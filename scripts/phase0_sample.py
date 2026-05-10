@@ -37,11 +37,13 @@ async def main():
 
     print("\nSelected samples:")
     for s in samples:
-        print(f"  msg {s.msg_id} | {s.posted_date} | {s.video_w}x{s.video_h} | {s.video_size//1024//1024}MB")
+        url = f"https://t.me/{cfg.channel_username}/{s.msg_id}"
+        print(f"  msg {s.msg_id} | {s.posted_date} | {s.video_w}x{s.video_h} | {s.video_size//1024//1024}MB | {url}")
 
     frames_dir = "data/frames"
     for s in samples:
-        print(f"\nProcessing msg {s.msg_id}...")
+        url = f"https://t.me/{cfg.channel_username}/{s.msg_id}"
+        print(f"\nProcessing msg {s.msg_id}  ({url})")
         with tempfile.TemporaryDirectory() as td:
             video_path = os.path.join(td, f"{s.msg_id}.mp4")
             await fetcher.download_video(s, video_path)
