@@ -22,17 +22,27 @@ def determine_status(merged: dict) -> str:
 
 async def process_message(tg_msg, fetcher, channel: str,
                           photos_dir: str, frames_dir: str,
-                          missing_birth_log_path: str) -> MartyrRow:
+                          missing_birth_log_path: str,
+                          paired_photo_msg=None) -> MartyrRow:
+    """Process one video message, optionally with a paired photo message.
+
+    The AqmarTofan channel posts the martyr's photo as a SEPARATE message
+    immediately before the video (matched by name in the caller). When
+    `paired_photo_msg` is provided, we download the photo from there
+    instead of looking inside the video message itself (which has only a
+    Document, not a Photo media).
+    """
     msg_id = tg_msg.msg_id
     log.info(f"Processing msg {msg_id}")
 
     cap = parse_caption(tg_msg.caption)
 
     photo_path = ""
-    if tg_msg.has_photo:
+    photo_source = paired_photo_msg if paired_photo_msg else (tg_msg if tg_msg.has_photo else None)
+    if photo_source is not None:
         photo_path = os.path.join(photos_dir, f"{msg_id}.jpg")
         try:
-            await fetcher.download_photo(tg_msg, photo_path)
+            await fetcher.download_photo(photo_source, photo_path)
         except Exception as e:
             log.warning(f"Photo download failed for {msg_id}: {e}")
             photo_path = ""

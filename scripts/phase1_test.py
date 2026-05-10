@@ -11,6 +11,7 @@ from src.telegram_client import TelegramFetcher
 from src.pipeline import process_message
 from src.excel_writer import ExcelWriter
 from src.state import State
+from src.parser_caption import parse_caption
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 
@@ -29,6 +30,17 @@ async def main():
     await fetcher.connect()
     messages = await fetcher.fetch_all_messages()
     videos = [m for m in messages if m.has_video]
+
+    # Build name -> photo TgMessage index from PHOTO posts (channel pairs each
+    # video with a separate photo post that has the same name in caption).
+    photos = [m for m in messages if m.has_photo]
+    name_to_photo = {}
+    for p in photos:
+        nm = parse_caption(p.caption)["name"]
+        if nm and nm not in name_to_photo:
+            name_to_photo[nm] = p
+    print(f"Indexed {len(name_to_photo)} unique photos by name (out of {len(photos)} photo posts)")
+
     if len(videos) < 5:
         samples = videos
     else:
@@ -40,11 +52,15 @@ async def main():
 
     for tg in samples:
         try:
+            video_name = parse_caption(tg.caption)["name"]
+            paired = name_to_photo.get(video_name)
             row = await process_message(tg, fetcher, cfg.channel_username,
-                                        PHOTOS_DIR, FRAMES_DIR, MISSING_BIRTH_LOG)
+                                        PHOTOS_DIR, FRAMES_DIR, MISSING_BIRTH_LOG,
+                                        paired_photo_msg=paired)
             writer.append_row(row)
             state.mark_processed(tg.msg_id, row.extraction_status)
-            print(f"  msg {tg.msg_id}: {row.extraction_status} | birth={row.birth_date} | martyrdom={row.martyrdom_date}")
+            paired_id = paired.msg_id if paired else "—"
+            print(f"  msg {tg.msg_id} (photo from msg {paired_id}): {row.extraction_status} | birth={row.birth_date} | martyrdom={row.martyrdom_date}")
         except Exception as e:
             logging.exception(f"Failed msg {tg.msg_id}: {e}")
             state.mark_processed(tg.msg_id, "failed")
