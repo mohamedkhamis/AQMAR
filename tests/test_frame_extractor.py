@@ -13,7 +13,7 @@ def test_extracts_frames_from_generated_video(tmp_path):
     out_dir = tmp_path / "frames"
     paths = extract_frames(str(video), str(out_dir), msg_id=99,
                            timestamps=DEFAULT_TIMESTAMPS)
-    assert len(paths) == 6
+    assert len(paths) == len(DEFAULT_TIMESTAMPS)
     for p in paths:
         assert os.path.exists(p)
         assert os.path.getsize(p) > 0

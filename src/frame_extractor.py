@@ -1,7 +1,10 @@
 import os
 import subprocess
 
-DEFAULT_TIMESTAMPS = [5, 10, 15, 20, 25, 30]
+# Phase 0 confirmed the data slide reliably appears around sec 30 (±2s).
+# Three frames around that window give us OCR redundancy for majority voting
+# while being 2x faster than scanning the whole 0-30s range.
+DEFAULT_TIMESTAMPS = [28, 30, 32]
 
 def extract_frames(video_path: str, out_dir: str, msg_id: int,
                    timestamps=None) -> list:

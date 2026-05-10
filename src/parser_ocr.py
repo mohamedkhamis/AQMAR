@@ -90,11 +90,13 @@ def normalize_date(raw: str) -> str:
             if 1 <= month <= 12 and 1 <= day <= 31:
                 return f"{year:04d}-{month:02d}-{day:02d}"
 
-    # Arabic month name + 4-digit year (e.g. "مايو - 2025") → "YYYY-MM"
+    # Arabic month name + 4-digit year (e.g. "مايو - 2025") → "YYYY-MM-15"
+    # Map to middle of month (day 15) per user request — partial dates are still
+    # actionable that way (sortable, filterable, displayable).
     month_num = _arabic_month_to_number(s)
     year_match = re.search(r"\d{4}", s)
     if month_num is not None and year_match:
-        return f"{int(year_match.group()):04d}-{month_num:02d}"
+        return f"{int(year_match.group()):04d}-{month_num:02d}-15"
 
     # Year-only
     if re.match(r"^\d{4}$", s_compact):

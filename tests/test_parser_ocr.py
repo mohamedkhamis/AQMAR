@@ -88,24 +88,24 @@ def test_martyrdom_dates_with_spaces():
     assert r["martyrdom_date"] == "2025-03-18"
 
 def test_normalize_date_arabic_month_year_egyptian():
-    # msg 20 caption shows "مايو - 2025" — partial date with Arabic month + year
-    assert normalize_date("مايو - 2025") == "2025-05"
+    # msg 20 caption shows "مايو - 2025" — partial date → maps to mid-month (day 15)
+    assert normalize_date("مايو - 2025") == "2025-05-15"
 
 def test_normalize_date_arabic_month_year_levantine():
-    assert normalize_date("أيار 2025") == "2025-05"
-    assert normalize_date("ايار - 2025") == "2025-05"
+    assert normalize_date("أيار 2025") == "2025-05-15"
+    assert normalize_date("ايار - 2025") == "2025-05-15"
 
 def test_normalize_date_arabic_month_compound_levantine():
     # "تشرين الأول" = October
-    assert normalize_date("تشرين الأول - 2024") == "2024-10"
+    assert normalize_date("تشرين الأول - 2024") == "2024-10-15"
     # "كانون الثاني" = January
-    assert normalize_date("كانون الثاني 2024") == "2024-01"
+    assert normalize_date("كانون الثاني 2024") == "2024-01-15"
 
 def test_parse_arabic_month_year_in_martyrdom_label():
-    # End-to-end: msg 20 style — full label + Arabic month value
+    # End-to-end: msg 20 style — full label + Arabic month value, mid-month default
     text = "تاريخ الشهادة: مايو - 2025"
     r = parse_ocr_text(text)
-    assert r["martyrdom_date"] == "2025-05"
+    assert r["martyrdom_date"] == "2025-05-15"
 
 
 # Phase 0 findings — actual EasyOCR output is noisy
