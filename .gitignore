@@ -1,0 +1,12 @@
+.env
+session/
+data/
+logs/
+__pycache__/
+*.pyc
+.venv/
+.playwright-mcp/
+*.session
+.pytest_cache/
+*.egg-info/
+.claude/
