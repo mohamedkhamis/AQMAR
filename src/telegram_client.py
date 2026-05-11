@@ -74,8 +74,33 @@ class TelegramFetcher:
         )
 
     async def download_photo(self, tg_msg: TgMessage, out_path: str) -> str:
+        """Download a photo, retrying with a fresh message reference if needed.
+
+        Telegram's file references expire after a short window (~30 min when
+        the file is referenced from an older Message). When that happens
+        Telethon raises an error containing "file reference". We re-fetch
+        the message by id and try once more — fresh refs always work.
+
+        Also removes any 0-byte file left from a partial failed download
+        before returning, so the caller never sees an empty success.
+        """
         os.makedirs(os.path.dirname(out_path) or ".", exist_ok=True)
-        return await self.client.download_media(tg_msg.raw, file=out_path)
+        try:
+            result = await self.client.download_media(tg_msg.raw, file=out_path)
+        except Exception as e:
+            err_lower = str(e).lower()
+            if "file reference" in err_lower:
+                # Re-fetch the message so we get a fresh reference, then retry once.
+                fresh = await self.client.get_messages(self.channel, ids=tg_msg.msg_id)
+                if fresh is None:
+                    raise
+                result = await self.client.download_media(fresh, file=out_path)
+            else:
+                raise
+        if os.path.exists(out_path) and os.path.getsize(out_path) == 0:
+            os.remove(out_path)
+            raise IOError(f"Downloaded photo for msg {tg_msg.msg_id} was 0 bytes")
+        return result
 
     async def download_video(self, tg_msg: TgMessage, out_path: str) -> str:
         os.makedirs(os.path.dirname(out_path) or ".", exist_ok=True)
