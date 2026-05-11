@@ -103,15 +103,29 @@ class TelegramFetcher:
         return result
 
     async def download_video(self, tg_msg: TgMessage, out_path: str) -> str:
+        """Download a video with the same fresh-fetch-on-expiry pattern as
+        download_photo. Telegram's file references in cached Message objects
+        expire (~30 min after the message was fetched) — we transparently
+        re-fetch the message and retry once when that happens.
+
+        Also handles FloodWaitError (rate limit) with the indicated sleep,
+        and exponential backoff on other transient errors.
+        """
         os.makedirs(os.path.dirname(out_path) or ".", exist_ok=True)
-        async def with_retry():
-            for attempt in range(3):
-                try:
-                    return await self.client.download_media(tg_msg.raw, file=out_path)
-                except FloodWaitError as e:
-                    await asyncio.sleep(e.seconds)
-                except Exception:
-                    if attempt == 2:
+        media_ref = tg_msg.raw
+        for attempt in range(3):
+            try:
+                return await self.client.download_media(media_ref, file=out_path)
+            except FloodWaitError as e:
+                await asyncio.sleep(e.seconds)
+            except Exception as e:
+                err_lower = str(e).lower()
+                if "file reference" in err_lower:
+                    fresh = await self.client.get_messages(self.channel, ids=tg_msg.msg_id)
+                    if fresh is None:
                         raise
-                    await asyncio.sleep(2 ** attempt)
-        return await with_retry()
+                    media_ref = fresh  # retry with fresh reference
+                    continue
+                if attempt == 2:
+                    raise
+                await asyncio.sleep(2 ** attempt)
