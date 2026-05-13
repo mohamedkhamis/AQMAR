@@ -305,7 +305,9 @@
     // ===== applyFilter composition (logic only — no Alpine context needed) =====
 
     function applyFilterPure(rows, opts) {
-      // Mirrors app.js applyFilter() — pure version for testing.
+      // Pure subset of app.js applyFilter() — only the predicates exercised
+      // by the composition tests (search + age + birthdate proximity).
+      // Out of scope here: martyrdom-date range filter and sort branch.
       let r = rows;
       if (opts.searchQuery !== undefined && opts.searchQuery !== "") {
         r = r.filter(row => searchPredicate(row, opts.searchQuery));
