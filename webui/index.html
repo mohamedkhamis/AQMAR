@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>أقمار الطوفان</title>
+
+  <!-- Tailwind via Play CDN (no build) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: { extend: { colors: {
+        bgdark: "#0c1f0c", bgcard: "#142914", brand: "#fbbf24", border: "#2d4a2d",
+      }}}
+    };
+  </script>
+
+  <!-- Alpine.js (defer per docs) -->
+  <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
+  <!-- App modules — load order matters -->
+  <script src="config.js"></script>
+  <script src="filter-logic.js"></script>
+  <script src="data-loader.js"></script>
+  <script src="admin-edit.js"></script>
+  <script src="app.js"></script>
+
+  <link rel="stylesheet" href="style.css">
+</head>
+<body x-data="app()" x-init="init()" class="min-h-screen bg-bgdark text-white">
+
+<!-- Loading / error banners -->
+<div x-show="isLoading" class="text-center py-12 text-lg">جاري التحميل...</div>
+<div x-show="loadError" class="bg-red-900 text-red-100 p-4 m-4 rounded" x-text="loadError"></div>
+
+<!-- Header -->
+<header class="bg-bgcard border-b border-border sticky top-0 z-10 px-4 py-3">
+  <div class="max-w-7xl mx-auto flex flex-wrap items-center gap-3">
+    <h1 class="text-xl font-bold flex-shrink-0">
+      <span x-text="AQMAR_CONFIG.appName"></span>
+    </h1>
+
+    <!-- View toggle (admin only) -->
+    <div x-show="loggedIn" class="flex gap-2 mr-auto">
+      <button @click="view='public'" :class="view==='public' ? 'bg-brand text-bgdark' : 'bg-bgdark border border-border'"
+        class="px-3 py-1 rounded text-sm">عام</button>
+      <button @click="view='admin'" :class="view==='admin' ? 'bg-brand text-bgdark' : 'bg-bgdark border border-border'"
+        class="px-3 py-1 rounded text-sm">إدارة</button>
+    </div>
+
+    <!-- Login/Logout (auth controls) -->
+    <button x-show="!loggedIn" @click="showLoginModal=true"
+      class="mr-auto px-3 py-1 bg-brand text-bgdark rounded font-bold text-sm">دخول الإدارة</button>
+    <button x-show="loggedIn" @click="logout()"
+      class="px-3 py-1 bg-bgdark border border-border rounded text-sm">خروج</button>
+  </div>
+
+  <!-- Filter bar (public view) -->
+  <div x-show="view==='public' && !isLoading" class="max-w-7xl mx-auto mt-3 flex flex-wrap items-center gap-3">
+    <label class="text-sm">تاريخ ميلادي:
+      <input type="date" x-model="userBirthdate" @change="applyFilter()"
+        class="bg-bgdark border border-border rounded px-2 py-1 ltr text-sm">
+    </label>
+    <label class="text-sm">النافذة:
+      <select x-model="windowMode" @change="applyFilter()"
+        class="bg-bgdark border border-border rounded px-2 py-1 text-sm">
+        <option value="1week">أسبوع (±7 يوم)</option>
+        <option value="1month">شهر (±30 يوم)</option>
+        <option value="2months">شهرين (±60 يوم)</option>
+        <option value="custom">مخصّص</option>
+      </select>
+    </label>
+    <label x-show="windowMode==='custom'" class="text-sm">عدد الأيام:
+      <input type="number" min="1" max="365" x-model="customDays" @input="applyFilter()"
+        class="bg-bgdark border border-border rounded px-2 py-1 w-20 ltr text-sm">
+      <span x-show="customDaysError" class="text-red-400 text-xs" x-text="customDaysError"></span>
+    </label>
+    <span class="text-brand text-sm mr-auto" x-text="`${filteredResults.length} شهيد`"></span>
+  </div>
+
+  <!-- Admin tip (admin view) -->
+  <div x-show="view==='admin' && !isLoading" class="max-w-7xl mx-auto mt-3 flex flex-wrap items-center gap-3">
+    <span class="text-sm">عدد الشهداء: <span x-text="allRows.length" class="text-brand"></span></span>
+    <button @click="exportOverrides()" x-show="pendingEditCount > 0"
+      class="mr-auto bg-brand text-bgdark px-3 py-1 rounded font-bold text-sm">
+      💾 تصدير <span x-text="pendingEditCount"></span> تعديل
+    </button>
+  </div>
+</header>
+
+<!-- ============ PUBLIC VIEW ============ -->
+<main x-show="view==='public' && !isLoading" class="max-w-7xl mx-auto p-4">
+  <!-- Empty state -->
+  <div x-show="!userBirthdate" class="text-center py-16 text-gray-400">
+    أدخل تاريخ ميلادك في الأعلى لعرض الشهداء بأعمار قريبة.
+  </div>
+  <div x-show="userBirthdate && filteredResults.length === 0" class="text-center py-16 text-gray-400">
+    لا يوجد شهداء بتاريخ ميلاد قريب من إدخالك. جرّب نافذة أوسع.
+  </div>
+
+  <!-- Grid -->
+  <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+    <template x-for="row in filteredResults" :key="row.msg_id">
+      <div class="bg-bgcard border border-border rounded-lg overflow-hidden cursor-pointer hover:border-brand transition-colors relative"
+           @click="openPhotoModal(row)">
+        <div x-show="row._overridden_fields && row._overridden_fields.length > 0" class="edit-dot" title="تعديل يدوي">✏️</div>
+        <div class="aspect-[4/5] bg-gradient-to-br from-bgcard to-bgdark">
+          <img x-show="row.photo_path" :src="row.photo_path" :alt="row.name" loading="lazy"
+            class="w-full h-full object-cover" @error="$el.style.display='none'; $el.nextElementSibling.style.display='flex'">
+          <div class="photo-placeholder w-full h-full" style="display:none">صورة غير متوفرة</div>
+        </div>
+        <div class="p-3 text-right">
+          <div class="font-bold text-sm" x-text="row.name"></div>
+          <div class="text-xs text-brand mt-1 ltr text-left" x-text="`${row.birth_date || '—'} → ${row.martyrdom_date || '—'}`"></div>
+          <div class="inline-block bg-brand text-bgdark text-xs font-bold px-2 py-0.5 rounded mt-2 ltr"
+            x-text="`±${Math.abs(row._delta_days)} يوم`"></div>
+        </div>
+      </div>
+    </template>
+  </div>
+</main>
+
+<!-- ============ ADMIN VIEW ============ -->
+<main x-show="view==='admin' && !isLoading && loggedIn" class="max-w-7xl mx-auto p-4">
+  <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+    <template x-for="row in allRows" :key="row.msg_id">
+      <div class="bg-bgcard border border-border rounded-lg overflow-hidden relative">
+        <div x-show="row._overridden_fields && row._overridden_fields.length > 0" class="edit-dot" title="تعديل يدوي">✏️</div>
+        <div class="aspect-[4/5] bg-gradient-to-br from-bgcard to-bgdark cursor-pointer"
+             @click="openPhotoModal(row)">
+          <img x-show="row.photo_path" :src="row.photo_path" :alt="row.name" loading="lazy"
+            class="w-full h-full object-cover" @error="$el.style.display='none'; $el.nextElementSibling.style.display='flex'">
+          <div class="photo-placeholder w-full h-full" style="display:none">صورة غير متوفرة</div>
+        </div>
+        <div class="p-3 text-right">
+          <div class="font-bold text-sm" x-text="row.name"></div>
+          <div class="text-xs text-gray-400 mt-1">معرّف: <span x-text="row.msg_id"></span></div>
+          <div class="text-xs text-brand mt-1 ltr text-left" x-text="`${row.birth_date || '—'} → ${row.martyrdom_date || '—'}`"></div>
+          <div class="flex gap-2 mt-2">
+            <button @click="openEditModal(row)" class="text-xs bg-brand text-bgdark px-2 py-1 rounded">✏️ تحرير</button>
+            <a :href="row.message_link" target="_blank" class="text-xs bg-bgdark border border-border px-2 py-1 rounded">↗ تيليجرام</a>
+          </div>
+        </div>
+      </div>
+    </template>
+  </div>
+</main>
+
+<!-- ============ PHOTO ZOOM MODAL ============ -->
+<div x-show="selectedRow" @click.self="closePhotoModal()" x-cloak
+     class="fixed inset-0 bg-black/80 z-20 flex items-center justify-center p-4">
+  <div class="bg-bgcard border border-border rounded-lg overflow-hidden max-w-2xl w-full max-h-[90vh] flex flex-col">
+    <div class="flex justify-between items-center p-3 border-b border-border">
+      <h3 class="font-bold" x-text="selectedRow?.name"></h3>
+      <button @click="closePhotoModal()" class="text-xl">✕</button>
+    </div>
+    <img x-show="selectedRow?.photo_path" :src="selectedRow?.photo_path" :alt="selectedRow?.name"
+         class="w-full max-h-[60vh] object-contain bg-bgdark">
+    <div class="p-3 text-sm space-y-1">
+      <div>تاريخ الميلاد: <span class="text-brand ltr" x-text="selectedRow?.birth_date || '—'"></span></div>
+      <div>تاريخ الاستشهاد: <span class="text-brand ltr" x-text="selectedRow?.martyrdom_date || '—'"></span></div>
+      <div>الرتبة: <span x-text="selectedRow?.military_rank || '—'"></span></div>
+      <div>الكتيبة: <span x-text="selectedRow?.battalion || '—'"></span></div>
+      <div>اللواء: <span x-text="selectedRow?.brigade || '—'"></span></div>
+      <a :href="selectedRow?.message_link" target="_blank" class="text-brand text-xs underline">عرض في تيليجرام ↗</a>
+    </div>
+  </div>
+</div>
+
+<!-- ============ ADMIN EDIT MODAL ============ -->
+<div x-show="editingMsgId" @click.self="closeEditModal()" x-cloak
+     class="fixed inset-0 bg-black/80 z-20 flex items-center justify-center p-4">
+  <div class="bg-bgcard border border-border rounded-lg overflow-hidden max-w-md w-full max-h-[90vh] flex flex-col">
+    <div class="flex justify-between items-center p-3 border-b border-border">
+      <h3 class="font-bold">تحرير الشهيد (معرّف <span x-text="editingMsgId"></span>)</h3>
+      <button @click="closeEditModal()" class="text-xl">✕</button>
+    </div>
+    <form @submit.prevent="saveEdit()" class="p-3 space-y-2 overflow-y-auto text-sm">
+      <template x-for="field in ['name','birth_date','martyrdom_date','city','military_rank','weapon','battalion','brigade']">
+        <label class="block">
+          <span class="block text-xs text-gray-300" x-text="field"></span>
+          <input :type="field.includes('date') ? 'date' : 'text'" x-model="editForm[field]"
+            class="w-full bg-bgdark border border-border rounded px-2 py-1 ltr">
+        </label>
+      </template>
+      <div class="flex gap-2 pt-2">
+        <button type="submit" class="bg-brand text-bgdark px-3 py-1 rounded font-bold flex-1">حفظ التعديل</button>
+        <button type="button" @click="closeEditModal()" class="bg-bgdark border border-border px-3 py-1 rounded">إلغاء</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ============ LOGIN MODAL ============ -->
+<div x-show="showLoginModal" @click.self="showLoginModal=false" x-cloak
+     class="fixed inset-0 bg-black/80 z-20 flex items-center justify-center p-4">
+  <div class="bg-bgcard border border-border rounded-lg p-5 max-w-sm w-full">
+    <h3 class="font-bold mb-3">دخول الإدارة</h3>
+    <form @submit.prevent="login()" class="space-y-2 text-sm">
+      <input type="text" x-model="loginUser" placeholder="اسم المستخدم"
+        class="w-full bg-bgdark border border-border rounded px-2 py-2 ltr">
+      <input type="password" x-model="loginPass" placeholder="كلمة المرور"
+        class="w-full bg-bgdark border border-border rounded px-2 py-2 ltr">
+      <div x-show="loginError" class="text-red-400 text-xs" x-text="loginError"></div>
+      <div class="flex gap-2 pt-2">
+        <button type="submit" class="bg-brand text-bgdark px-3 py-2 rounded font-bold flex-1">دخول</button>
+        <button type="button" @click="showLoginModal=false" class="bg-bgdark border border-border px-3 py-2 rounded">إلغاء</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+</body>
+</html>
