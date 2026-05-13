@@ -136,6 +136,25 @@
       </div>
     </div>
 
+    <!-- View mode toggle (grid ↔ list) -->
+    <div role="group" aria-label="نمط العرض"
+         class="inline-flex bg-bgdark border border-border rounded-full p-1">
+      <button @click="setViewMode('grid')"
+              :class="viewMode === 'grid' ? 'bg-brand text-bgdark font-bold' : 'text-gray-400 hover:text-brand'"
+              class="px-3 py-1 rounded-full text-sm transition-colors flex items-center gap-1"
+              aria-pressed="viewMode === 'grid'"
+              title="عرض شبكي">
+        <span aria-hidden="true">▦</span><span>شبكة</span>
+      </button>
+      <button @click="setViewMode('list')"
+              :class="viewMode === 'list' ? 'bg-brand text-bgdark font-bold' : 'text-gray-400 hover:text-brand'"
+              class="px-3 py-1 rounded-full text-sm transition-colors flex items-center gap-1"
+              aria-pressed="viewMode === 'list'"
+              title="عرض قائمة">
+        <span aria-hidden="true">≡</span><span>قائمة</span>
+      </button>
+    </div>
+
     <!-- Advanced filters toggle -->
     <button @click="showAdvancedFilters = !showAdvancedFilters"
       :class="showAdvancedFilters ? 'border-brand text-brand' : 'border-border text-gray-400'"
