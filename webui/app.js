@@ -82,6 +82,13 @@ window.app = function () {
           this.customDaysError = `${AQMAR_CONFIG.filterCustomDaysMin} - ${AQMAR_CONFIG.filterCustomDaysMax}`;
         }
       }
+      if (!this.userBirthdate) {
+        // No birthdate → show ALL martyrs, sorted by martyrdom date desc (newest first)
+        this.filteredResults = [...this.allRows].sort((a, b) =>
+          (b.martyrdom_date || "").localeCompare(a.martyrdom_date || "")
+        );
+        return;
+      }
       const days = windowDaysFromMode(this.windowMode, this.customDays);
       this.filteredResults = filterByProximity(this.allRows, this.userBirthdate, days);
     },

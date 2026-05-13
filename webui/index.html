@@ -57,25 +57,43 @@
 
   <!-- Filter bar (public view) -->
   <div x-show="view==='public' && !isLoading" class="max-w-7xl mx-auto mt-3 flex flex-wrap items-center gap-3">
-    <label class="text-sm">تاريخ ميلادي:
-      <input type="date" x-model="userBirthdate" @change="applyFilter()"
-        class="bg-bgdark border border-border rounded px-2 py-1 ltr text-sm">
-    </label>
-    <label class="text-sm">النافذة:
-      <select x-model="windowMode" @change="applyFilter()"
-        class="bg-bgdark border border-border rounded px-2 py-1 text-sm">
-        <option value="1week">أسبوع (±7 يوم)</option>
-        <option value="1month">شهر (±30 يوم)</option>
-        <option value="2months">شهرين (±60 يوم)</option>
-        <option value="custom">مخصّص</option>
-      </select>
-    </label>
-    <label x-show="windowMode==='custom'" class="text-sm">عدد الأيام:
-      <input type="number" min="1" max="365" x-model="customDays" @input="applyFilter()"
-        class="bg-bgdark border border-border rounded px-2 py-1 w-20 ltr text-sm">
+    <div class="flex items-center gap-2 bg-bgdark border border-border rounded-lg px-3 py-2 hover:border-brand transition-colors">
+      <span class="text-lg">🎂</span>
+      <label class="text-sm">
+        <span class="block text-xs text-gray-400">تاريخ ميلادي</span>
+        <input type="date" x-model="userBirthdate" @change="applyFilter()"
+          max="2026-12-31"
+          class="bg-transparent ltr text-sm focus:outline-none">
+      </label>
+      <button x-show="userBirthdate" @click="userBirthdate=''; applyFilter()" title="مسح" class="text-gray-400 hover:text-brand px-1">✕</button>
+    </div>
+
+    <div x-show="userBirthdate" class="flex items-center gap-2 bg-bgdark border border-border rounded-lg px-3 py-2">
+      <span class="text-lg">📐</span>
+      <label class="text-sm">
+        <span class="block text-xs text-gray-400">النافذة</span>
+        <select x-model="windowMode" @change="applyFilter()" class="bg-transparent text-sm focus:outline-none">
+          <option value="1week" class="bg-bgdark">أسبوع (±7 يوم)</option>
+          <option value="1month" class="bg-bgdark">شهر (±30 يوم)</option>
+          <option value="2months" class="bg-bgdark">شهرين (±60 يوم)</option>
+          <option value="custom" class="bg-bgdark">مخصّص</option>
+        </select>
+      </label>
+    </div>
+
+    <div x-show="userBirthdate && windowMode==='custom'" class="flex items-center gap-2 bg-bgdark border border-border rounded-lg px-3 py-2">
+      <label class="text-sm">
+        <span class="block text-xs text-gray-400">عدد الأيام (1-365)</span>
+        <input type="number" min="1" max="365" x-model="customDays" @input="applyFilter()" class="bg-transparent w-16 ltr text-sm focus:outline-none">
+      </label>
       <span x-show="customDaysError" class="text-red-400 text-xs" x-text="customDaysError"></span>
-    </label>
-    <span class="text-brand text-sm mr-auto" x-text="`${filteredResults.length} شهيد`"></span>
+    </div>
+
+    <div class="mr-auto flex items-baseline gap-2">
+      <span class="text-2xl font-bold text-brand" x-text="filteredResults.length"></span>
+      <span class="text-sm text-gray-400" x-show="!userBirthdate">شهيد · جميع الشهداء</span>
+      <span class="text-sm text-gray-400" x-show="userBirthdate">شهيد بأعمار قريبة من ميلادك</span>
+    </div>
   </div>
 
   <!-- Admin tip (admin view) -->
@@ -90,30 +108,38 @@
 
 <!-- ============ PUBLIC VIEW ============ -->
 <main x-show="view==='public' && !isLoading" class="max-w-7xl mx-auto p-4">
-  <!-- Empty state -->
-  <div x-show="!userBirthdate" class="text-center py-16 text-gray-400">
-    أدخل تاريخ ميلادك في الأعلى لعرض الشهداء بأعمار قريبة.
+  <!-- Hero hint when no filter is active -->
+  <div x-show="!userBirthdate" class="text-center py-6 mb-4 bg-bgcard border border-border rounded-lg">
+    <p class="text-gray-300">
+      💡 أدخل تاريخ ميلادك أعلاه لترى الشهداء بأعمار قريبة من عمرك
+    </p>
   </div>
+
+  <!-- No results state (only if filtering AND zero results) -->
   <div x-show="userBirthdate && filteredResults.length === 0" class="text-center py-16 text-gray-400">
-    لا يوجد شهداء بتاريخ ميلاد قريب من إدخالك. جرّب نافذة أوسع.
+    🔍 لا يوجد شهداء بتاريخ ميلاد قريب من إدخالك. جرّب نافذة أوسع.
   </div>
 
   <!-- Grid -->
-  <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+  <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
     <template x-for="row in filteredResults" :key="row.msg_id">
-      <div class="bg-bgcard border border-border rounded-lg overflow-hidden cursor-pointer hover:border-brand transition-colors relative"
+      <div class="group bg-bgcard border border-border rounded-lg overflow-hidden cursor-pointer hover:border-brand hover:shadow-lg hover:shadow-brand/20 transition-all duration-200 relative"
            @click="openPhotoModal(row)">
         <div x-show="row._overridden_fields && row._overridden_fields.length > 0" class="edit-dot" title="تعديل يدوي">✏️</div>
-        <div class="aspect-[4/5] bg-gradient-to-br from-bgcard to-bgdark">
+        <div class="aspect-[4/5] bg-gradient-to-br from-bgcard to-bgdark overflow-hidden">
           <img x-show="row.photo_path" :src="row.photo_path" :alt="row.name" loading="lazy"
-            class="w-full h-full object-cover" @error="$el.style.display='none'; $el.nextElementSibling.style.display='flex'">
+            class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+            @error="$el.style.display='none'; $el.nextElementSibling.style.display='flex'">
           <div class="photo-placeholder w-full h-full" style="display:none">صورة غير متوفرة</div>
         </div>
         <div class="p-3 text-right">
-          <div class="font-bold text-sm" x-text="row.name"></div>
-          <div class="text-xs text-brand mt-1 ltr text-left" x-text="`${row.birth_date || '—'} → ${row.martyrdom_date || '—'}`"></div>
-          <div class="inline-block bg-brand text-bgdark text-xs font-bold px-2 py-0.5 rounded mt-2 ltr"
-            x-text="`±${Math.abs(row._delta_days)} يوم`"></div>
+          <div class="font-bold text-sm leading-tight" x-text="row.name"></div>
+          <div class="text-xs text-gray-400 mt-1 ltr text-left">
+            <span x-text="row.birth_date || '—'"></span> → <span x-text="row.martyrdom_date || '—'"></span>
+          </div>
+          <div x-show="userBirthdate && row._delta_days !== undefined"
+               class="inline-block bg-brand text-bgdark text-xs font-bold px-2 py-0.5 rounded mt-2 ltr"
+               x-text="`±${Math.abs(row._delta_days)} يوم`"></div>
         </div>
       </div>
     </template>
