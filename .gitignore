@@ -1,6 +1,7 @@
 .env
 session/
 data/
+!data/overrides.json
 logs/
 __pycache__/
 *.pyc
