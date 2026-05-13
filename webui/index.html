@@ -458,7 +458,8 @@
      @keydown.escape.window="closePhotoModal()" x-trap="selectedRow"
      role="dialog" aria-modal="true" aria-labelledby="photo-modal-title"
      class="fixed inset-0 bg-black/80 z-20 flex items-center justify-center p-4">
-  <div class="bg-bgcard border border-border rounded-lg overflow-hidden max-w-2xl w-full max-h-[90vh] flex flex-col">
+  <div class="bg-bgcard sm:border border-border sm:rounded-lg overflow-hidden
+              w-full h-full sm:max-w-2xl sm:h-auto sm:max-h-[90vh] flex flex-col">
     <div class="flex justify-between items-center p-3 border-b border-border">
       <h3 id="photo-modal-title" class="font-bold" x-text="selectedRow?.name"></h3>
       <button @click="closePhotoModal()" class="text-xl">✕</button>
@@ -505,8 +506,9 @@
 <div x-show="editingMsgId" @click.self="closeEditModal()" x-cloak
      @keydown.escape.window="closeEditModal()" x-trap="editingMsgId"
      role="dialog" aria-modal="true" aria-labelledby="edit-modal-title"
-     class="fixed inset-0 bg-black/80 z-20 flex items-center justify-center p-4">
-  <div class="bg-bgcard border border-border rounded-lg overflow-hidden max-w-md w-full max-h-[90vh] flex flex-col">
+     class="fixed inset-0 bg-black/80 z-20 flex items-end sm:items-center justify-center sm:p-4">
+  <div class="bg-bgcard sm:border border-border rounded-t-2xl sm:rounded-lg overflow-hidden
+              w-full max-h-[85vh] sm:max-w-md mt-auto sm:mt-0 sm:max-h-[90vh] flex flex-col">
     <div class="flex justify-between items-center p-3 border-b border-border">
       <h3 id="edit-modal-title" class="font-bold">تحرير الشهيد (معرّف <span x-text="editingMsgId"></span>)</h3>
       <button @click="closeEditModal()" class="text-xl">✕</button>
