@@ -35,9 +35,10 @@ with two views:
 ```powershell
 .venv\Scripts\activate
 python scripts\excel_to_json.py    # generate data/martyrs.json from xlsx
-cd webui
+
+# Serve from the PROJECT ROOT (so ../data/ paths from webui/ work):
 python -m http.server 8000
-start http://localhost:8000
+start http://localhost:8000/webui/
 ```
 
 ### Default admin login
@@ -54,7 +55,7 @@ with the SHA-256 hex of your new password:
 
 ### Tests
 
-Open `http://localhost:8000/tests.html` while the server is running.
+Open `http://localhost:8000/webui/tests.html` while the server is running.
 Tests run on page load — all 23 should pass.
 
 ### Daily workflow
