@@ -35,7 +35,22 @@
 <body x-data="app()" x-init="init()" class="min-h-screen bg-bgdark text-white">
 
 <!-- Loading / error banners -->
-<div x-show="isLoading" class="text-center py-12 text-lg">جاري التحميل...</div>
+<!-- Loading skeleton (replaces plain text) -->
+<main x-show="isLoading" class="max-w-7xl mx-auto p-4" aria-busy="true" aria-live="polite">
+  <div class="sr-only">جاري تحميل بيانات الشهداء...</div>
+  <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+    <template x-for="i in 12">
+      <div class="bg-bgcard border border-border rounded-lg overflow-hidden">
+        <div class="aspect-[4/5] skeleton"></div>
+        <div class="p-3 space-y-2">
+          <div class="skeleton h-3 rounded w-4/5"></div>
+          <div class="skeleton h-2 rounded w-3/5"></div>
+          <div class="skeleton h-2 rounded w-2/5"></div>
+        </div>
+      </div>
+    </template>
+  </div>
+</main>
 <div x-show="loadError" class="bg-red-900 text-red-100 p-4 m-4 rounded" x-text="loadError"></div>
 
 <!-- Header -->
