@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>AqmarTofan SPA — Tests</title>
+  <style>
+    body { font-family: monospace; background: #111; color: #eee; padding: 2rem; }
+    .pass { color: #6ee06e; }
+    .fail { color: #f55; }
+    h2 { border-bottom: 1px solid #444; padding-bottom: 0.3rem; }
+    pre { background: #222; padding: 0.5rem; border-radius: 4px; overflow: auto; }
+  </style>
+</head>
+<body>
+  <h1>SPA tests</h1>
+  <div id="results"></div>
+
+  <script>
+    // Tiny test runner — pushes results into #results
+    window.AQMAR_TESTS = [];
+    window.test = (name, fn) => window.AQMAR_TESTS.push({ name, fn });
+
+    function assertEq(actual, expected, msg) {
+      const a = JSON.stringify(actual);
+      const e = JSON.stringify(expected);
+      if (a !== e) throw new Error(`${msg || "assert"}: expected ${e}, got ${a}`);
+    }
+    window.assertEq = assertEq;
+
+    function runAll() {
+      const out = document.getElementById("results");
+      let pass = 0, fail = 0;
+      for (const t of window.AQMAR_TESTS) {
+        try {
+          t.fn();
+          out.innerHTML += `<div class="pass">✓ ${t.name}</div>`;
+          pass++;
+        } catch (e) {
+          out.innerHTML += `<div class="fail">✗ ${t.name}<pre>${e.message}</pre></div>`;
+          fail++;
+        }
+      }
+      out.innerHTML += `<h2>${pass} passed, ${fail} failed</h2>`;
+    }
+    window.addEventListener("load", runAll);
+  </script>
+
+  <!-- Modules under test — order matters: dependencies first -->
+  <script src="filter-logic.js"></script>
+
+  <!-- Test files -->
+  <script>
+    // ===== filter-logic.js =====
+
+    test("daysBetween returns 0 for same date", () => {
+      assertEq(daysBetween("1985-06-15", "1985-06-15"), 0);
+    });
+
+    test("daysBetween returns positive when later", () => {
+      assertEq(daysBetween("1985-06-15", "1985-06-20"), 5);
+    });
+
+    test("daysBetween returns negative when earlier", () => {
+      assertEq(daysBetween("1985-06-15", "1985-06-10"), -5);
+    });
+
+    test("daysBetween handles cross-year", () => {
+      assertEq(daysBetween("1985-12-31", "1986-01-01"), 1);
+    });
+
+    test("filterByProximity within 1month returns rows in window", () => {
+      const rows = [
+        { msg_id: 1, birth_date: "1985-06-10" }, // -5
+        { msg_id: 2, birth_date: "1985-06-15" }, // 0
+        { msg_id: 3, birth_date: "1985-07-20" }, // +35 (out)
+        { msg_id: 4, birth_date: "" },           // (no birth date — skip)
+        { msg_id: 5, birth_date: "1985-05-20" }, // -26
+      ];
+      const result = filterByProximity(rows, "1985-06-15", 30);
+      assertEq(result.map(r => r.msg_id), [2, 1, 5]); // sorted by closeness
+    });
+
+    test("filterByProximity returns empty when userBirthdate is blank", () => {
+      const rows = [{ msg_id: 1, birth_date: "1985-06-15" }];
+      assertEq(filterByProximity(rows, "", 30), []);
+    });
+
+    test("filterByProximity attaches signed _delta_days", () => {
+      const rows = [
+        { msg_id: 1, birth_date: "1985-06-20" },
+        { msg_id: 2, birth_date: "1985-06-10" },
+      ];
+      const result = filterByProximity(rows, "1985-06-15", 30);
+      const deltas = result.map(r => r._delta_days);
+      assertEq(deltas.sort(), [-5, 5]);
+    });
+
+    test("filterByProximity excludes rows beyond window", () => {
+      const rows = [
+        { msg_id: 1, birth_date: "1985-06-15" }, // 0
+        { msg_id: 2, birth_date: "1985-08-15" }, // +61
+      ];
+      assertEq(filterByProximity(rows, "1985-06-15", 60).map(r => r.msg_id), [1]);
+    });
+
+    test("windowDaysFromMode resolves named modes", () => {
+      assertEq(windowDaysFromMode("1week", 999), 7);
+      assertEq(windowDaysFromMode("1month", 999), 30);
+      assertEq(windowDaysFromMode("2months", 999), 60);
+    });
+
+    test("windowDaysFromMode clamps custom to [1,365]", () => {
+      assertEq(windowDaysFromMode("custom", 0),    1);
+      assertEq(windowDaysFromMode("custom", -10),  1);
+      assertEq(windowDaysFromMode("custom", 999),  365);
+      assertEq(windowDaysFromMode("custom", 45),   45);
+    });
+
+    test("windowDaysFromMode falls back to 30 for unknown mode", () => {
+      assertEq(windowDaysFromMode("nonsense", 999), 30);
+    });
+  </script>
+</body>
+</html>
