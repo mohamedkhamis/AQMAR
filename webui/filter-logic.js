@@ -86,6 +86,32 @@
     }
   }
 
+  // Short, compact delta — for cards in the grid.
+  // "▼ 3 أيام" / "▲ 2 شهر" / "● اليوم".
+  function describeDeltaShort(deltaDays) {
+    if (deltaDays === 0) return { icon: "●", text: "اليوم", direction: "same" };
+    const abs = Math.abs(deltaDays);
+    const direction = deltaDays > 0 ? "younger" : "older";
+    const icon = deltaDays > 0 ? "▼" : "▲";
+    let text;
+    if (abs <= 5) {
+      text = `${abs} ${abs === 1 ? "يوم" : "أيام"}`;
+    } else if (abs <= 60) {
+      text = `${abs} يوم`;
+    } else if (abs < 365) {
+      const m = Math.round(abs / 30);
+      text = `${m} ${m <= 10 ? "أشهر" : "شهر"}`;
+    } else {
+      const y = Math.floor(abs / 365);
+      const remDays = abs - y * 365;
+      const m = Math.round(remDays / 30);
+      text = m > 0
+        ? `${y} ${y === 1 ? "سنة" : "سنوات"} و ${m} شهر`
+        : `${y} ${y === 1 ? "سنة" : "سنوات"}`;
+    }
+    return { icon, text, direction };
+  }
+
   // Describe the age delta in Arabic, choosing the right unit (days / months /
   // years) and direction word ("أكبر" / "أصغر").
   //   deltaDays = (martyr_birth_date - user_birth_date) in days
@@ -120,6 +146,7 @@
   global.windowDaysFromMode = windowDaysFromMode;
   global.filterByProximity = filterByProximity;
   global.describeDelta = describeDelta;
+  global.describeDeltaShort = describeDeltaShort;
   global.computeAge = computeAge;
   global.sortRows = sortRows;
 })(window);

@@ -240,16 +240,18 @@
               ⏳ <span class="text-gray-300 font-bold" x-text="computeAge(row.birth_date, row.martyrdom_date)"></span> سنة
             </div>
           </template>
-          <!-- Delta badge: described, colored by direction (older=blue, younger=yellow, same=green) -->
+          <!-- Compact delta chip (short text — full description in the photo modal).
+               Color by direction (older=blue, younger=yellow, same=green). -->
           <template x-if="userBirthdate && row._delta_days !== undefined">
             <div class="mt-2 inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded"
+                 :title="describeDelta(row._delta_days).text"
                  :class="{
-                   'bg-yellow-400/20 text-yellow-300':  describeDelta(row._delta_days).direction === 'younger',
-                   'bg-blue-400/20  text-blue-300':    describeDelta(row._delta_days).direction === 'older',
-                   'bg-green-400/20 text-green-300':   describeDelta(row._delta_days).direction === 'same',
+                   'bg-yellow-400/20 text-yellow-300':  describeDeltaShort(row._delta_days).direction === 'younger',
+                   'bg-blue-400/20  text-blue-300':    describeDeltaShort(row._delta_days).direction === 'older',
+                   'bg-green-400/20 text-green-300':   describeDeltaShort(row._delta_days).direction === 'same',
                  }">
-              <span x-text="describeDelta(row._delta_days).icon"></span>
-              <span x-text="describeDelta(row._delta_days).text"></span>
+              <span x-text="describeDeltaShort(row._delta_days).icon"></span>
+              <span x-text="describeDeltaShort(row._delta_days).text"></span>
             </div>
           </template>
         </div>
