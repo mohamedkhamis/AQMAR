@@ -34,6 +34,8 @@
 </head>
 <body x-data="app()" x-init="init()" class="min-h-screen bg-bgdark text-white">
 
+<a href="#main-content" class="skip-link">تخطي إلى المحتوى</a>
+
 <!-- Loading / error banners -->
 <!-- Loading skeleton (replaces plain text) -->
 <main x-show="isLoading" class="max-w-7xl mx-auto p-4" aria-busy="true" aria-live="polite">
@@ -62,7 +64,7 @@
 </div>
 
 <!-- Header -->
-<header class="bg-bgcard border-b border-border sticky top-0 z-10 px-4 py-3">
+<header role="banner" class="bg-bgcard border-b border-border sticky top-0 z-10 px-4 py-3">
   <div class="max-w-7xl mx-auto flex flex-wrap items-center gap-3">
     <h1 class="text-xl font-bold flex-shrink-0">
       <span x-text="AQMAR_CONFIG.appName"></span>
@@ -273,11 +275,13 @@
     </div>
   </div>
 
-  <!-- Result count — centered on its own line below the filter -->
-  <div x-show="view==='public' && !isLoading" class="max-w-4xl mx-auto mt-2 text-center">
+  <!-- Result count (announced to screen readers) -->
+  <div x-show="view==='public' && !isLoading" class="max-w-4xl mx-auto mt-2 text-center"
+       aria-live="polite" aria-atomic="true">
     <span class="text-3xl font-bold text-brand" x-text="filteredResults.length"></span>
-    <span class="text-sm text-gray-400 mr-1" x-show="!userBirthdate">شهيد · جميع الشهداء</span>
-    <span class="text-sm text-gray-400 mr-1" x-show="userBirthdate">شهيد بأعمار قريبة من ميلادك</span>
+    <span class="text-sm text-gray-400 mr-1" x-show="!userBirthdate && !searchQuery">شهيد · جميع الشهداء</span>
+    <span class="text-sm text-gray-400 mr-1" x-show="userBirthdate && !searchQuery">شهيد بأعمار قريبة من ميلادك</span>
+    <span class="text-sm text-gray-400 mr-1" x-show="searchQuery">شهيد يطابق البحث</span>
   </div>
 
   <!-- Admin tip (admin view) -->
@@ -291,7 +295,7 @@
 </header>
 
 <!-- ============ PUBLIC VIEW ============ -->
-<main x-show="view==='public' && !isLoading" class="max-w-7xl mx-auto p-4">
+<main id="main-content" role="main" x-show="view==='public' && !isLoading" class="max-w-7xl mx-auto p-4">
   <!-- Hero hint when no filter is active -->
   <div x-show="!userBirthdate" class="text-center py-6 mb-4 bg-bgcard border border-border rounded-lg">
     <p class="text-gray-300">
@@ -413,7 +417,7 @@
 </main>
 
 <!-- ============ ADMIN VIEW ============ -->
-<main x-show="view==='admin' && !isLoading && loggedIn" class="max-w-7xl mx-auto p-4">
+<main id="main-content-admin" role="main" x-show="view==='admin' && !isLoading && loggedIn" class="max-w-7xl mx-auto p-4">
   <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
     <template x-for="row in allRows" :key="row.msg_id">
       <div class="bg-bgcard border border-border rounded-lg overflow-hidden relative">
@@ -440,10 +444,11 @@
 
 <!-- ============ PHOTO ZOOM MODAL ============ -->
 <div x-show="selectedRow" @click.self="closePhotoModal()" x-cloak
+     role="dialog" aria-modal="true" aria-labelledby="photo-modal-title"
      class="fixed inset-0 bg-black/80 z-20 flex items-center justify-center p-4">
   <div class="bg-bgcard border border-border rounded-lg overflow-hidden max-w-2xl w-full max-h-[90vh] flex flex-col">
     <div class="flex justify-between items-center p-3 border-b border-border">
-      <h3 class="font-bold" x-text="selectedRow?.name"></h3>
+      <h3 id="photo-modal-title" class="font-bold" x-text="selectedRow?.name"></h3>
       <button @click="closePhotoModal()" class="text-xl">✕</button>
     </div>
     <div class="overflow-y-auto">
@@ -486,10 +491,11 @@
 
 <!-- ============ ADMIN EDIT MODAL ============ -->
 <div x-show="editingMsgId" @click.self="closeEditModal()" x-cloak
+     role="dialog" aria-modal="true" aria-labelledby="edit-modal-title"
      class="fixed inset-0 bg-black/80 z-20 flex items-center justify-center p-4">
   <div class="bg-bgcard border border-border rounded-lg overflow-hidden max-w-md w-full max-h-[90vh] flex flex-col">
     <div class="flex justify-between items-center p-3 border-b border-border">
-      <h3 class="font-bold">تحرير الشهيد (معرّف <span x-text="editingMsgId"></span>)</h3>
+      <h3 id="edit-modal-title" class="font-bold">تحرير الشهيد (معرّف <span x-text="editingMsgId"></span>)</h3>
       <button @click="closeEditModal()" class="text-xl">✕</button>
     </div>
     <form @submit.prevent="saveEdit()" class="p-3 space-y-2 overflow-y-auto text-sm">
@@ -510,9 +516,10 @@
 
 <!-- ============ LOGIN MODAL ============ -->
 <div x-show="showLoginModal" @click.self="showLoginModal=false" x-cloak
+     role="dialog" aria-modal="true" aria-labelledby="login-modal-title"
      class="fixed inset-0 bg-black/80 z-20 flex items-center justify-center p-4">
   <div class="bg-bgcard border border-border rounded-lg p-5 max-w-sm w-full">
-    <h3 class="font-bold mb-3">دخول الإدارة</h3>
+    <h3 id="login-modal-title" class="font-bold mb-3">دخول الإدارة</h3>
     <form @submit.prevent="login()" class="space-y-2 text-sm">
       <input type="text" x-model="loginUser" placeholder="اسم المستخدم"
         class="w-full bg-bgdark border border-border rounded px-2 py-2 ltr">
