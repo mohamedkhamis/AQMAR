@@ -16,6 +16,10 @@
     };
   </script>
 
+  <!-- Litepicker — tiny date picker with year+month dropdowns -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/litepicker/dist/css/litepicker.css">
+  <script src="https://cdn.jsdelivr.net/npm/litepicker/dist/litepicker.js"></script>
+
   <!-- Alpine.js (defer per docs) -->
   <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
 
@@ -59,46 +63,16 @@
   <!-- Filter bar (public view) — centered -->
   <div x-show="view==='public' && !isLoading" class="max-w-4xl mx-auto mt-4 flex flex-wrap items-center justify-center gap-3">
 
-    <!-- Birthdate — 3-step Year / Month / Day dropdowns -->
-    <div class="flex items-center gap-2 bg-bgdark border border-border rounded-lg px-3 py-2 hover:border-brand transition-colors">
+    <!-- Birthdate — Litepicker (year + month dropdowns always visible) -->
+    <div class="flex items-center gap-2 bg-bgdark border border-border rounded-lg px-3 py-2 hover:border-brand transition-colors min-w-[220px]">
       <span class="text-xl">🎂</span>
-      <div class="flex gap-2">
-        <!-- Year -->
-        <div>
-          <div class="text-[10px] text-gray-400 uppercase tracking-wide text-center">السنة</div>
-          <select x-model="birthYear" @change="updateBirthdate()"
-            class="bg-bgcard border border-border rounded px-2 py-1 text-sm font-bold text-brand focus:outline-none focus:border-brand cursor-pointer">
-            <option value="">—</option>
-            <template x-for="y in yearOptions" :key="y">
-              <option :value="y" x-text="y"></option>
-            </template>
-          </select>
-        </div>
-        <!-- Month -->
-        <div>
-          <div class="text-[10px] text-gray-400 uppercase tracking-wide text-center">الشهر</div>
-          <select x-model="birthMonth" @change="updateBirthdate()"
-            class="bg-bgcard border border-border rounded px-2 py-1 text-sm font-bold text-brand focus:outline-none focus:border-brand cursor-pointer">
-            <option value="">—</option>
-            <template x-for="m in monthOptions" :key="m.v">
-              <option :value="m.v" x-text="m.label"></option>
-            </template>
-          </select>
-        </div>
-        <!-- Day -->
-        <div>
-          <div class="text-[10px] text-gray-400 uppercase tracking-wide text-center">اليوم</div>
-          <select x-model="birthDay" @change="updateBirthdate()"
-            class="bg-bgcard border border-border rounded px-2 py-1 text-sm font-bold text-brand focus:outline-none focus:border-brand cursor-pointer">
-            <option value="">—</option>
-            <template x-for="d in dayOptions" :key="d">
-              <option :value="d" x-text="d"></option>
-            </template>
-          </select>
-        </div>
+      <div class="flex-1">
+        <div class="text-[10px] text-gray-400 uppercase tracking-wide">تاريخ ميلادك</div>
+        <input type="text" x-ref="birthdate" readonly placeholder="انقر لاختيار التاريخ"
+          x-init="initLitepicker($refs.birthdate)"
+          class="bg-transparent ltr text-sm focus:outline-none w-40 placeholder-gray-600 cursor-pointer">
       </div>
-      <button x-show="birthYear || birthMonth || birthDay"
-        @click="birthYear=''; birthMonth=''; birthDay=''; updateBirthdate()"
+      <button x-show="userBirthdate" @click="clearBirthdate()"
         title="مسح" class="text-gray-400 hover:text-red-400 px-1 text-lg">✕</button>
     </div>
 

@@ -27,10 +27,8 @@ window.app = function () {
     editForm: {},                                  // bound to inputs in the modal
 
     // === public filter state ===
-    userBirthdate: "",                             // assembled YYYY-MM-DD string
-    birthYear: "",
-    birthMonth: "",                                // "01".."12"
-    birthDay: "",                                  // "1".."31"
+    userBirthdate: "",                             // YYYY-MM-DD string, written by Litepicker
+    _picker: null,                                  // Litepicker instance
     windowMode: AQMAR_CONFIG.filterDefaultWindow,
     customDays: 30,
     filteredResults: [],
@@ -45,42 +43,29 @@ window.app = function () {
     // photo modal extras
     showVideoEmbed: false,
 
-    // Year/month/day dropdown options
-    monthOptions: [
-      { v: "01", label: "يناير" },   { v: "02", label: "فبراير" },
-      { v: "03", label: "مارس" },    { v: "04", label: "إبريل" },
-      { v: "05", label: "مايو" },    { v: "06", label: "يونيو" },
-      { v: "07", label: "يوليو" },   { v: "08", label: "أغسطس" },
-      { v: "09", label: "سبتمبر" },  { v: "10", label: "أكتوبر" },
-      { v: "11", label: "نوفمبر" },  { v: "12", label: "ديسمبر" },
-    ],
-    get yearOptions() {
+    initLitepicker(el) {
+      const self = this;
       const currentYear = new Date().getFullYear();
-      const years = [];
-      for (let y = currentYear; y >= 1900; y--) years.push(y);
-      return years;
+      const todayIso = new Date().toISOString().split("T")[0];
+      this._picker = new Litepicker({
+        element: el,
+        format: "YYYY-MM-DD",
+        singleMode: true,
+        autoApply: true,
+        maxDate: todayIso,
+        dropdowns: { minYear: 1900, maxYear: currentYear, months: true, years: true },
+        setup: (picker) => {
+          picker.on("selected", (date) => {
+            self.userBirthdate = date.format("YYYY-MM-DD");
+            self.applyFilter();
+          });
+        },
+      });
     },
-    get dayOptions() {
-      const y = parseInt(this.birthYear, 10);
-      const m = parseInt(this.birthMonth, 10);
-      // If year+month known, use exact days-in-month; otherwise show 31 max.
-      let max = 31;
-      if (!isNaN(y) && !isNaN(m)) max = new Date(y, m, 0).getDate();
-      return Array.from({ length: max }, (_, i) => i + 1);
-    },
-
-    updateBirthdate() {
-      if (this.birthYear && this.birthMonth && this.birthDay) {
-        const d = String(this.birthDay).padStart(2, "0");
-        this.userBirthdate = `${this.birthYear}-${this.birthMonth}-${d}`;
-      } else {
-        this.userBirthdate = "";
-      }
-      // If day was set to something larger than the new month allows, clear it.
-      if (this.birthDay && parseInt(this.birthDay, 10) > this.dayOptions.length) {
-        this.birthDay = "";
-        this.userBirthdate = "";
-      }
+    clearBirthdate() {
+      this.userBirthdate = "";
+      if (this._picker) this._picker.clearSelection();
+      if (this.$refs && this.$refs.birthdate) this.$refs.birthdate.value = "";
       this.applyFilter();
     },
 

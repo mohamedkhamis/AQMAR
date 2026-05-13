@@ -41,3 +41,46 @@ body.modal-open { overflow: hidden; }
 ::-webkit-scrollbar-track { background: #0c1f0c; }
 ::-webkit-scrollbar-thumb { background: #2d4a2d; border-radius: 5px; }
 ::-webkit-scrollbar-thumb:hover { background: #3d5a3d; }
+
+/* Litepicker dark-green theme overrides */
+.litepicker {
+  --litepicker-month-header-color: #fbbf24;
+  --litepicker-button-prev-month-color: #fbbf24;
+  --litepicker-button-next-month-color: #fbbf24;
+  --litepicker-day-color: #e8e8e8;
+  --litepicker-day-color-hover: #fbbf24;
+  --litepicker-is-today-color: #fbbf24;
+  --litepicker-is-in-range-color: rgba(251, 191, 36, 0.2);
+  --litepicker-is-start-color: #0c1f0c;
+  --litepicker-is-start-color-bg: #fbbf24;
+  --litepicker-is-end-color: #0c1f0c;
+  --litepicker-is-end-color-bg: #fbbf24;
+  --litepicker-day-width: 32px;
+  background: #142914 !important;
+  border: 1px solid #2d4a2d !important;
+  border-radius: 8px !important;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.5) !important;
+  font-family: inherit !important;
+}
+.litepicker .container__main { background: #142914 !important; }
+.litepicker .container__months { background: #142914 !important; color: #e8e8e8 !important; }
+.litepicker .container__months .month-item-header { color: #fbbf24 !important; }
+.litepicker .container__months .month-item-header .month-item-name,
+.litepicker .container__months .month-item-header .month-item-year {
+  background: #0c1f0c !important;
+  color: #fbbf24 !important;
+  border: 1px solid #2d4a2d !important;
+  border-radius: 4px;
+  padding: 2px 6px;
+}
+.litepicker .container__days .day-item { color: #e8e8e8 !important; }
+.litepicker .container__days .day-item:hover { background: rgba(251,191,36,0.2) !important; color: #fbbf24 !important; }
+.litepicker .container__days .day-item.is-locked,
+.litepicker .container__days .day-item.is-disabled { color: #444 !important; }
+.litepicker .container__days .day-item.is-today { color: #fbbf24 !important; font-weight: bold; }
+.litepicker .container__days .day-item.is-start-date,
+.litepicker .container__days .day-item.is-end-date {
+  background: #fbbf24 !important; color: #0c1f0c !important; font-weight: bold;
+}
+.litepicker .container__days .week-number { color: #666 !important; }
+.litepicker .container__footer { background: #142914 !important; color: #e8e8e8 !important; }
