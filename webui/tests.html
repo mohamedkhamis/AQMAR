@@ -251,5 +251,54 @@
       assertEq(normalizeArabic(undefined), "");
     });
   </script>
+
+  <script>
+    // ===== searchPredicate =====
+
+    const SAMPLE_ROW = {
+      msg_id: 1,
+      name: "محمد عبد الرحمن",
+      city: "غزة",
+      battalion: "كتيبة الشجاعية",
+      brigade: "لواء غزة",
+      military_rank: "رقيب",
+      weapon: "أر بي جي",
+      birth_date: "1990-03-15",
+      martyrdom_date: "2023-10-12",
+    };
+
+    test("searchPredicate matches exact name", () => {
+      assertEq(searchPredicate(SAMPLE_ROW, "محمد عبد الرحمن"), true);
+    });
+
+    test("searchPredicate matches partial name", () => {
+      assertEq(searchPredicate(SAMPLE_ROW, "عبد"), true);
+    });
+
+    test("searchPredicate matches city", () => {
+      assertEq(searchPredicate(SAMPLE_ROW, "غزة"), true);
+    });
+
+    test("searchPredicate matches battalion", () => {
+      assertEq(searchPredicate(SAMPLE_ROW, "الشجاعية"), true);
+    });
+
+    test("searchPredicate matches brigade", () => {
+      assertEq(searchPredicate(SAMPLE_ROW, "لواء"), true);
+    });
+
+    test("searchPredicate normalizes Arabic in query and field", () => {
+      assertEq(searchPredicate({ ...SAMPLE_ROW, name: "أحمد" }, "احمد"), true);
+    });
+
+    test("searchPredicate returns true for empty query", () => {
+      assertEq(searchPredicate(SAMPLE_ROW, ""), true);
+      assertEq(searchPredicate(SAMPLE_ROW, "   "), true);
+    });
+
+    test("searchPredicate returns false on no match", () => {
+      assertEq(searchPredicate(SAMPLE_ROW, "خانيونس"), false);
+    });
+  </script>
 </body>
 </html>

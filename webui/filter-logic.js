@@ -154,6 +154,18 @@
     return s;
   }
 
+  function searchPredicate(row, query) {
+    const q = normalizeArabic(query);
+    if (!q) return true;
+    const haystack = [
+      row.name,
+      row.city,
+      row.battalion,
+      row.brigade,
+    ].map(normalizeArabic).join(" | ");
+    return haystack.includes(q);
+  }
+
   global.daysBetween = daysBetween;
   global.windowDaysFromMode = windowDaysFromMode;
   global.filterByProximity = filterByProximity;
@@ -162,4 +174,5 @@
   global.computeAge = computeAge;
   global.sortRows = sortRows;
   global.normalizeArabic = normalizeArabic;
+  global.searchPredicate = searchPredicate;
 })(window);
