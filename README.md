@@ -17,3 +17,20 @@ python scripts\phase2_backfill.py  # full backfill
 ```
 
 See [design doc](docs/superpowers/specs/2026-05-10-aqmar-tofan-scraper-design.md).
+
+## Web UI
+
+A static single-page app to browse martyrs and let an admin fix data manually.
+
+```powershell
+# After the scraper runs (or you manually edited Excel):
+python scripts\excel_to_json.py
+
+# Serve the UI locally:
+cd webui
+python -m http.server 8000
+
+# Then open http://localhost:8000 in your browser
+```
+
+Admin login: see `webui/config.js` for the username and password hash.
