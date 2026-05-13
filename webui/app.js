@@ -1,6 +1,25 @@
 // webui/app.js
 // Alpine.js root component for the AqmarTofan SPA.
 
+// View-mode persistence helpers (exposed on window for tests).
+function readViewMode() {
+  try {
+    const v = localStorage.getItem(AQMAR_CONFIG.storage.viewMode);
+    return (v === "list") ? "list" : "grid";
+  } catch (e) {
+    return "grid";  // localStorage blocked
+  }
+}
+function writeViewMode(mode) {
+  try {
+    localStorage.setItem(AQMAR_CONFIG.storage.viewMode, mode === "list" ? "list" : "grid");
+  } catch (e) {
+    // localStorage blocked — silently degrade.
+  }
+}
+window.readViewMode  = readViewMode;
+window.writeViewMode = writeViewMode;
+
 window.app = function () {
   return {
     // === auth state ===
@@ -22,6 +41,7 @@ window.app = function () {
 
     // === view state ===
     view: "public",                                // 'public' | 'admin'
+    viewMode: readViewMode(),                      // 'grid' | 'list'
     selectedRow: null,                             // photo zoom modal
     editingMsgId: null,                            // admin edit modal target
     editForm: {},                                  // bound to inputs in the modal
@@ -149,6 +169,11 @@ window.app = function () {
       this.searchQuery = value;
       clearTimeout(this._searchDebounceId);
       this._searchDebounceId = setTimeout(() => this.applyFilter(), 150);
+    },
+
+    setViewMode(mode) {
+      this.viewMode = mode;
+      writeViewMode(mode);
     },
 
     // === filter pipeline (search → martyrdom-range → age-range → proximity → sort) ===

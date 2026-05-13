@@ -46,9 +46,11 @@
   </script>
 
   <!-- Modules under test — order matters: dependencies first -->
-  <script src="filter-logic.js"></script>
-  <script src="data-loader.js"></script>
-  <script src="admin-edit.js"></script>
+  <script src="config.js?v=4" charset="UTF-8"></script>
+  <script src="filter-logic.js?v=4" charset="UTF-8"></script>
+  <script src="data-loader.js?v=4" charset="UTF-8"></script>
+  <script src="admin-edit.js?v=4" charset="UTF-8"></script>
+  <script src="app.js?v=4" charset="UTF-8"></script>
 
   <!-- Test files -->
   <script>
@@ -298,6 +300,29 @@
 
     test("searchPredicate returns false on no match", () => {
       assertEq(searchPredicate(SAMPLE_ROW, "خانيونس"), false);
+    });
+  </script>
+
+  <script>
+    // ===== viewMode persistence =====
+
+    test("viewMode default is 'grid' when localStorage empty", () => {
+      localStorage.removeItem(AQMAR_CONFIG.storage.viewMode);
+      assertEq(readViewMode(), "grid");
+    });
+
+    test("viewMode reads 'list' from localStorage", () => {
+      localStorage.setItem(AQMAR_CONFIG.storage.viewMode, "list");
+      assertEq(readViewMode(), "list");
+      localStorage.removeItem(AQMAR_CONFIG.storage.viewMode);  // cleanup
+    });
+
+    test("writeViewMode persists to localStorage", () => {
+      writeViewMode("list");
+      assertEq(localStorage.getItem(AQMAR_CONFIG.storage.viewMode), "list");
+      writeViewMode("grid");
+      assertEq(localStorage.getItem(AQMAR_CONFIG.storage.viewMode), "grid");
+      localStorage.removeItem(AQMAR_CONFIG.storage.viewMode);  // cleanup
     });
   </script>
 
