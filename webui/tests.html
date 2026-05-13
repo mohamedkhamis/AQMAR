@@ -48,6 +48,7 @@
   <!-- Modules under test — order matters: dependencies first -->
   <script src="filter-logic.js"></script>
   <script src="data-loader.js"></script>
+  <script src="admin-edit.js"></script>
 
   <!-- Test files -->
   <script>
@@ -166,6 +167,60 @@
       const base = [{ msg_id: 3 }, { msg_id: 1 }, { msg_id: 2 }];
       const merged = mergeOverrides(base, {});
       assertEq(merged.map(r => r.msg_id), [3, 1, 2]);
+    });
+  </script>
+
+  <script>
+    // ===== admin-edit.js =====
+
+    test("buildEditDiff returns only changed fields", () => {
+      const original = { name: "A", birth_date: "1980-01-01", city: "" };
+      const edited =   { name: "B", birth_date: "1980-01-01", city: "غزة" };
+      const diff = buildEditDiff(original, edited);
+      assertEq(diff.name, "B");
+      assertEq(diff.city, "غزة");
+      assertEq(diff.birth_date, undefined);  // unchanged → not in diff
+    });
+
+    test("buildEditDiff returns empty object when nothing changed", () => {
+      const original = { name: "A", birth_date: "1980-01-01" };
+      const edited   = { name: "A", birth_date: "1980-01-01" };
+      assertEq(buildEditDiff(original, edited), {});
+    });
+
+    test("buildEditDiff ignores fields starting with underscore", () => {
+      const original = { name: "A", _delta_days: 5 };
+      const edited =   { name: "A", _delta_days: 999 };
+      assertEq(buildEditDiff(original, edited), {});
+    });
+
+    test("addEdit merges new diff with existing override + adds meta", () => {
+      const existing = { "20": { name: "old override", _manual_edit_at: "2026-05-12" } };
+      const diff = { birth_date: "1980-01-01" };
+      const result = addEdit(existing, 20, diff, "2026-05-13T10:00:00", "admin");
+      assertEq(result["20"].name, "old override");
+      assertEq(result["20"].birth_date, "1980-01-01");
+      assertEq(result["20"]._manual_edit_at, "2026-05-13T10:00:00");
+      assertEq(result["20"]._editor, "admin");
+    });
+
+    test("addEdit creates a new override entry when none exists", () => {
+      const result = addEdit({}, 99, { name: "fresh" }, "2026-05-13", "admin");
+      assertEq(result["99"].name, "fresh");
+      assertEq(result["99"]._manual_edit_at, "2026-05-13");
+    });
+
+    test("addEdit returns the same object reference unmodified when diff is empty", () => {
+      const existing = { "20": { name: "old" } };
+      const result = addEdit(existing, 20, {}, "2026-05-13", "admin");
+      assertEq(result, existing);
+    });
+
+    test("buildExportPayload wraps edits with version", () => {
+      const edits = { "20": { name: "X" } };
+      const payload = buildExportPayload(edits);
+      assertEq(payload.version, 1);
+      assertEq(payload.edits, edits);
     });
   </script>
 </body>
