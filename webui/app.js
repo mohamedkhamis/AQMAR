@@ -160,6 +160,21 @@ window.app = function () {
       }
     },
 
+    async retryLoad() {
+      this.loadError = "";
+      this.isLoading = true;
+      try {
+        const data = await loadData(AQMAR_CONFIG.martyrsJson, AQMAR_CONFIG.overridesJson);
+        this.martyrs = data.martyrs;
+        this.overrides = data.overrides;
+        this.refreshAllRows();
+      } catch (e) {
+        this.loadError = `تعذّر تحميل البيانات: ${e.message}`;
+      } finally {
+        this.isLoading = false;
+      }
+    },
+
     refreshAllRows() {
       this.allRows = mergeOverrides(this.martyrs, this.effectiveOverrides);
       this.applyFilter();

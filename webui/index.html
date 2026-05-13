@@ -51,7 +51,15 @@
     </template>
   </div>
 </main>
-<div x-show="loadError" class="bg-red-900 text-red-100 p-4 m-4 rounded" x-text="loadError"></div>
+<div x-show="loadError" x-cloak role="alert"
+     class="max-w-md mx-auto my-12 text-center py-6 px-6 bg-red-900/40 border border-red-700 rounded-xl">
+  <div class="text-4xl mb-2" aria-hidden="true">⚠️</div>
+  <div class="text-base font-bold text-red-100" x-text="loadError"></div>
+  <button @click="retryLoad()"
+          class="mt-4 bg-brand text-bgdark px-5 py-2 rounded-full font-bold text-sm hover:opacity-90 transition-opacity">
+    🔄 إعادة المحاولة
+  </button>
+</div>
 
 <!-- Header -->
 <header class="bg-bgcard border-b border-border sticky top-0 z-10 px-4 py-3">
@@ -291,10 +299,15 @@
     </p>
   </div>
 
-  <!-- No results state (any filter active but zero results) -->
-  <div x-show="filteredResults.length === 0 && allRows.length > 0 && (userBirthdate || martyrdomFrom || martyrdomTo || ageMin || ageMax)"
-       class="text-center py-16 text-gray-400">
-    🔍 لا يوجد شهداء يطابقون الفلاتر الحالية. جرّب توسيع نطاق البحث أو امسح بعض الفلاتر.
+  <!-- No results state -->
+  <div x-show="filteredResults.length === 0 && allRows.length > 0 && (searchQuery || userBirthdate || martyrdomFrom || martyrdomTo || ageMin || ageMax)"
+       x-cloak
+       class="max-w-md mx-auto my-12 text-center py-10 px-6 bg-bgcard/60 border border-dashed border-border rounded-xl"
+       role="status">
+    <div class="text-5xl opacity-40 mb-3" aria-hidden="true">🔍</div>
+    <div class="text-base font-bold text-gray-200" x-text="searchQuery ? 'لا يوجد شهداء يطابقون البحث' : 'لا يوجد شهداء يطابقون الفلاتر الحالية'"></div>
+    <div class="text-sm text-gray-400 mt-2"
+         x-text="searchQuery ? 'جرّب كلمات أخرى، أو امسح البحث للرؤية الكاملة' : 'جرّب توسيع نطاق التاريخ، أو امسح بعض الفلاتر'"></div>
   </div>
 
   <!-- Grid view -->
