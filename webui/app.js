@@ -33,6 +33,9 @@ window.app = function () {
     customDays: 30,
     filteredResults: [],
     customDaysError: "",
+    // search (text query over name + city + battalion + brigade)
+    searchQuery: "",
+    _searchDebounceId: null,
     // additional filters + sort
     sortMode: "martyrdom_desc",                    // default: newest martyrdom first
     martyrdomFrom: "",                             // "YYYY-MM-DD"
@@ -142,7 +145,13 @@ window.app = function () {
       this.applyFilter();
     },
 
-    // === filter pipeline (martyrdom-range → age-range → proximity → sort) ===
+    setSearchQuery(value) {
+      this.searchQuery = value;
+      clearTimeout(this._searchDebounceId);
+      this._searchDebounceId = setTimeout(() => this.applyFilter(), 150);
+    },
+
+    // === filter pipeline (search → martyrdom-range → age-range → proximity → sort) ===
     applyFilter() {
       this.customDaysError = "";
       if (this.windowMode === "custom") {
@@ -151,7 +160,12 @@ window.app = function () {
           this.customDaysError = `${AQMAR_CONFIG.filterCustomDaysMin} - ${AQMAR_CONFIG.filterCustomDaysMax}`;
         }
       }
+
+      // Filter 0: free-text search (cheapest predicate — runs first)
       let rows = this.allRows;
+      if (this.searchQuery && this.searchQuery.trim()) {
+        rows = rows.filter(r => searchPredicate(r, this.searchQuery));
+      }
 
       // Filter 1: martyrdom date range
       if (this.martyrdomFrom) rows = rows.filter(r => r.martyrdom_date && r.martyrdom_date >= this.martyrdomFrom);

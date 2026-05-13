@@ -238,11 +238,12 @@ const COMPOSITION_ROWS = [
 ];
 
 test("composition: search + birthdate window", () => {
-  // searchQuery "محمد" + userBirthdate near 1990 (±2 years)
+  // searchQuery "محمد" + userBirthdate near 1990 with a window wide enough
+  // to include row 3 (1985 birth) so we exercise BOTH filters composing.
   const result = applyFilterPure(COMPOSITION_ROWS, {
     searchQuery: "محمد",
     userBirthdate: "1990-03-15",
-    windowDays: 730,  // ±2 years
+    windowDays: 2200,  // ±6 years — covers the 5-year gap to row 3
   });
   assertEq(result.map(r => r.msg_id).sort(), [1, 3]);
 });

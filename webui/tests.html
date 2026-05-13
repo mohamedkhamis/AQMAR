@@ -300,5 +300,59 @@
       assertEq(searchPredicate(SAMPLE_ROW, "خانيونس"), false);
     });
   </script>
+
+  <script>
+    // ===== applyFilter composition (logic only — no Alpine context needed) =====
+
+    function applyFilterPure(rows, opts) {
+      // Mirrors app.js applyFilter() — pure version for testing.
+      let r = rows;
+      if (opts.searchQuery !== undefined && opts.searchQuery !== "") {
+        r = r.filter(row => searchPredicate(row, opts.searchQuery));
+      }
+      if (opts.ageMin !== undefined || opts.ageMax !== undefined) {
+        r = r.filter(row => {
+          const age = computeAge(row.birth_date, row.martyrdom_date);
+          if (age === null) return false;
+          if (opts.ageMin !== undefined && age < opts.ageMin) return false;
+          if (opts.ageMax !== undefined && age > opts.ageMax) return false;
+          return true;
+        });
+      }
+      if (opts.userBirthdate) {
+        r = filterByProximity(r, opts.userBirthdate, opts.windowDays || 30);
+      }
+      return r;
+    }
+
+    const COMPOSITION_ROWS = [
+      { msg_id: 1, name: "محمد", city: "غزة", birth_date: "1990-03-15", martyrdom_date: "2023-10-12" },
+      { msg_id: 2, name: "أحمد", city: "خانيونس", birth_date: "1995-08-20", martyrdom_date: "2023-11-05" },
+      { msg_id: 3, name: "محمد", city: "رفح", birth_date: "1985-01-10", martyrdom_date: "2023-09-30" },
+    ];
+
+    test("composition: search + birthdate window", () => {
+      // searchQuery "محمد" + userBirthdate near 1990 (±6 years / 2200 days)
+      // Row 1: delta = 0 days ✓; Row 3: delta ≈ 1891 days ✓; Row 2: name mismatch ✗
+      const result = applyFilterPure(COMPOSITION_ROWS, {
+        searchQuery: "محمد",
+        userBirthdate: "1990-03-15",
+        windowDays: 2200,  // ±6 years — wide enough to include both محمد rows
+      });
+      assertEq(result.map(r => r.msg_id).sort(), [1, 3]);
+    });
+
+    test("composition: search + age range", () => {
+      // searchQuery "محمد" + age between 33 and 40
+      const result = applyFilterPure(COMPOSITION_ROWS, {
+        searchQuery: "محمد",
+        ageMin: 33,
+        ageMax: 40,
+      });
+      // msg_id 1: age 33 (1990→2023) ✓
+      // msg_id 3: age 38 (1985→2023) ✓
+      assertEq(result.map(r => r.msg_id).sort(), [1, 3]);
+    });
+  </script>
 </body>
 </html>
