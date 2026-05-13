@@ -247,47 +247,52 @@
     🔍 لا يوجد شهداء يطابقون الفلاتر الحالية. جرّب توسيع نطاق البحث أو امسح بعض الفلاتر.
   </div>
 
-  <!-- Grid -->
-  <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-    <template x-for="row in filteredResults" :key="row.msg_id">
-      <div class="group bg-bgcard border border-border rounded-lg overflow-hidden cursor-pointer hover:border-brand hover:shadow-lg hover:shadow-brand/20 transition-all duration-200 relative"
-           @click="openPhotoModal(row)">
-        <div x-show="row._overridden_fields && row._overridden_fields.length > 0" class="edit-dot" title="تعديل يدوي">✏️</div>
-        <div class="aspect-[4/5] bg-gradient-to-br from-bgcard to-bgdark overflow-hidden">
-          <img x-show="row.photo_path" :src="row.photo_path" :alt="row.name" loading="lazy"
-            class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-            @error="$el.style.display='none'; $el.nextElementSibling.style.display='flex'">
-          <div class="photo-placeholder w-full h-full" style="display:none">صورة غير متوفرة</div>
-        </div>
-        <div class="p-3 text-right">
-          <div class="font-bold text-sm leading-tight" x-text="row.name"></div>
-          <div class="text-xs text-gray-400 mt-1 ltr text-left">
-            <span x-text="row.birth_date || '—'"></span> → <span x-text="row.martyrdom_date || '—'"></span>
+  <!-- Grid view -->
+  <template x-if="viewMode === 'grid'">
+    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+      <template x-for="row in filteredResults" :key="row.msg_id">
+        <div class="group card-hover bg-bgcard border border-border rounded-lg overflow-hidden cursor-pointer hover:border-brand hover:shadow-lg hover:shadow-brand/20 relative"
+             tabindex="0"
+             @click="openPhotoModal(row)"
+             @keydown.enter="openPhotoModal(row)"
+             @keydown.space.prevent="openPhotoModal(row)">
+          <div x-show="row._overridden_fields && row._overridden_fields.length > 0" class="edit-dot" title="تعديل يدوي">✏️</div>
+          <div class="aspect-[4/5] bg-gradient-to-br from-bgcard to-bgdark overflow-hidden">
+            <img x-show="row.photo_path" :src="row.photo_path" :alt="row.name" loading="lazy"
+              class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+              @error="$el.style.display='none'; $el.nextElementSibling.style.display='flex'">
+            <div class="photo-placeholder w-full h-full" style="display:none">صورة غير متوفرة</div>
           </div>
-          <!-- Age at martyrdom (small inline pill) -->
-          <template x-if="computeAge(row.birth_date, row.martyrdom_date) !== null">
-            <div class="mt-1 inline-block text-[10px] text-gray-500">
-              ⏳ <span class="text-gray-300 font-bold" x-text="computeAge(row.birth_date, row.martyrdom_date)"></span> سنة
+          <div class="p-3 text-right">
+            <div class="font-bold text-sm leading-tight" x-text="row.name"></div>
+            <div class="text-xs text-gray-400 mt-1 ltr text-left">
+              <span x-text="row.birth_date || '—'"></span> → <span x-text="row.martyrdom_date || '—'"></span>
             </div>
-          </template>
-          <!-- Compact delta chip (short text — full description in the photo modal).
-               Color by direction (older=blue, younger=yellow, same=green). -->
-          <template x-if="userBirthdate && row._delta_days !== undefined">
-            <div class="mt-2 inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded"
-                 :title="describeDelta(row._delta_days).text"
-                 :class="{
-                   'bg-yellow-400/20 text-yellow-300':  describeDeltaShort(row._delta_days).direction === 'younger',
-                   'bg-blue-400/20  text-blue-300':    describeDeltaShort(row._delta_days).direction === 'older',
-                   'bg-green-400/20 text-green-300':   describeDeltaShort(row._delta_days).direction === 'same',
-                 }">
-              <span x-text="describeDeltaShort(row._delta_days).icon"></span>
-              <span x-text="describeDeltaShort(row._delta_days).text"></span>
-            </div>
-          </template>
+            <!-- Age at martyrdom (small inline pill) -->
+            <template x-if="computeAge(row.birth_date, row.martyrdom_date) !== null">
+              <div class="mt-1 inline-block text-[10px] text-gray-500">
+                ⏳ <span class="text-gray-300 font-bold" x-text="computeAge(row.birth_date, row.martyrdom_date)"></span> سنة
+              </div>
+            </template>
+            <!-- Compact delta chip (short text — full description in the photo modal).
+                 Color by direction (older=blue, younger=yellow, same=green). -->
+            <template x-if="userBirthdate && row._delta_days !== undefined">
+              <div class="mt-2 inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded"
+                   :title="describeDelta(row._delta_days).text"
+                   :class="{
+                     'bg-yellow-400/20 text-yellow-300':  describeDeltaShort(row._delta_days).direction === 'younger',
+                     'bg-blue-400/20  text-blue-300':    describeDeltaShort(row._delta_days).direction === 'older',
+                     'bg-green-400/20 text-green-300':   describeDeltaShort(row._delta_days).direction === 'same',
+                   }">
+                <span x-text="describeDeltaShort(row._delta_days).icon"></span>
+                <span x-text="describeDeltaShort(row._delta_days).text"></span>
+              </div>
+            </template>
+          </div>
         </div>
-      </div>
-    </template>
-  </div>
+      </template>
+    </div>
+  </template>
 </main>
 
 <!-- ============ ADMIN VIEW ============ -->
