@@ -1,0 +1,43 @@
+/* webui/style.css — custom layer on top of Tailwind */
+
+/* Arabic-aware font stack with a sensible Latin fallback */
+:root {
+  font-family: "Cairo", "Tajawal", "Segoe UI", system-ui, -apple-system, sans-serif;
+}
+
+body {
+  background: #0c1f0c;   /* dark green palette matching channel branding */
+  color: #e8e8e8;
+}
+
+/* RTL by default — overridden per-element where Latin numbers/dates need LTR */
+html { direction: rtl; }
+.ltr { direction: ltr; }
+
+/* Smooth grid scroll, prevent layout jank when modal opens */
+html { scroll-behavior: smooth; }
+body.modal-open { overflow: hidden; }
+
+/* Card photo placeholder — gradient mimics our memorial palette */
+.photo-placeholder {
+  background: linear-gradient(135deg, #2d4a2d, #1a2e1a);
+  display: flex; align-items: center; justify-content: center;
+  color: #6f8a6f;
+}
+
+/* Edit-indicator dot (small ✏️ corner badge for overridden rows) */
+.edit-dot {
+  position: absolute; top: 0.4rem; left: 0.4rem;
+  width: 1.4rem; height: 1.4rem;
+  background: #fbbf24; color: #0c1f0c;
+  border-radius: 999px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.75rem;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+}
+
+/* Custom scrollbar so the dark theme isn't broken by white scrollbars */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: #0c1f0c; }
+::-webkit-scrollbar-thumb { background: #2d4a2d; border-radius: 5px; }
+::-webkit-scrollbar-thumb:hover { background: #3d5a3d; }
