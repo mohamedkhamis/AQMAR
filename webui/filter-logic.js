@@ -33,7 +33,38 @@
       .sort((a, b) => Math.abs(a._delta_days) - Math.abs(b._delta_days));
   }
 
+  // Describe the age delta in Arabic, choosing the right unit (days / months /
+  // years) and direction word ("أكبر" / "أصغر").
+  //   deltaDays = (martyr_birth_date - user_birth_date) in days
+  //     positive → martyr born AFTER user → martyr is younger (smaller age)
+  //     negative → martyr born BEFORE user → martyr is older (greater age)
+  // Returns { icon, text, direction }.
+  function describeDelta(deltaDays) {
+    if (deltaDays === 0) return { icon: "●", text: "نفس يوم ميلادك", direction: "same" };
+    const abs = Math.abs(deltaDays);
+    const direction = deltaDays > 0 ? "younger" : "older";
+    const word = deltaDays > 0 ? "أصغر" : "أكبر";
+    const icon = deltaDays > 0 ? "▼" : "▲";
+    let unit;
+    if (abs <= 5) {
+      unit = `${abs} ${abs === 1 ? "يوم" : "أيام"}`;
+    } else if (abs <= 60) {
+      unit = `${abs} يوم`;
+    } else if (abs < 365) {
+      const months = Math.round(abs / 30);
+      unit = `${months} ${months <= 10 ? "أشهر" : "شهر"}`;
+    } else {
+      const years = Math.floor(abs / 365);
+      const remDays = abs - years * 365;
+      const months = Math.round(remDays / 30);
+      const yearsStr = `${years} ${years === 1 ? "سنة" : (years <= 10 ? "سنوات" : "سنة")}`;
+      unit = months > 0 ? `${yearsStr} و ${months} شهر` : yearsStr;
+    }
+    return { icon, text: `${word} منك بـ ${unit}`, direction };
+  }
+
   global.daysBetween = daysBetween;
   global.windowDaysFromMode = windowDaysFromMode;
   global.filterByProximity = filterByProximity;
+  global.describeDelta = describeDelta;
 })(window);

@@ -15,6 +15,12 @@
     };
   </script>
 
+  <!-- Flatpickr — pretty date picker (CDN, no build) -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/dark.css">
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+  <script src="https://npmcdn.com/flatpickr/dist/l10n/ar.js"></script>
+
   <!-- Alpine.js (defer per docs) -->
   <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
 
@@ -55,45 +61,75 @@
       class="px-3 py-1 bg-bgdark border border-border rounded text-sm">خروج</button>
   </div>
 
-  <!-- Filter bar (public view) -->
-  <div x-show="view==='public' && !isLoading" class="max-w-7xl mx-auto mt-3 flex flex-wrap items-center gap-3">
-    <div class="flex items-center gap-2 bg-bgdark border border-border rounded-lg px-3 py-2 hover:border-brand transition-colors">
-      <span class="text-lg">🎂</span>
-      <label class="text-sm">
-        <span class="block text-xs text-gray-400">تاريخ ميلادي</span>
-        <input type="date" x-model="userBirthdate" @change="applyFilter()"
-          max="2026-12-31"
-          class="bg-transparent ltr text-sm focus:outline-none">
-      </label>
-      <button x-show="userBirthdate" @click="userBirthdate=''; applyFilter()" title="مسح" class="text-gray-400 hover:text-brand px-1">✕</button>
+  <!-- Filter bar (public view) — centered -->
+  <div x-show="view==='public' && !isLoading" class="max-w-4xl mx-auto mt-4 flex flex-wrap items-center justify-center gap-3">
+
+    <!-- Birthdate (Flatpickr) -->
+    <div class="flex items-center gap-2 bg-bgdark border border-border rounded-lg px-3 py-2 hover:border-brand transition-colors min-w-[200px]">
+      <span class="text-xl">🎂</span>
+      <div class="flex-1">
+        <div class="text-[10px] text-gray-400 uppercase tracking-wide">تاريخ ميلادك</div>
+        <input type="text" x-ref="birthdate" placeholder="اختر التاريخ"
+          x-init="flatpickr($refs.birthdate, {
+            dateFormat: 'Y-m-d',
+            maxDate: 'today',
+            locale: 'ar',
+            onChange: (sel, str) => { userBirthdate = str; applyFilter(); }
+          })"
+          class="bg-transparent ltr text-sm focus:outline-none w-32 placeholder-gray-600">
+      </div>
+      <button x-show="userBirthdate" @click="userBirthdate=''; $refs.birthdate._flatpickr.clear(); applyFilter()"
+        title="مسح" class="text-gray-400 hover:text-red-400 px-1 text-lg">✕</button>
     </div>
 
-    <div x-show="userBirthdate" class="flex items-center gap-2 bg-bgdark border border-border rounded-lg px-3 py-2">
-      <span class="text-lg">📐</span>
-      <label class="text-sm">
-        <span class="block text-xs text-gray-400">النافذة</span>
-        <select x-model="windowMode" @change="applyFilter()" class="bg-transparent text-sm focus:outline-none">
-          <option value="1week" class="bg-bgdark">أسبوع (±7 يوم)</option>
-          <option value="1month" class="bg-bgdark">شهر (±30 يوم)</option>
-          <option value="2months" class="bg-bgdark">شهرين (±60 يوم)</option>
-          <option value="custom" class="bg-bgdark">مخصّص</option>
-        </select>
-      </label>
+    <!-- Window selector (custom Alpine dropdown) -->
+    <div x-show="userBirthdate" x-data="{ open: false }" @click.away="open=false" class="relative min-w-[180px]">
+      <button @click="open=!open"
+        class="w-full flex items-center gap-2 bg-bgdark border border-border rounded-lg px-3 py-2 hover:border-brand transition-colors">
+        <span class="text-xl">📐</span>
+        <div class="flex-1 text-right">
+          <div class="text-[10px] text-gray-400 uppercase tracking-wide">نافذة المقارنة</div>
+          <div class="text-sm" x-text="{'1week':'أسبوع (±7 يوم)','1month':'شهر (±30 يوم)','2months':'شهرين (±60 يوم)','custom':`مخصص (${customDays} يوم)`}[windowMode]"></div>
+        </div>
+        <span class="text-xs text-gray-400" :class="open && 'rotate-180'" style="transition: transform 0.2s">▼</span>
+      </button>
+      <div x-show="open" x-transition.opacity x-cloak
+        class="absolute top-full left-0 right-0 mt-1 bg-bgcard border border-border rounded-lg shadow-xl z-30 overflow-hidden">
+        <template x-for="opt in [
+          {v:'1week',   label:'أسبوع',    sub:'±7 يوم'},
+          {v:'1month',  label:'شهر',      sub:'±30 يوم'},
+          {v:'2months', label:'شهرين',    sub:'±60 يوم'},
+          {v:'custom',  label:'مخصص',     sub:'اختر عدد الأيام'},
+        ]" :key="opt.v">
+          <button @click="windowMode=opt.v; open=false; applyFilter()"
+            :class="windowMode===opt.v ? 'bg-brand/20 text-brand' : 'hover:bg-bgdark'"
+            class="block w-full px-3 py-2 text-right transition-colors">
+            <div class="text-sm font-bold" x-text="opt.label"></div>
+            <div class="text-xs text-gray-400" x-text="opt.sub"></div>
+          </button>
+        </template>
+      </div>
     </div>
 
+    <!-- Custom days input — only when custom mode -->
     <div x-show="userBirthdate && windowMode==='custom'" class="flex items-center gap-2 bg-bgdark border border-border rounded-lg px-3 py-2">
-      <label class="text-sm">
-        <span class="block text-xs text-gray-400">عدد الأيام (1-365)</span>
-        <input type="number" min="1" max="365" x-model="customDays" @input="applyFilter()" class="bg-transparent w-16 ltr text-sm focus:outline-none">
-      </label>
+      <div>
+        <div class="text-[10px] text-gray-400 uppercase tracking-wide">عدد الأيام</div>
+        <div class="flex items-center gap-2">
+          <input type="number" min="1" max="365" x-model="customDays" @input="applyFilter()"
+            class="bg-transparent w-16 ltr text-sm focus:outline-none">
+          <span class="text-xs text-gray-500">من 1 إلى 365</span>
+        </div>
+      </div>
       <span x-show="customDaysError" class="text-red-400 text-xs" x-text="customDaysError"></span>
     </div>
+  </div>
 
-    <div class="mr-auto flex items-baseline gap-2">
-      <span class="text-2xl font-bold text-brand" x-text="filteredResults.length"></span>
-      <span class="text-sm text-gray-400" x-show="!userBirthdate">شهيد · جميع الشهداء</span>
-      <span class="text-sm text-gray-400" x-show="userBirthdate">شهيد بأعمار قريبة من ميلادك</span>
-    </div>
+  <!-- Result count — centered on its own line below the filter -->
+  <div x-show="view==='public' && !isLoading" class="max-w-4xl mx-auto mt-2 text-center">
+    <span class="text-3xl font-bold text-brand" x-text="filteredResults.length"></span>
+    <span class="text-sm text-gray-400 mr-1" x-show="!userBirthdate">شهيد · جميع الشهداء</span>
+    <span class="text-sm text-gray-400 mr-1" x-show="userBirthdate">شهيد بأعمار قريبة من ميلادك</span>
   </div>
 
   <!-- Admin tip (admin view) -->
@@ -137,9 +173,18 @@
           <div class="text-xs text-gray-400 mt-1 ltr text-left">
             <span x-text="row.birth_date || '—'"></span> → <span x-text="row.martyrdom_date || '—'"></span>
           </div>
-          <div x-show="userBirthdate && row._delta_days !== undefined"
-               class="inline-block bg-brand text-bgdark text-xs font-bold px-2 py-0.5 rounded mt-2 ltr"
-               x-text="`±${Math.abs(row._delta_days)} يوم`"></div>
+          <!-- Delta badge: described, colored by direction (older=blue, younger=yellow, same=green) -->
+          <template x-if="userBirthdate && row._delta_days !== undefined">
+            <div class="mt-2 inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded"
+                 :class="{
+                   'bg-yellow-400/20 text-yellow-300':  describeDelta(row._delta_days).direction === 'younger',
+                   'bg-blue-400/20  text-blue-300':    describeDelta(row._delta_days).direction === 'older',
+                   'bg-green-400/20 text-green-300':   describeDelta(row._delta_days).direction === 'same',
+                 }">
+              <span x-text="describeDelta(row._delta_days).icon"></span>
+              <span x-text="describeDelta(row._delta_days).text"></span>
+            </div>
+          </template>
         </div>
       </div>
     </template>
@@ -188,6 +233,20 @@
       <div>الرتبة: <span x-text="selectedRow?.military_rank || '—'"></span></div>
       <div>الكتيبة: <span x-text="selectedRow?.battalion || '—'"></span></div>
       <div>اللواء: <span x-text="selectedRow?.brigade || '—'"></span></div>
+      <template x-if="userBirthdate && selectedRow?._delta_days !== undefined">
+        <div class="mt-2 pt-2 border-t border-border">
+          <span class="text-xs text-gray-400">بالمقارنة بتاريخ ميلادك:</span>
+          <div class="inline-flex items-center gap-1 mt-1 text-sm font-bold px-3 py-1 rounded"
+               :class="{
+                 'bg-yellow-400/20 text-yellow-300':  describeDelta(selectedRow._delta_days).direction === 'younger',
+                 'bg-blue-400/20  text-blue-300':    describeDelta(selectedRow._delta_days).direction === 'older',
+                 'bg-green-400/20 text-green-300':   describeDelta(selectedRow._delta_days).direction === 'same',
+               }">
+            <span x-text="describeDelta(selectedRow._delta_days).icon"></span>
+            <span x-text="describeDelta(selectedRow._delta_days).text"></span>
+          </div>
+        </div>
+      </template>
       <a :href="selectedRow?.message_link" target="_blank" class="text-brand text-xs underline">عرض في تيليجرام ↗</a>
     </div>
   </div>
