@@ -67,6 +67,41 @@ window.app = function () {
       this.applyFilter();
     },
 
+    // Reusable Litepicker for any date input. The selected ISO string is
+    // assigned to `this[targetField]` and applyFilter runs.
+    _attachDatePicker(el, targetField) {
+      const self = this;
+      const currentYear = new Date().getFullYear();
+      const todayIso = new Date().toISOString().split("T")[0];
+      return new Litepicker({
+        element: el,
+        format: "YYYY-MM-DD",
+        singleMode: true,
+        autoApply: true,
+        maxDate: todayIso,
+        dropdowns: { minYear: 1900, maxYear: currentYear, months: true, years: true },
+        setup: (picker) => {
+          picker.on("selected", (date) => {
+            self[targetField] = date.format("YYYY-MM-DD");
+            self.applyFilter();
+          });
+        },
+      });
+    },
+    _martyrdomFromPicker: null,
+    _martyrdomToPicker: null,
+    initMartyrdomFromPicker(el) { this._martyrdomFromPicker = this._attachDatePicker(el, "martyrdomFrom"); },
+    initMartyrdomToPicker(el)   { this._martyrdomToPicker   = this._attachDatePicker(el, "martyrdomTo"); },
+    clearMartyrdomRange() {
+      this.martyrdomFrom = "";
+      this.martyrdomTo = "";
+      if (this._martyrdomFromPicker) this._martyrdomFromPicker.clearSelection();
+      if (this._martyrdomToPicker)   this._martyrdomToPicker.clearSelection();
+      if (this.$refs && this.$refs.martyrdomFromInput) this.$refs.martyrdomFromInput.value = "";
+      if (this.$refs && this.$refs.martyrdomToInput)   this.$refs.martyrdomToInput.value = "";
+      this.applyFilter();
+    },
+
     // === computed-ish helpers (called from templates) ===
     get pendingEditCount() {
       return Object.keys(this.pendingOverrides).length;

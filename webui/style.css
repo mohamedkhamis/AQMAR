@@ -42,6 +42,14 @@ body.modal-open { overflow: hidden; }
 ::-webkit-scrollbar-thumb { background: #2d4a2d; border-radius: 5px; }
 ::-webkit-scrollbar-thumb:hover { background: #3d5a3d; }
 
+/* Remove number-input spinner arrows for cleaner UI */
+input[type=number]::-webkit-outer-spin-button,
+input[type=number]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type=number] { -moz-appearance: textfield; }
+
 /* Litepicker dark-green theme overrides */
 .litepicker {
   --litepicker-month-header-color: #fbbf24;
