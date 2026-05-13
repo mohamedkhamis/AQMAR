@@ -327,7 +327,8 @@
 
   <!-- Grid view -->
   <template x-if="viewMode === 'grid'">
-    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+    <div x-transition.opacity.duration.150ms
+         class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
       <template x-for="row in filteredResults" :key="row.msg_id">
         <div class="group card-hover bg-bgcard border border-border rounded-lg overflow-hidden cursor-pointer hover:border-brand hover:shadow-lg hover:shadow-brand/20 relative"
              tabindex="0"
@@ -374,7 +375,8 @@
 
   <!-- List view -->
   <template x-if="viewMode === 'list'">
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-3 max-w-4xl mx-auto">
+    <div x-transition.opacity.duration.150ms
+         class="grid grid-cols-1 md:grid-cols-2 gap-3 max-w-4xl mx-auto">
       <template x-for="row in filteredResults" :key="row.msg_id">
         <div class="card-hover bg-bgcard border border-border rounded-lg p-3 flex items-center gap-3 cursor-pointer hover:border-brand relative"
              tabindex="0"
