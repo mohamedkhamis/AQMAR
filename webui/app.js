@@ -35,6 +35,15 @@ window.app = function () {
     customDays: 30,
     filteredResults: [],
     customDaysError: "",
+    // additional filters + sort
+    sortMode: "martyrdom_desc",                    // default: newest martyrdom first
+    martyrdomFrom: "",                             // "YYYY-MM-DD"
+    martyrdomTo: "",
+    ageMin: "",                                    // integer string
+    ageMax: "",
+    showAdvancedFilters: false,
+    // photo modal extras
+    showVideoEmbed: false,
 
     // Year/month/day dropdown options
     monthOptions: [
@@ -115,7 +124,7 @@ window.app = function () {
       this.applyFilter();
     },
 
-    // === filter ===
+    // === filter pipeline (martyrdom-range → age-range → proximity → sort) ===
     applyFilter() {
       this.customDaysError = "";
       if (this.windowMode === "custom") {
@@ -124,24 +133,50 @@ window.app = function () {
           this.customDaysError = `${AQMAR_CONFIG.filterCustomDaysMin} - ${AQMAR_CONFIG.filterCustomDaysMax}`;
         }
       }
-      if (!this.userBirthdate) {
-        // No birthdate → show ALL martyrs, sorted by martyrdom date desc (newest first)
-        this.filteredResults = [...this.allRows].sort((a, b) =>
-          (b.martyrdom_date || "").localeCompare(a.martyrdom_date || "")
-        );
-        return;
+      let rows = this.allRows;
+
+      // Filter 1: martyrdom date range
+      if (this.martyrdomFrom) rows = rows.filter(r => r.martyrdom_date && r.martyrdom_date >= this.martyrdomFrom);
+      if (this.martyrdomTo)   rows = rows.filter(r => r.martyrdom_date && r.martyrdom_date <= this.martyrdomTo);
+
+      // Filter 2: age range (computed from birth_date + martyrdom_date)
+      const aMin = this.ageMin === "" ? null : parseInt(this.ageMin, 10);
+      const aMax = this.ageMax === "" ? null : parseInt(this.ageMax, 10);
+      if (aMin !== null || aMax !== null) {
+        rows = rows.filter(r => {
+          const age = computeAge(r.birth_date, r.martyrdom_date);
+          if (age === null) return false;
+          if (aMin !== null && age < aMin) return false;
+          if (aMax !== null && age > aMax) return false;
+          return true;
+        });
       }
-      const days = windowDaysFromMode(this.windowMode, this.customDays);
-      this.filteredResults = filterByProximity(this.allRows, this.userBirthdate, days);
+
+      // Filter 3: birthdate proximity (only when userBirthdate set)
+      if (this.userBirthdate) {
+        const days = windowDaysFromMode(this.windowMode, this.customDays);
+        rows = filterByProximity(rows, this.userBirthdate, days);
+        // proximity also annotates _delta_days and sorts by closeness;
+        // if the user explicitly chose a different sortMode, we'll re-sort below.
+      }
+
+      // Sort: use sortMode unless user has birthdate AND sortMode === default "martyrdom_desc",
+      // in which case proximity ordering (already applied) is more useful.
+      const effectiveSort = (this.userBirthdate && this.sortMode === "martyrdom_desc")
+        ? "proximity"
+        : this.sortMode;
+      this.filteredResults = sortRows(rows, effectiveSort);
     },
 
     // === modals ===
     openPhotoModal(row) {
       this.selectedRow = row;
+      this.showVideoEmbed = false;                 // reset — don't auto-load iframe
       document.body.classList.add("modal-open");
     },
     closePhotoModal() {
       this.selectedRow = null;
+      this.showVideoEmbed = false;
       document.body.classList.remove("modal-open");
     },
     openEditModal(row) {

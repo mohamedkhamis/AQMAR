@@ -33,6 +33,59 @@
       .sort((a, b) => Math.abs(a._delta_days) - Math.abs(b._delta_days));
   }
 
+  // Age at martyrdom: integer years between birth and martyrdom dates.
+  // Returns null if either is missing or unparseable.
+  function computeAge(birthDate, deathDate) {
+    if (!birthDate || !deathDate) return null;
+    const b = new Date(birthDate);
+    const d = new Date(deathDate);
+    if (isNaN(b.getTime()) || isNaN(d.getTime())) return null;
+    let age = d.getFullYear() - b.getFullYear();
+    const monthDiff = d.getMonth() - b.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && d.getDate() < b.getDate())) age--;
+    return age;
+  }
+
+  // Compare two ISO date strings ("YYYY-MM-DD" or "YYYY-MM-DD HH:MM").
+  // Empty strings sort last in ascending order.
+  function dateCmp(a, b, ascending) {
+    const av = a || "";
+    const bv = b || "";
+    if (av === "" && bv !== "") return 1;     // empties last
+    if (bv === "" && av !== "") return -1;
+    if (av === bv) return 0;
+    return ascending ? av.localeCompare(bv) : bv.localeCompare(av);
+  }
+
+  // Sort rows by named mode. Modes:
+  //   'proximity'         — only valid if rows have _delta_days; closest first
+  //   'martyrdom_desc'    — newest martyrdom first
+  //   'martyrdom_asc'     — oldest martyrdom first
+  //   'birth_asc'         — oldest (born earliest = older today) first
+  //   'birth_desc'        — youngest first
+  //   'posted_desc'       — newest channel post first
+  //   'posted_asc'        — oldest channel post first
+  //   'name_asc'          — alphabetical (Arabic-aware via localeCompare)
+  function sortRows(rows, mode) {
+    const copy = [...rows];
+    switch (mode) {
+      case "proximity":
+        return copy.sort((a, b) => {
+          const ad = a._delta_days === undefined ? Infinity : Math.abs(a._delta_days);
+          const bd = b._delta_days === undefined ? Infinity : Math.abs(b._delta_days);
+          return ad - bd;
+        });
+      case "martyrdom_asc":  return copy.sort((a, b) => dateCmp(a.martyrdom_date, b.martyrdom_date, true));
+      case "martyrdom_desc": return copy.sort((a, b) => dateCmp(a.martyrdom_date, b.martyrdom_date, false));
+      case "birth_asc":      return copy.sort((a, b) => dateCmp(a.birth_date, b.birth_date, true));
+      case "birth_desc":     return copy.sort((a, b) => dateCmp(a.birth_date, b.birth_date, false));
+      case "posted_asc":     return copy.sort((a, b) => dateCmp(a.posted_date, b.posted_date, true));
+      case "posted_desc":    return copy.sort((a, b) => dateCmp(a.posted_date, b.posted_date, false));
+      case "name_asc":       return copy.sort((a, b) => (a.name || "").localeCompare(b.name || "", "ar"));
+      default:               return copy;
+    }
+  }
+
   // Describe the age delta in Arabic, choosing the right unit (days / months /
   // years) and direction word ("أكبر" / "أصغر").
   //   deltaDays = (martyr_birth_date - user_birth_date) in days
@@ -67,4 +120,6 @@
   global.windowDaysFromMode = windowDaysFromMode;
   global.filterByProximity = filterByProximity;
   global.describeDelta = describeDelta;
+  global.computeAge = computeAge;
+  global.sortRows = sortRows;
 })(window);

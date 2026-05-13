@@ -143,6 +143,72 @@
       </div>
       <span x-show="customDaysError" class="text-red-400 text-xs" x-text="customDaysError"></span>
     </div>
+
+    <!-- Sort -->
+    <div class="flex items-center gap-2 bg-bgdark border border-border rounded-lg px-3 py-2 hover:border-brand transition-colors">
+      <span class="text-xl">⇅</span>
+      <div>
+        <div class="text-[10px] text-gray-400 uppercase tracking-wide">الترتيب حسب</div>
+        <select x-model="sortMode" @change="applyFilter()"
+          class="bg-transparent text-sm font-bold text-brand focus:outline-none cursor-pointer">
+          <option value="martyrdom_desc" class="bg-bgdark">تاريخ الاستشهاد ↓ (الأحدث)</option>
+          <option value="martyrdom_asc"  class="bg-bgdark">تاريخ الاستشهاد ↑ (الأقدم)</option>
+          <option value="birth_asc"      class="bg-bgdark">تاريخ الميلاد ↑ (الأكبر سناً)</option>
+          <option value="birth_desc"     class="bg-bgdark">تاريخ الميلاد ↓ (الأصغر سناً)</option>
+          <option value="posted_desc"    class="bg-bgdark">تاريخ النشر ↓ (الأحدث)</option>
+          <option value="posted_asc"     class="bg-bgdark">تاريخ النشر ↑ (الأقدم)</option>
+          <option value="name_asc"       class="bg-bgdark">الاسم (أ → ي)</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Advanced filters toggle -->
+    <button @click="showAdvancedFilters = !showAdvancedFilters"
+      :class="showAdvancedFilters ? 'border-brand text-brand' : 'border-border text-gray-400'"
+      class="flex items-center gap-1 bg-bgdark border rounded-lg px-3 py-2 text-sm hover:border-brand transition-colors">
+      <span>🔍</span>
+      <span>فلاتر متقدمة</span>
+      <span :class="showAdvancedFilters && 'rotate-180'" style="transition: transform 0.2s">▼</span>
+    </button>
+  </div>
+
+  <!-- Advanced filters panel (collapsible) -->
+  <div x-show="view==='public' && !isLoading && showAdvancedFilters" x-transition x-cloak
+    class="max-w-4xl mx-auto mt-3 bg-bgcard border border-border rounded-lg p-4">
+    <div class="flex flex-wrap gap-4 items-end justify-center">
+      <!-- Martyrdom date range -->
+      <div>
+        <div class="text-xs text-gray-400 mb-1">📅 تاريخ الاستشهاد — من</div>
+        <input type="date" x-model="martyrdomFrom" @change="applyFilter()"
+          class="bg-bgdark border border-border rounded px-2 py-1 ltr text-sm focus:outline-none focus:border-brand">
+      </div>
+      <div>
+        <div class="text-xs text-gray-400 mb-1">إلى</div>
+        <input type="date" x-model="martyrdomTo" @change="applyFilter()"
+          class="bg-bgdark border border-border rounded px-2 py-1 ltr text-sm focus:outline-none focus:border-brand">
+      </div>
+
+      <div class="border-r border-border h-12 mx-2"></div>
+
+      <!-- Age range -->
+      <div>
+        <div class="text-xs text-gray-400 mb-1">⏳ العمر عند الاستشهاد — من</div>
+        <input type="number" min="0" max="120" x-model="ageMin" @input="applyFilter()" placeholder="—"
+          class="bg-bgdark border border-border rounded px-2 py-1 ltr text-sm w-20 focus:outline-none focus:border-brand">
+      </div>
+      <div>
+        <div class="text-xs text-gray-400 mb-1">إلى</div>
+        <input type="number" min="0" max="120" x-model="ageMax" @input="applyFilter()" placeholder="—"
+          class="bg-bgdark border border-border rounded px-2 py-1 ltr text-sm w-20 focus:outline-none focus:border-brand">
+      </div>
+
+      <!-- Clear filters -->
+      <button x-show="martyrdomFrom || martyrdomTo || ageMin || ageMax"
+        @click="martyrdomFrom=''; martyrdomTo=''; ageMin=''; ageMax=''; applyFilter()"
+        class="text-xs bg-bgdark border border-border rounded px-2 py-1 hover:border-red-400 hover:text-red-400 transition-colors">
+        مسح الفلاتر
+      </button>
+    </div>
   </div>
 
   <!-- Result count — centered on its own line below the filter -->
@@ -171,9 +237,10 @@
     </p>
   </div>
 
-  <!-- No results state (only if filtering AND zero results) -->
-  <div x-show="userBirthdate && filteredResults.length === 0" class="text-center py-16 text-gray-400">
-    🔍 لا يوجد شهداء بتاريخ ميلاد قريب من إدخالك. جرّب نافذة أوسع.
+  <!-- No results state (any filter active but zero results) -->
+  <div x-show="filteredResults.length === 0 && allRows.length > 0 && (userBirthdate || martyrdomFrom || martyrdomTo || ageMin || ageMax)"
+       class="text-center py-16 text-gray-400">
+    🔍 لا يوجد شهداء يطابقون الفلاتر الحالية. جرّب توسيع نطاق البحث أو امسح بعض الفلاتر.
   </div>
 
   <!-- Grid -->
@@ -193,6 +260,12 @@
           <div class="text-xs text-gray-400 mt-1 ltr text-left">
             <span x-text="row.birth_date || '—'"></span> → <span x-text="row.martyrdom_date || '—'"></span>
           </div>
+          <!-- Age at martyrdom (small inline pill) -->
+          <template x-if="computeAge(row.birth_date, row.martyrdom_date) !== null">
+            <div class="mt-1 inline-block text-[10px] text-gray-500">
+              ⏳ <span class="text-gray-300 font-bold" x-text="computeAge(row.birth_date, row.martyrdom_date)"></span> سنة
+            </div>
+          </template>
           <!-- Delta badge: described, colored by direction (older=blue, younger=yellow, same=green) -->
           <template x-if="userBirthdate && row._delta_days !== undefined">
             <div class="mt-2 inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded"
@@ -245,11 +318,27 @@
       <h3 class="font-bold" x-text="selectedRow?.name"></h3>
       <button @click="closePhotoModal()" class="text-xl">✕</button>
     </div>
-    <img x-show="selectedRow?.photo_path" :src="selectedRow?.photo_path" :alt="selectedRow?.name"
-         class="w-full max-h-[60vh] object-contain bg-bgdark">
+    <div class="overflow-y-auto">
+      <img x-show="selectedRow?.photo_path && !showVideoEmbed" :src="selectedRow?.photo_path" :alt="selectedRow?.name"
+           class="w-full max-h-[60vh] object-contain bg-bgdark">
+      <!-- Telegram video embed (loads only when user clicks the play button) -->
+      <iframe x-show="showVideoEmbed" :src="selectedRow ? `https://t.me/AqmarTofan/${selectedRow.msg_id}?embed=1` : ''"
+              class="w-full h-[60vh] bg-bgdark border-0"
+              sandbox="allow-scripts allow-same-origin allow-popups"></iframe>
     <div class="p-3 text-sm space-y-1">
+      <div class="flex gap-2 mb-2">
+        <button x-show="!showVideoEmbed" @click="showVideoEmbed=true"
+          class="bg-brand text-bgdark px-3 py-1 rounded text-xs font-bold">▶ تشغيل فيديو تيليجرام</button>
+        <button x-show="showVideoEmbed" @click="showVideoEmbed=false"
+          class="bg-bgdark border border-border px-3 py-1 rounded text-xs">← العودة للصورة</button>
+        <a :href="selectedRow?.message_link" target="_blank"
+          class="bg-bgdark border border-border px-3 py-1 rounded text-xs hover:border-brand">↗ فتح في تيليجرام</a>
+      </div>
       <div>تاريخ الميلاد: <span class="text-brand ltr" x-text="selectedRow?.birth_date || '—'"></span></div>
       <div>تاريخ الاستشهاد: <span class="text-brand ltr" x-text="selectedRow?.martyrdom_date || '—'"></span></div>
+      <div x-show="selectedRow && computeAge(selectedRow.birth_date, selectedRow.martyrdom_date) !== null">
+        العمر عند الاستشهاد: <span class="text-brand ltr font-bold" x-text="`${computeAge(selectedRow?.birth_date, selectedRow?.martyrdom_date)} سنة`"></span>
+      </div>
       <div>الرتبة: <span x-text="selectedRow?.military_rank || '—'"></span></div>
       <div>الكتيبة: <span x-text="selectedRow?.battalion || '—'"></span></div>
       <div>اللواء: <span x-text="selectedRow?.brigade || '—'"></span></div>
@@ -269,6 +358,7 @@
       </template>
       <a :href="selectedRow?.message_link" target="_blank" class="text-brand text-xs underline">عرض في تيليجرام ↗</a>
     </div>
+    </div><!-- /overflow-y-auto -->
   </div>
 </div>
 
