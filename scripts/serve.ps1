@@ -31,9 +31,9 @@ Write-Host "Tests: http://localhost:$Port/webui/tests.html" -ForegroundColor Cya
 Write-Host "Press Ctrl+C to stop the server."
 Write-Host ""
 
-# Serve from the project root so /webui/ + /data/ are both accessible
+# Serve from the project root (explicit --directory so cd mistakes don't matter)
 if (Test-Path $venvPython) {
-    & $venvPython -m http.server $Port
+    & $venvPython -m http.server $Port --directory $projectRoot
 } else {
-    python -m http.server $Port
+    python -m http.server $Port --directory $projectRoot
 }
