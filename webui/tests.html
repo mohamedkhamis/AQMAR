@@ -223,5 +223,33 @@
       assertEq(payload.edits, edits);
     });
   </script>
+
+  <script>
+    // ===== normalizeArabic =====
+
+    test("normalizeArabic strips diacritics", () => {
+      assertEq(normalizeArabic("مُحَمَّد"), "محمد");
+    });
+
+    test("normalizeArabic unifies alef variants", () => {
+      assertEq(normalizeArabic("أحمد"), "احمد");
+      assertEq(normalizeArabic("إيمان"), "ايمان");
+      assertEq(normalizeArabic("آمنة"), "امنه");
+    });
+
+    test("normalizeArabic converts ya variants", () => {
+      assertEq(normalizeArabic("على"), "علي");
+    });
+
+    test("normalizeArabic collapses whitespace", () => {
+      assertEq(normalizeArabic("  محمد   أحمد  "), "محمد احمد");
+    });
+
+    test("normalizeArabic handles empty/null", () => {
+      assertEq(normalizeArabic(""), "");
+      assertEq(normalizeArabic(null), "");
+      assertEq(normalizeArabic(undefined), "");
+    });
+  </script>
 </body>
 </html>

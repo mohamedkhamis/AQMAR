@@ -142,6 +142,18 @@
     return { icon, text: `${word} منك بـ ${unit}`, direction };
   }
 
+  function normalizeArabic(text) {
+    if (!text) return "";
+    let s = String(text);
+    s = s.replace(/[ً-ْ]/g, "");      // diacritics
+    s = s.replace(/ـ/g, "");               // tatweel
+    s = s.replace(/[أإآ]/g, "ا");  // أإآ → ا
+    s = s.replace(/ة/g, "ه");         // ة → ه
+    s = s.replace(/ى/g, "ي");         // ى → ي
+    s = s.replace(/\s+/g, " ").trim();
+    return s;
+  }
+
   global.daysBetween = daysBetween;
   global.windowDaysFromMode = windowDaysFromMode;
   global.filterByProximity = filterByProximity;
@@ -149,4 +161,5 @@
   global.describeDeltaShort = describeDeltaShort;
   global.computeAge = computeAge;
   global.sortRows = sortRows;
+  global.normalizeArabic = normalizeArabic;
 })(window);
