@@ -295,21 +295,15 @@
       <button @click="closePhotoModal()" class="text-xl">✕</button>
     </div>
     <div class="overflow-y-auto">
-      <img x-show="selectedRow?.photo_path && !showVideoEmbed" :src="selectedRow?.photo_path" :alt="selectedRow?.name"
+      <img x-show="selectedRow?.photo_path" :src="selectedRow?.photo_path" :alt="selectedRow?.name"
            class="w-full max-h-[60vh] object-contain bg-bgdark">
-      <!-- Telegram video embed (loads only when user clicks the play button) -->
-      <iframe x-show="showVideoEmbed" :src="selectedRow ? `https://t.me/AqmarTofan/${selectedRow.msg_id}?embed=1` : ''"
-              class="w-full h-[60vh] bg-bgdark border-0"
-              sandbox="allow-scripts allow-same-origin allow-popups"></iframe>
     <div class="p-3 text-sm space-y-1">
-      <div class="flex gap-2 mb-2">
-        <button x-show="!showVideoEmbed" @click="showVideoEmbed=true"
-          class="bg-brand text-bgdark px-3 py-1 rounded text-xs font-bold">▶ تشغيل فيديو تيليجرام</button>
-        <button x-show="showVideoEmbed" @click="showVideoEmbed=false"
-          class="bg-bgdark border border-border px-3 py-1 rounded text-xs">← العودة للصورة</button>
-        <a :href="selectedRow?.message_link" target="_blank"
-          class="bg-bgdark border border-border px-3 py-1 rounded text-xs hover:border-brand">↗ فتح في تيليجرام</a>
-      </div>
+      <!-- Big call-to-action: open the video in Telegram (the channel's videos are too
+           large for Telegram's web-embed widget, so inline playback isn't reliable). -->
+      <a :href="selectedRow?.message_link" target="_blank"
+        class="block w-full text-center bg-brand text-bgdark px-3 py-2 rounded font-bold text-sm hover:opacity-90 transition-opacity mb-2">
+        ▶ مشاهدة الفيديو في تيليجرام ↗
+      </a>
       <div>تاريخ الميلاد: <span class="text-brand ltr" x-text="selectedRow?.birth_date || '—'"></span></div>
       <div>تاريخ الاستشهاد: <span class="text-brand ltr" x-text="selectedRow?.martyrdom_date || '—'"></span></div>
       <div x-show="selectedRow && computeAge(selectedRow.birth_date, selectedRow.martyrdom_date) !== null">

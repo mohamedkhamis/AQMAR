@@ -40,8 +40,6 @@ window.app = function () {
     ageMin: "",                                    // integer string
     ageMax: "",
     showAdvancedFilters: false,
-    // photo modal extras
-    showVideoEmbed: false,
 
     initLitepicker(el) {
       const self = this;
@@ -156,12 +154,10 @@ window.app = function () {
     // === modals ===
     openPhotoModal(row) {
       this.selectedRow = row;
-      this.showVideoEmbed = false;                 // reset — don't auto-load iframe
       document.body.classList.add("modal-open");
     },
     closePhotoModal() {
       this.selectedRow = null;
-      this.showVideoEmbed = false;
       document.body.classList.remove("modal-open");
     },
     openEditModal(row) {
