@@ -65,7 +65,7 @@
 </div>
 
 <!-- Header -->
-<header role="banner" class="bg-bgcard border-b border-border sticky top-0 z-10 px-4 py-3">
+<header role="banner" class="bg-bgcard border-b border-border sticky top-0 z-10 px-3 sm:px-4 py-2 sm:py-3">
   <div class="max-w-7xl mx-auto flex flex-wrap items-center gap-3">
     <h1 class="text-xl font-bold flex-shrink-0">
       <span x-text="AQMAR_CONFIG.appName"></span>
@@ -207,72 +207,82 @@
     </button>
   </div>
 
-  <!-- Advanced filters panel (collapsible) — fixed width, 2 stacked sections -->
-  <div x-show="view==='public' && !isLoading && showAdvancedFilters" x-transition x-cloak
-    class="max-w-3xl mx-auto mt-3 bg-bgcard border border-border rounded-lg p-5 space-y-4">
+  <!-- Advanced filters panel — bottom sheet on mobile, centered panel on sm+ -->
+  <div x-show="view==='public' && !isLoading && showAdvancedFilters"
+       @click.self="showAdvancedFilters = false"
+       x-cloak
+       class="fixed inset-0 z-30 bg-black/60 sm:relative sm:bg-transparent sm:inset-auto sm:z-auto sm:mt-3">
+    <div x-show="showAdvancedFilters" x-transition.opacity
+         class="absolute bottom-0 left-0 right-0 bg-bgcard border-t border-border rounded-t-2xl p-5 space-y-4
+                sm:relative sm:bottom-auto sm:max-w-3xl sm:mx-auto sm:border sm:rounded-lg">
+      <!-- Mobile drag handle -->
+      <div class="sm:hidden flex justify-center -mt-2 mb-2">
+        <div class="w-10 h-1 rounded-full bg-border"></div>
+      </div>
 
-    <!-- Section: Martyrdom date range -->
-    <div>
-      <div class="text-xs text-gray-400 mb-2 font-bold">📅 تاريخ الاستشهاد</div>
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <div class="bg-bgdark border border-border rounded-lg px-3 py-2 hover:border-brand transition-colors">
-          <div class="text-[10px] text-gray-400 uppercase tracking-wide">من</div>
-          <div class="flex items-center gap-1">
-            <input type="text" x-ref="martyrdomFromInput" readonly placeholder="انقر لاختيار التاريخ"
-              x-init="initMartyrdomFromPicker($refs.martyrdomFromInput)"
-              class="bg-transparent ltr text-sm focus:outline-none flex-1 cursor-pointer placeholder-gray-600">
-            <button x-show="martyrdomFrom"
-              @click="martyrdomFrom=''; _martyrdomFromPicker.clearSelection(); $refs.martyrdomFromInput.value=''; applyFilter()"
-              title="مسح" class="text-gray-400 hover:text-red-400 px-1">✕</button>
+      <!-- Section: Martyrdom date range -->
+      <div>
+        <div class="text-xs text-gray-400 mb-2 font-bold">📅 تاريخ الاستشهاد</div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div class="bg-bgdark border border-border rounded-lg px-3 py-2 hover:border-brand transition-colors">
+            <div class="text-[10px] text-gray-400 uppercase tracking-wide">من</div>
+            <div class="flex items-center gap-1">
+              <input type="text" x-ref="martyrdomFromInput" readonly placeholder="انقر لاختيار التاريخ"
+                x-init="initMartyrdomFromPicker($refs.martyrdomFromInput)"
+                class="bg-transparent ltr text-sm focus:outline-none flex-1 cursor-pointer placeholder-gray-600">
+              <button x-show="martyrdomFrom"
+                @click="martyrdomFrom=''; _martyrdomFromPicker.clearSelection(); $refs.martyrdomFromInput.value=''; applyFilter()"
+                title="مسح" class="text-gray-400 hover:text-red-400 px-1">✕</button>
+            </div>
           </div>
-        </div>
-        <div class="bg-bgdark border border-border rounded-lg px-3 py-2 hover:border-brand transition-colors">
-          <div class="text-[10px] text-gray-400 uppercase tracking-wide">إلى</div>
-          <div class="flex items-center gap-1">
-            <input type="text" x-ref="martyrdomToInput" readonly placeholder="انقر لاختيار التاريخ"
-              x-init="initMartyrdomToPicker($refs.martyrdomToInput)"
-              class="bg-transparent ltr text-sm focus:outline-none flex-1 cursor-pointer placeholder-gray-600">
-            <button x-show="martyrdomTo"
-              @click="martyrdomTo=''; _martyrdomToPicker.clearSelection(); $refs.martyrdomToInput.value=''; applyFilter()"
-              title="مسح" class="text-gray-400 hover:text-red-400 px-1">✕</button>
+          <div class="bg-bgdark border border-border rounded-lg px-3 py-2 hover:border-brand transition-colors">
+            <div class="text-[10px] text-gray-400 uppercase tracking-wide">إلى</div>
+            <div class="flex items-center gap-1">
+              <input type="text" x-ref="martyrdomToInput" readonly placeholder="انقر لاختيار التاريخ"
+                x-init="initMartyrdomToPicker($refs.martyrdomToInput)"
+                class="bg-transparent ltr text-sm focus:outline-none flex-1 cursor-pointer placeholder-gray-600">
+              <button x-show="martyrdomTo"
+                @click="martyrdomTo=''; _martyrdomToPicker.clearSelection(); $refs.martyrdomToInput.value=''; applyFilter()"
+                title="مسح" class="text-gray-400 hover:text-red-400 px-1">✕</button>
+            </div>
           </div>
         </div>
       </div>
-    </div>
 
-    <!-- Section: Age range -->
-    <div>
-      <div class="text-xs text-gray-400 mb-2 font-bold">⏳ العمر عند الاستشهاد</div>
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <div class="bg-bgdark border border-border rounded-lg px-3 py-2 hover:border-brand transition-colors">
-          <div class="text-[10px] text-gray-400 uppercase tracking-wide">من (سنة)</div>
-          <div class="flex items-center gap-1">
-            <input type="number" min="0" max="120" inputmode="numeric"
-              x-model="ageMin" @input="applyFilter()" placeholder="مثال: 18"
-              class="bg-transparent ltr text-sm focus:outline-none w-full placeholder-gray-600">
-            <button x-show="ageMin" @click="ageMin=''; applyFilter()"
-              title="مسح" class="text-gray-400 hover:text-red-400 px-1">✕</button>
+      <!-- Section: Age range -->
+      <div>
+        <div class="text-xs text-gray-400 mb-2 font-bold">⏳ العمر عند الاستشهاد</div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div class="bg-bgdark border border-border rounded-lg px-3 py-2 hover:border-brand transition-colors">
+            <div class="text-[10px] text-gray-400 uppercase tracking-wide">من (سنة)</div>
+            <div class="flex items-center gap-1">
+              <input type="number" min="0" max="120" inputmode="numeric"
+                x-model="ageMin" @input="applyFilter()" placeholder="مثال: 18"
+                class="bg-transparent ltr text-sm focus:outline-none w-full placeholder-gray-600">
+              <button x-show="ageMin" @click="ageMin=''; applyFilter()"
+                title="مسح" class="text-gray-400 hover:text-red-400 px-1">✕</button>
+            </div>
           </div>
-        </div>
-        <div class="bg-bgdark border border-border rounded-lg px-3 py-2 hover:border-brand transition-colors">
-          <div class="text-[10px] text-gray-400 uppercase tracking-wide">إلى (سنة)</div>
-          <div class="flex items-center gap-1">
-            <input type="number" min="0" max="120" inputmode="numeric"
-              x-model="ageMax" @input="applyFilter()" placeholder="مثال: 45"
-              class="bg-transparent ltr text-sm focus:outline-none w-full placeholder-gray-600">
-            <button x-show="ageMax" @click="ageMax=''; applyFilter()"
-              title="مسح" class="text-gray-400 hover:text-red-400 px-1">✕</button>
+          <div class="bg-bgdark border border-border rounded-lg px-3 py-2 hover:border-brand transition-colors">
+            <div class="text-[10px] text-gray-400 uppercase tracking-wide">إلى (سنة)</div>
+            <div class="flex items-center gap-1">
+              <input type="number" min="0" max="120" inputmode="numeric"
+                x-model="ageMax" @input="applyFilter()" placeholder="مثال: 45"
+                class="bg-transparent ltr text-sm focus:outline-none w-full placeholder-gray-600">
+              <button x-show="ageMax" @click="ageMax=''; applyFilter()"
+                title="مسح" class="text-gray-400 hover:text-red-400 px-1">✕</button>
+            </div>
           </div>
         </div>
       </div>
-    </div>
 
-    <!-- Clear-all button -->
-    <div x-show="martyrdomFrom || martyrdomTo || ageMin || ageMax" class="flex justify-center pt-2 border-t border-border">
-      <button @click="clearMartyrdomRange(); ageMin=''; ageMax=''; applyFilter()"
-        class="text-xs bg-bgdark border border-border rounded-lg px-4 py-2 hover:border-red-400 hover:text-red-400 transition-colors">
-        🗑 مسح جميع الفلاتر المتقدمة
-      </button>
+      <!-- Clear-all button -->
+      <div x-show="martyrdomFrom || martyrdomTo || ageMin || ageMax" class="flex justify-center pt-2 border-t border-border">
+        <button @click="clearMartyrdomRange(); ageMin=''; ageMax=''; applyFilter()"
+          class="text-xs bg-bgdark border border-border rounded-lg px-4 py-2 hover:border-red-400 hover:text-red-400 transition-colors">
+          🗑 مسح جميع الفلاتر المتقدمة
+        </button>
+      </div>
     </div>
   </div>
 
