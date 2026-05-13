@@ -47,6 +47,7 @@
 
   <!-- Modules under test — order matters: dependencies first -->
   <script src="filter-logic.js"></script>
+  <script src="data-loader.js"></script>
 
   <!-- Test files -->
   <script>
@@ -118,6 +119,53 @@
 
     test("windowDaysFromMode falls back to 30 for unknown mode", () => {
       assertEq(windowDaysFromMode("nonsense", 999), 30);
+    });
+  </script>
+
+  <script>
+    // ===== data-loader.js =====
+
+    test("mergeOverrides applies override fields on top of base", () => {
+      const base = [
+        { msg_id: 20, name: "A", birth_date: "1980-01-01" },
+        { msg_id: 21, name: "B", birth_date: "1981-02-02" },
+      ];
+      const overrides = {
+        "20": { birth_date: "1979-12-31", _manual_edit_at: "2026-05-13T10:00:00" },
+      };
+      const merged = mergeOverrides(base, overrides);
+      assertEq(merged[0].birth_date, "1979-12-31");
+      assertEq(merged[0].name, "A");                                // unchanged
+      assertEq(merged[0]._overridden_fields, ["birth_date"]);
+      assertEq(merged[1].birth_date, "1981-02-02");                 // untouched
+      assertEq(merged[1]._overridden_fields, []);
+    });
+
+    test("mergeOverrides ignores meta fields when reporting overridden", () => {
+      const base = [{ msg_id: 5, name: "X" }];
+      const overrides = { "5": { name: "Y", _manual_edit_at: "2026-05-13" } };
+      const merged = mergeOverrides(base, overrides);
+      assertEq(merged[0].name, "Y");
+      assertEq(merged[0]._overridden_fields, ["name"]);
+    });
+
+    test("mergeOverrides leaves rows alone when no override matches", () => {
+      const base = [{ msg_id: 99, name: "Z" }];
+      const merged = mergeOverrides(base, { "1": { name: "ignored" } });
+      assertEq(merged[0].name, "Z");
+      assertEq(merged[0]._overridden_fields, []);
+    });
+
+    test("mergeOverrides accepts numeric and string msg_id keys", () => {
+      const base = [{ msg_id: 42, name: "old" }];
+      const merged = mergeOverrides(base, { 42: { name: "new" } });
+      assertEq(merged[0].name, "new");
+    });
+
+    test("mergeOverrides preserves row order from base", () => {
+      const base = [{ msg_id: 3 }, { msg_id: 1 }, { msg_id: 2 }];
+      const merged = mergeOverrides(base, {});
+      assertEq(merged.map(r => r.msg_id), [3, 1, 2]);
     });
   </script>
 </body>
