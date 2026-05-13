@@ -63,6 +63,22 @@
   <!-- Filter bar (public view) — centered -->
   <div x-show="view==='public' && !isLoading" class="max-w-4xl mx-auto mt-4 flex flex-wrap items-center justify-center gap-3">
 
+    <!-- Search bar (text query over name + city + battalion + brigade) -->
+    <div class="w-full sm:w-auto sm:flex-1 sm:max-w-md">
+      <div class="flex items-center gap-2 bg-bgdark border border-border rounded-full px-4 py-2 hover:border-brand transition-colors"
+           :class="searchQuery && 'border-brand'">
+        <span class="text-lg" aria-hidden="true">🔍</span>
+        <input type="search" :value="searchQuery"
+               @input="setSearchQuery($event.target.value)"
+               placeholder="ابحث · اسم، مدينة، كتيبة، لواء"
+               aria-label="بحث في قاعدة بيانات الشهداء"
+               class="bg-transparent flex-1 focus:outline-none text-sm placeholder-gray-500">
+        <button x-show="searchQuery" @click="setSearchQuery('')" type="button"
+                aria-label="مسح البحث" title="مسح"
+                class="text-gray-400 hover:text-red-400 text-lg">✕</button>
+      </div>
+    </div>
+
     <!-- Birthdate — Litepicker (year + month dropdowns always visible) -->
     <div class="flex items-center gap-2 bg-bgdark border border-border rounded-lg px-3 py-2 hover:border-brand transition-colors min-w-[220px]">
       <span class="text-xl">🎂</span>
