@@ -21,6 +21,7 @@
   <script src="https://cdn.jsdelivr.net/npm/litepicker/dist/litepicker.js"></script>
 
   <!-- Alpine.js (defer per docs) -->
+  <script defer src="https://unpkg.com/@alpinejs/focus@3.x.x/dist/cdn.min.js"></script>
   <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
 
   <!-- App modules — load order matters -->
@@ -444,6 +445,7 @@
 
 <!-- ============ PHOTO ZOOM MODAL ============ -->
 <div x-show="selectedRow" @click.self="closePhotoModal()" x-cloak
+     @keydown.escape.window="closePhotoModal()" x-trap="selectedRow"
      role="dialog" aria-modal="true" aria-labelledby="photo-modal-title"
      class="fixed inset-0 bg-black/80 z-20 flex items-center justify-center p-4">
   <div class="bg-bgcard border border-border rounded-lg overflow-hidden max-w-2xl w-full max-h-[90vh] flex flex-col">
@@ -491,6 +493,7 @@
 
 <!-- ============ ADMIN EDIT MODAL ============ -->
 <div x-show="editingMsgId" @click.self="closeEditModal()" x-cloak
+     @keydown.escape.window="closeEditModal()" x-trap="editingMsgId"
      role="dialog" aria-modal="true" aria-labelledby="edit-modal-title"
      class="fixed inset-0 bg-black/80 z-20 flex items-center justify-center p-4">
   <div class="bg-bgcard border border-border rounded-lg overflow-hidden max-w-md w-full max-h-[90vh] flex flex-col">
@@ -516,6 +519,7 @@
 
 <!-- ============ LOGIN MODAL ============ -->
 <div x-show="showLoginModal" @click.self="showLoginModal=false" x-cloak
+     @keydown.escape.window="showLoginModal=false" x-trap="showLoginModal"
      role="dialog" aria-modal="true" aria-labelledby="login-modal-title"
      class="fixed inset-0 bg-black/80 z-20 flex items-center justify-center p-4">
   <div class="bg-bgcard border border-border rounded-lg p-5 max-w-sm w-full">
