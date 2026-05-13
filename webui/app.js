@@ -27,11 +27,53 @@ window.app = function () {
     editForm: {},                                  // bound to inputs in the modal
 
     // === public filter state ===
-    userBirthdate: "",
+    userBirthdate: "",                             // assembled YYYY-MM-DD string
+    birthYear: "",
+    birthMonth: "",                                // "01".."12"
+    birthDay: "",                                  // "1".."31"
     windowMode: AQMAR_CONFIG.filterDefaultWindow,
     customDays: 30,
     filteredResults: [],
     customDaysError: "",
+
+    // Year/month/day dropdown options
+    monthOptions: [
+      { v: "01", label: "يناير" },   { v: "02", label: "فبراير" },
+      { v: "03", label: "مارس" },    { v: "04", label: "إبريل" },
+      { v: "05", label: "مايو" },    { v: "06", label: "يونيو" },
+      { v: "07", label: "يوليو" },   { v: "08", label: "أغسطس" },
+      { v: "09", label: "سبتمبر" },  { v: "10", label: "أكتوبر" },
+      { v: "11", label: "نوفمبر" },  { v: "12", label: "ديسمبر" },
+    ],
+    get yearOptions() {
+      const currentYear = new Date().getFullYear();
+      const years = [];
+      for (let y = currentYear; y >= 1900; y--) years.push(y);
+      return years;
+    },
+    get dayOptions() {
+      const y = parseInt(this.birthYear, 10);
+      const m = parseInt(this.birthMonth, 10);
+      // If year+month known, use exact days-in-month; otherwise show 31 max.
+      let max = 31;
+      if (!isNaN(y) && !isNaN(m)) max = new Date(y, m, 0).getDate();
+      return Array.from({ length: max }, (_, i) => i + 1);
+    },
+
+    updateBirthdate() {
+      if (this.birthYear && this.birthMonth && this.birthDay) {
+        const d = String(this.birthDay).padStart(2, "0");
+        this.userBirthdate = `${this.birthYear}-${this.birthMonth}-${d}`;
+      } else {
+        this.userBirthdate = "";
+      }
+      // If day was set to something larger than the new month allows, clear it.
+      if (this.birthDay && parseInt(this.birthDay, 10) > this.dayOptions.length) {
+        this.birthDay = "";
+        this.userBirthdate = "";
+      }
+      this.applyFilter();
+    },
 
     // === computed-ish helpers (called from templates) ===
     get pendingEditCount() {
