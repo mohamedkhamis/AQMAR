@@ -193,12 +193,7 @@ function aqmar() {
       }
       const f = this.filters;
       if (f.q) {
-        const q = f.q.toLowerCase();
-        list = list.filter(m =>
-          (m.name && m.name.toLowerCase().includes(q)) ||
-          (m.city && m.city.toLowerCase().includes(q)) ||
-          (m.battalion && m.battalion.toLowerCase().includes(q))
-        );
+        list = list.filter(m => searchPredicate(m, f.q));
       }
       if (f.city) list = list.filter(m => m.city === f.city);
       if (f.rank) list = list.filter(m => m.rank === f.rank);
