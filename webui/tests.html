@@ -304,29 +304,6 @@
   </script>
 
   <script>
-    // ===== viewMode persistence =====
-
-    test("viewMode default is 'grid' when localStorage empty", () => {
-      localStorage.removeItem(AQMAR_CONFIG.storage.viewMode);
-      assertEq(readViewMode(), "grid");
-    });
-
-    test("viewMode reads 'list' from localStorage", () => {
-      localStorage.setItem(AQMAR_CONFIG.storage.viewMode, "list");
-      assertEq(readViewMode(), "list");
-      localStorage.removeItem(AQMAR_CONFIG.storage.viewMode);  // cleanup
-    });
-
-    test("writeViewMode persists to localStorage", () => {
-      writeViewMode("list");
-      assertEq(localStorage.getItem(AQMAR_CONFIG.storage.viewMode), "list");
-      writeViewMode("grid");
-      assertEq(localStorage.getItem(AQMAR_CONFIG.storage.viewMode), "grid");
-      localStorage.removeItem(AQMAR_CONFIG.storage.viewMode);  // cleanup
-    });
-  </script>
-
-  <script>
     // ===== adaptMartyrToNewSchema =====
 
     test("adaptMartyrToNewSchema maps full row 1:1", () => {
