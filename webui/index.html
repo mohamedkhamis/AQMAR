@@ -23,7 +23,14 @@
 <!-- Site config (admin password hash etc.) -->
 <script src="config.js"></script>
 
-<!-- Alpine (defer required) -->
+<!-- Preserved helpers from v1: schema adapter, search predicate, admin diff logic.
+     Load BEFORE Alpine + app.js so their globals are available at init time. -->
+<script src="data-loader.js"></script>
+<script src="filter-logic.js"></script>
+<script src="admin-edit.js"></script>
+
+<!-- Alpine + focus plugin (plugin must load BEFORE the core). -->
+<script defer src="https://unpkg.com/@alpinejs/focus@3.x.x/dist/cdn.min.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.5/dist/cdn.min.js"></script>
 </head>
 

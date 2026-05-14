@@ -81,7 +81,13 @@ function aqmar() {
       let martyrs = null;
       try {
         const res = await fetch('../data/martyrs.json', { cache: 'no-cache' });
-        if (res.ok) martyrs = await res.json();
+        if (res.ok) {
+          const raw = await res.json();
+          // Our pipeline produces { generated_at, channel, martyrs: [...] }
+          // (an envelope). Handle both bare arrays and the envelope.
+          const rows = Array.isArray(raw) ? raw : (raw.martyrs || []);
+          martyrs = rows.map(adaptMartyrToNewSchema).filter(Boolean);
+        }
       } catch (e) {}
       if (!martyrs && window.AQMAR_SAMPLE_DATA) martyrs = window.AQMAR_SAMPLE_DATA;
       if (!martyrs) martyrs = [];
@@ -90,7 +96,8 @@ function aqmar() {
       try {
         const ores = await fetch('../data/overrides.json', { cache: 'no-cache' });
         if (ores.ok) {
-          const overrides = await ores.json();
+          const raw = await ores.json();
+          const overrides = adaptOverridesToNewSchema(raw);
           martyrs = martyrs.map(m => overrides[m.id] ? { ...m, ...overrides[m.id] } : m);
         }
       } catch (e) {}
