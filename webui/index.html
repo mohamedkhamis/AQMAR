@@ -547,10 +547,6 @@
           <div class="text-[11px] opacity-75 tracking-wide"
                x-text="lang === 'ar' ? 'تعديلٌ قيد الانتظار' : 'pending edits'"></div>
         </div>
-        <button @click="exportOverrides()" class="btn"
-                style="background: var(--paper); color: var(--forest); border: 1px solid var(--paper);">
-          ⬇ <span x-text="lang === 'ar' ? 'تصدير overrides.json' : 'Export overrides.json'"></span>
-        </button>
         <button @click="logout()" class="btn btn-text" style="color: rgba(255,255,255,0.75);"
                 x-text="lang === 'ar' ? 'خروج' : 'Sign out'"></button>
       </div>

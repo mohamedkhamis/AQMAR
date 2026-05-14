@@ -305,15 +305,23 @@ function aqmar() {
       this.editingId = null;
       this.draft = {};
     },
-    saveEdit() {
+    // Saves an admin edit. Asynchronous because it round-trips to Supabase.
+    // On success: optimistically patches this.all[idx] so the UI updates
+    // instantly. this.edits is also updated as a session-scoped dirty-marker
+    // cache (no longer exported — Supabase is canonical).
+    async saveEdit() {
       const m = this.editingMartyr();
       if (!m) return;
-      // Compute the diff using the shared v1 helper (ignores untouched fields
-      // and underscore-prefixed meta).
       const diff = buildEditDiff(m, this.draft);
       if (Object.keys(diff).length === 0) {
         this.editingId = null;
         this.draft = {};
+        return;
+      }
+      try {
+        await saveEditToSupabase(m.id, diff);
+      } catch (e) {
+        alert("تعذّر حفظ التعديل في Supabase:\n" + e.message);
         return;
       }
       // Merge the new diff into the existing per-id override.
@@ -323,15 +331,6 @@ function aqmar() {
       if (idx >= 0) this.all[idx] = { ...this.all[idx], ...diff };
       this.editingId = null;
       this.draft = {};
-    },
-    exportOverrides() {
-      const blob = new Blob([JSON.stringify(this.edits, null, 2)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'overrides.json';
-      a.click();
-      URL.revokeObjectURL(url);
     },
 
     // ============================================================
