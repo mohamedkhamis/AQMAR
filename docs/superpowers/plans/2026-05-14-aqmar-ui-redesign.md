@@ -56,7 +56,7 @@ Copy-Item "$src\styles.css" webui\styles.css -Force
 
 (Do NOT copy `PORT_README.md` — its install instructions are now outdated; this plan is the source of truth.)
 
-- [ ] **Step 3: Verify the new UI loads with SAMPLE data**
+- [ ] **Step 3: Verify the new UI scaffold renders structurally**
 
 Start the server if not running:
 
@@ -64,9 +64,12 @@ Start the server if not running:
 python -m http.server 8000
 ```
 
-Open `http://localhost:8000/webui/`. Expected: the landing page renders with 36 sample names (Arabic placeholder names from `config.js`). The hero "ابحث عمّن شاركك يوم ميلادك" card is visible.
+Open `http://localhost:8000/webui/`. What you see depends on whether `data/martyrs.json` exists:
 
-If you see a blank page or JS errors in the console, STOP and report.
+- **Without** `data/martyrs.json`: 36 sample names (placeholders from `config.js`).
+- **With** `data/martyrs.json` (the current repo state): the page renders structurally — verse, heading, birthday-match hero, stats strip — but `app.js` throws `TypeError: martyrs.map is not a function` in the console because our data is an envelope (`{generated_at, channel, martyrs: [...]}`) while the new UI expects a bare array. **This is expected at this stage.** Task 4 fixes it via the envelope unwrap.
+
+Confirm only the structural elements (verse, hero card, stat strip) render. Data-driven elements being empty/zero is OK for now. If you see anything other than that envelope error, STOP and report.
 
 - [ ] **Step 4: Commit**
 

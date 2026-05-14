@@ -1,556 +1,767 @@
-<!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<!doctype html>
+<html lang="ar" dir="rtl" data-theme="light">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>أقمار الطوفان</title>
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%230c1f0c'/%3E%3Ccircle cx='32' cy='32' r='14' fill='%23fbbf24'/%3E%3Ccircle cx='36' cy='28' r='10' fill='%230c1f0c'/%3E%3C/svg%3E">
+<meta charset="utf-8" />
+<title>أقمار الطوفان — AQMAR</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="description" content="أرشيف مفتوح يحفظ أسماء شهداء كتائب القسام في معركة طوفان الأقصى" />
 
-  <!-- Tailwind via Play CDN (no build) -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      theme: { extend: { colors: {
-        bgdark: "#0c1f0c", bgcard: "#142914", brand: "#fbbf24", border: "#2d4a2d",
-      }}}
-    };
-  </script>
+<!-- Fonts -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Reem+Kufi:wght@400;500;600;700&family=Tajawal:wght@300;400;500;700&family=Crimson+Pro:ital,wght@0,400;0,600;1,400&family=Inter+Tight:wght@400;500;600&display=swap" rel="stylesheet">
 
-  <!-- Litepicker — tiny date picker with year+month dropdowns -->
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/litepicker/dist/css/litepicker.css">
-  <script src="https://cdn.jsdelivr.net/npm/litepicker/dist/litepicker.js"></script>
+<!-- Tailwind (Play CDN — no build step, matches your existing setup) -->
+<script src="https://cdn.tailwindcss.com"></script>
 
-  <!-- Alpine.js (defer per docs) -->
-  <script defer src="https://unpkg.com/@alpinejs/focus@3.x.x/dist/cdn.min.js"></script>
-  <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+<!-- Litepicker (kept from your existing UI for the admin date pickers) -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/litepicker/dist/css/litepicker.css">
 
-  <!-- App modules — load order matters -->
-  <script src="config.js"></script>
-  <script src="filter-logic.js"></script>
-  <script src="data-loader.js"></script>
-  <script src="admin-edit.js"></script>
-  <script src="app.js"></script>
+<!-- Design tokens + components -->
+<link rel="stylesheet" href="styles.css">
 
-  <link rel="stylesheet" href="style.css">
+<!-- Site config (admin password hash etc.) -->
+<script src="config.js"></script>
+
+<!-- Alpine (defer required) -->
+<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.5/dist/cdn.min.js"></script>
 </head>
-<body x-data="app()" x-init="init()" class="min-h-screen bg-bgdark text-white">
 
-<a href="#main-content" class="skip-link">تخطي إلى المحتوى</a>
+<body>
+<div id="root" x-data="aqmar()" x-init="init()" x-cloak>
 
-<!-- Loading / error banners -->
-<!-- Loading skeleton (replaces plain text) -->
-<main x-show="isLoading" class="max-w-7xl mx-auto p-4" aria-busy="true" aria-live="polite">
-  <div class="sr-only">جاري تحميل بيانات الشهداء...</div>
-  <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-    <template x-for="i in 12">
-      <div class="bg-bgcard border border-border rounded-lg overflow-hidden">
-        <div class="aspect-[4/5] skeleton"></div>
-        <div class="p-3 space-y-2">
-          <div class="skeleton h-3 rounded w-4/5"></div>
-          <div class="skeleton h-2 rounded w-3/5"></div>
-          <div class="skeleton h-2 rounded w-2/5"></div>
+  <!-- ===================== HEADER ===================== -->
+  <header class="sticky top-0 z-50 border-b border-divider" style="background: color-mix(in oklab, var(--bg) 88%, transparent); backdrop-filter: blur(10px);">
+    <div class="max-w-[1240px] mx-auto px-8 py-3.5 flex items-center gap-6">
+      <!-- Logo -->
+      <button @click="goto('home')" class="flex items-center gap-3 bg-transparent border-0 p-0">
+        <svg width="34" height="34" viewBox="0 0 60 60" style="opacity:.55">
+          <g fill="none" stroke="var(--forest)" stroke-width="0.9">
+            <circle cx="30" cy="30" r="20"/>
+            <circle cx="30" cy="30" r="14"/>
+            <path d="M30 10 L30 50 M10 30 L50 30 M16 16 L44 44 M44 16 L16 44"/>
+            <path d="M30 14 L44 30 L30 46 L16 30 Z"/>
+          </g>
+        </svg>
+        <div class="text-right leading-none">
+          <div class="font-naskh text-[22px] font-bold text-ink">أَقْمَارُ الطّوفان</div>
+          <div class="font-latin-sans text-[10px] tracking-[0.3em] text-olive mt-1 uppercase">AQMAR · MEMORIAL</div>
         </div>
-      </div>
-    </template>
-  </div>
-</main>
-<div x-show="loadError" x-cloak role="alert"
-     class="max-w-md mx-auto my-12 text-center py-6 px-6 bg-red-900/40 border border-red-700 rounded-xl">
-  <div class="text-4xl mb-2" aria-hidden="true">⚠️</div>
-  <div class="text-base font-bold text-red-100" x-text="loadError"></div>
-  <button @click="retryLoad()"
-          class="mt-4 bg-brand text-bgdark px-5 py-2 rounded-full font-bold text-sm hover:opacity-90 transition-opacity">
-    🔄 إعادة المحاولة
-  </button>
-</div>
-
-<!-- Header -->
-<header role="banner" class="bg-bgcard border-b border-border sticky top-0 z-10 px-3 sm:px-4 py-2 sm:py-3">
-  <div class="max-w-7xl mx-auto flex flex-wrap items-center gap-3">
-    <h1 class="text-xl font-bold flex-shrink-0">
-      <span x-text="AQMAR_CONFIG.appName"></span>
-    </h1>
-
-    <!-- View toggle (admin only) -->
-    <div x-show="loggedIn" class="flex gap-2 mr-auto">
-      <button @click="view='public'" :class="view==='public' ? 'bg-brand text-bgdark' : 'bg-bgdark border border-border'"
-        class="px-3 py-1 rounded text-sm">عام</button>
-      <button @click="view='admin'" :class="view==='admin' ? 'bg-brand text-bgdark' : 'bg-bgdark border border-border'"
-        class="px-3 py-1 rounded text-sm">إدارة</button>
-    </div>
-
-    <!-- Login/Logout (auth controls) -->
-    <button x-show="!loggedIn" @click="showLoginModal=true"
-      class="mr-auto px-3 py-1 bg-brand text-bgdark rounded font-bold text-sm">دخول الإدارة</button>
-    <button x-show="loggedIn" @click="logout()"
-      class="px-3 py-1 bg-bgdark border border-border rounded text-sm">خروج</button>
-  </div>
-
-  <!-- Filter bar (public view) — centered -->
-  <div x-show="view==='public' && !isLoading" class="max-w-4xl mx-auto mt-4 flex flex-wrap items-center justify-center gap-3">
-
-    <!-- Search bar (text query over name + city + battalion + brigade) -->
-    <div class="w-full sm:w-auto sm:flex-1 sm:max-w-md">
-      <div class="flex items-center gap-2 bg-bgdark border border-border rounded-full px-4 py-2 hover:border-brand transition-colors"
-           :class="searchQuery && 'border-brand'">
-        <span class="text-lg" aria-hidden="true">🔍</span>
-        <input type="search" :value="searchQuery"
-               @input="setSearchQuery($event.target.value)"
-               placeholder="ابحث · اسم، مدينة، كتيبة، لواء"
-               aria-label="بحث في قاعدة بيانات الشهداء"
-               class="bg-transparent flex-1 focus:outline-none text-sm placeholder-gray-500">
-        <button x-show="searchQuery" @click="setSearchQuery('')" type="button"
-                aria-label="مسح البحث" title="مسح"
-                class="text-gray-400 hover:text-red-400 text-lg">✕</button>
-      </div>
-    </div>
-
-    <!-- Birthdate — Litepicker (year + month dropdowns always visible) -->
-    <div class="flex items-center gap-2 bg-bgdark border border-border rounded-lg px-3 py-2 hover:border-brand transition-colors min-w-[220px]">
-      <span class="text-xl">🎂</span>
-      <div class="flex-1">
-        <div class="text-[10px] text-gray-400 uppercase tracking-wide">تاريخ ميلادك</div>
-        <input type="text" x-ref="birthdate" readonly placeholder="انقر لاختيار التاريخ"
-          x-init="initLitepicker($refs.birthdate)"
-          class="bg-transparent ltr text-sm focus:outline-none w-40 placeholder-gray-600 cursor-pointer">
-      </div>
-      <button x-show="userBirthdate" @click="clearBirthdate()"
-        title="مسح" class="text-gray-400 hover:text-red-400 px-1 text-lg">✕</button>
-    </div>
-
-    <!-- Window selector (custom Alpine dropdown) -->
-    <div x-show="userBirthdate" x-data="{ open: false }" @click.away="open=false" class="relative min-w-[180px]">
-      <button @click="open=!open"
-        class="w-full flex items-center gap-2 bg-bgdark border border-border rounded-lg px-3 py-2 hover:border-brand transition-colors">
-        <span class="text-xl">📐</span>
-        <div class="flex-1 text-right">
-          <div class="text-[10px] text-gray-400 uppercase tracking-wide">نافذة المقارنة</div>
-          <div class="text-sm" x-text="{'1week':'أسبوع (±7 يوم)','1month':'شهر (±30 يوم)','2months':'شهرين (±60 يوم)','custom':`مخصص (${customDays} يوم)`}[windowMode]"></div>
-        </div>
-        <span class="text-xs text-gray-400" :class="open && 'rotate-180'" style="transition: transform 0.2s">▼</span>
       </button>
-      <div x-show="open" x-transition.opacity x-cloak
-        class="absolute top-full left-0 right-0 mt-1 bg-bgcard border border-border rounded-lg shadow-xl z-30 overflow-hidden">
-        <template x-for="opt in [
-          {v:'1week',   label:'أسبوع',    sub:'±7 يوم'},
-          {v:'1month',  label:'شهر',      sub:'±30 يوم'},
-          {v:'2months', label:'شهرين',    sub:'±60 يوم'},
-          {v:'custom',  label:'مخصص',     sub:'اختر عدد الأيام'},
-        ]" :key="opt.v">
-          <button @click="windowMode=opt.v; open=false; applyFilter()"
-            :class="windowMode===opt.v ? 'bg-brand/20 text-brand' : 'hover:bg-bgdark'"
-            class="block w-full px-3 py-2 text-right transition-colors">
-            <div class="text-sm font-bold" x-text="opt.label"></div>
-            <div class="text-xs text-gray-400" x-text="opt.sub"></div>
+
+      <nav class="nav-links flex gap-1 mr-8">
+        <template x-for="l in nav" :key="l.id">
+          <button @click="goto(l.id)"
+                  :class="view === l.id ? 'text-ink' : 'text-muted'"
+                  class="bg-transparent border-0 px-3.5 py-2 text-[15px] font-medium relative">
+            <span x-text="lang === 'ar' ? l.ar : l.en"></span>
+            <span x-show="view === l.id" class="absolute bottom-[-1px] inset-x-3.5 h-0.5 bg-forest rounded"></span>
+          </button>
+        </template>
+      </nav>
+
+      <div class="flex-1"></div>
+
+      <button @click="lang = (lang === 'ar' ? 'en' : 'ar')"
+              class="bg-transparent border border-divider rounded-full px-3.5 py-1.5 font-latin-sans text-[12px] text-muted tracking-[0.1em]">
+        <span x-text="lang === 'ar' ? 'EN' : 'ع'"></span>
+      </button>
+
+      <template x-if="isAdmin">
+        <button @click="goto('admin')" class="btn btn-ghost">
+          <span class="w-1.5 h-1.5 rounded-full bg-forest"></span>
+          <span x-text="lang === 'ar' ? 'لوحة التحرير' : 'Admin'"></span>
+        </button>
+      </template>
+      <template x-if="!isAdmin">
+        <button @click="showLogin = true" class="btn btn-text">
+          <span x-text="lang === 'ar' ? 'دخول المحرّر' : 'Editor login'"></span>
+        </button>
+      </template>
+    </div>
+  </header>
+
+  <!-- ===================== LANDING ===================== -->
+  <main x-show="view === 'home'" class="relative pt-6">
+    <!-- Verse -->
+    <div class="max-w-[760px] mx-auto pt-7 px-8 text-center">
+      <div class="font-naskh text-[17px] text-olive leading-[1.9]">
+        ﴿ وَلَا تَحْسَبَنَّ الَّذِينَ قُتِلُوا فِي سَبِيلِ اللَّهِ أَمْوَاتًا ۚ بَلْ أَحْيَاءٌ عِندَ رَبِّهِمْ يُرْزَقُونَ ﴾
+      </div>
+      <div class="font-latin-sans text-[10px] tracking-[0.3em] text-faint mt-1.5 uppercase">آل عمران · ١٦٩</div>
+    </div>
+
+    <div class="max-w-[1100px] mx-auto px-8 pt-10 pb-8 relative">
+      <div class="text-center">
+        <div class="section-kicker" x-text="lang === 'ar' ? 'ذكرى · توثيق · كرامة' : 'Memory · Record · Dignity'"></div>
+        <h1 class="h1-display font-naskh font-bold text-ink m-0 leading-[1.05]" style="font-size: clamp(48px, 6vw, 84px);">أَقْمَارُ الطّوفان</h1>
+        <div class="font-latin-serif italic text-[22px] text-muted mt-3.5"
+             x-text="lang === 'ar' ? 'ذاكرةٌ موصولةٌ بأسماءِ شهداءِ معركةِ طوفان الأقصى' : 'A living memory of those who fell in Tūfān al-Aqṣā'"></div>
+        <div class="mt-4 mb-9 ornament-row"><span class="ornament-star"></span></div>
+        <p class="font-body text-[18px] leading-[1.8] text-ink-2 max-w-[620px] mx-auto"
+           x-text="lang === 'ar'
+             ? 'أرشيفٌ مفتوحٌ يحفظ أسماءَ الشهداء وتواريخَ ميلادهم واستشهادهم. اعرف الذين شاركوك يوم ميلادك، أو ابحث في السجلّ الكامل.'
+             : 'An open archive preserving the names, birth and martyrdom dates of the fallen. Find those who share your birthday — or browse the full registry.'"></p>
+      </div>
+
+      <!-- Birthday-match card -->
+      <div class="hero-pad mt-14 max-w-[820px] mx-auto bg-paper border border-divider rounded-lg px-9 py-8 relative"
+           style="box-shadow: 0 24px 60px -40px rgba(40,30,15,0.35);">
+        <div class="absolute top-[-1px] start-6 w-16 h-[3px] bg-forest"></div>
+        <div class="absolute top-[-1px] end-6 w-6 h-[3px] bg-olive" style="background: var(--olive);"></div>
+
+        <div class="flex items-baseline justify-between gap-4 mb-5.5">
+          <h3 class="font-display text-[22px] font-medium text-ink m-0"
+              x-text="lang === 'ar' ? 'ابحث عمّن شاركك يوم ميلادك' : 'Find those who shared your birthday'"></h3>
+          <div class="font-latin-sans text-[11px] tracking-[0.2em] text-olive uppercase hidden md:block"
+               x-text="lang === 'ar' ? 'بحث رئيسي' : 'Primary search'"></div>
+        </div>
+
+        <div class="grid-bday grid gap-3" style="grid-template-columns: 1fr 1fr 1.2fr auto; align-items: end;">
+          <label class="block">
+            <div class="field-label" x-text="lang === 'ar' ? 'اليوم' : 'Day'"></div>
+            <select class="select" x-model.number="bday.day">
+              <template x-for="d in 31" :key="d"><option :value="d" x-text="d"></option></template>
+            </select>
+          </label>
+          <label class="block">
+            <div class="field-label" x-text="lang === 'ar' ? 'الشهر' : 'Month'"></div>
+            <select class="select" x-model.number="bday.month">
+              <template x-for="(m, i) in (lang === 'ar' ? arMonths : enMonths)" :key="i">
+                <option :value="i+1" x-text="m"></option>
+              </template>
+            </select>
+          </label>
+          <div class="grid-bday-window">
+            <div class="field-label" x-text="lang === 'ar' ? 'نطاق البحث' : 'Window'"></div>
+            <div class="flex gap-1.5 flex-wrap">
+              <template x-for="opt in windowOptions" :key="opt.v">
+                <button @click="bday.window = opt.v" type="button"
+                        :class="bday.window === opt.v ? 'bg-ink text-paper' : 'bg-transparent text-muted'"
+                        class="btn"
+                        style="padding: 8px 14px; font-size: 13px;"
+                        :style="bday.window === opt.v
+                          ? 'background: var(--ink); color: var(--paper); border-color: var(--ink);'
+                          : 'border-color: var(--divider);'">
+                  <span x-text="lang === 'ar' ? opt.ar : opt.en"></span>
+                </button>
+              </template>
+            </div>
+          </div>
+          <div class="grid-bday-submit">
+            <button @click="runBirthdaySearch()" class="btn btn-primary">
+              <span x-text="lang === 'ar' ? 'اعرض الأسماء' : 'Show names'"></span>
+              <span class="text-xs opacity-70">←</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Preview matches -->
+        <div class="mt-6 pt-5.5" style="border-top: 1px dashed var(--divider);">
+          <div class="font-body text-[12px] text-muted mb-3.5"
+               x-text="lang === 'ar' ? 'أقربُ الأسماءِ مولداً ليومك' : 'Nearest birthdays to your date'"></div>
+          <div class="preview-matches grid gap-3" style="grid-template-columns: repeat(3, 1fr);">
+            <template x-for="m in previewMatches" :key="m.id">
+              <button @click="openMartyr(m.id)" class="bg-page-2 border border-divider rounded p-3 flex items-center gap-3 text-right cursor-pointer">
+                <div x-html="renderPortrait(m, 42, false)"></div>
+                <div class="min-w-0 flex-1">
+                  <div class="font-naskh text-[16px] font-bold text-ink truncate" x-text="m.name"></div>
+                  <div class="text-[11px] text-muted mt-0.5">
+                    <span x-show="m.delta === 0" x-text="lang === 'ar' ? 'نفس اليوم' : 'same day'"></span>
+                    <span x-show="m.delta > 0" x-text="`${m.delta} ${lang === 'ar' ? 'يوم فارقاً' : 'days away'}`"></span>
+                  </div>
+                </div>
+              </button>
+            </template>
+          </div>
+        </div>
+      </div>
+
+      <!-- On this day -->
+      <section class="mt-18" x-show="onThisDay.length > 0" style="margin-top: 72px;">
+        <div class="flex items-baseline justify-between mb-4 flex-wrap gap-2">
+          <div>
+            <div class="font-latin-sans text-[11px] tracking-[0.25em] text-olive uppercase"
+                 x-text="lang === 'ar' ? 'في مثل هذا اليوم' : 'On this day'"></div>
+            <h3 class="font-display text-[28px] font-medium m-0 mt-1.5"
+                x-text="lang === 'ar' ? `ذكرى استشهاد · ${todayDay}/${todayMonth}` : `Anniversaries · ${todayDay}/${todayMonth}`"></h3>
+          </div>
+          <button @click="bday.month = todayMonth; bday.day = todayDay; bday.window = 7; runBirthdaySearch()"
+                  class="btn btn-text"
+                  x-text="lang === 'ar' ? 'عرض الكلّ ←' : 'View all ←'"></button>
+        </div>
+        <div class="grid gap-3.5" style="grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));">
+          <template x-for="m in onThisDay" :key="m.id">
+            <button @click="openMartyr(m.id)" class="bg-paper border border-divider rounded p-3.5 text-right cursor-pointer flex flex-col gap-1.5"
+                    style="border-inline-start: 2px solid var(--forest);">
+              <div class="font-naskh text-[16px] font-bold text-ink truncate" x-text="m.name"></div>
+              <div class="text-[12px] text-muted flex justify-between">
+                <span x-text="m.battalion"></span>
+                <span class="text-forest font-latin-sans tabular-nums" x-text="m.martyrdom.slice(0,4)"></span>
+              </div>
+            </button>
+          </template>
+        </div>
+      </section>
+
+      <!-- Stats -->
+      <div class="stats-strip mt-14 grid gap-0" style="grid-template-columns: repeat(4, 1fr); border-top: 1px solid var(--divider); border-bottom: 1px solid var(--divider);">
+        <template x-for="(s, i) in stats" :key="i">
+          <div class="p-5 text-center" :style="i > 0 ? 'border-inline-start: 1px solid var(--divider);' : ''">
+            <div class="font-naskh text-[28px] font-bold text-forest" x-text="lang === 'ar' ? s.k_ar : s.k_en"></div>
+            <div class="text-[12px] text-muted mt-1 tracking-wide" x-text="lang === 'ar' ? s.v_ar : s.v_en"></div>
+          </div>
+        </template>
+      </div>
+    </div>
+  </main>
+
+  <!-- ===================== BROWSE ===================== -->
+  <main x-show="view === 'browse'" class="max-w-[1240px] mx-auto px-8 py-12">
+    <!-- Birthday match banner -->
+    <div x-show="matchFilter"
+         class="mb-7 px-5 py-4 rounded-md flex items-center justify-between gap-4 flex-wrap"
+         style="background: linear-gradient(110deg, rgba(31,61,43,0.06), rgba(138,109,59,0.04));
+                border: 1px solid var(--divider); border-inline-start: 3px solid var(--forest);">
+      <div>
+        <div class="font-display text-[17px] text-ink">
+          <span x-show="lang === 'ar'">عرضُ الأسماءِ المولودةِ حولَ <b class="text-forest" x-text="`${matchFilter?.day}/${matchFilter?.month}`"></b>، ضمنَ نطاق ±<span x-text="matchFilter?.window"></span> يوماً</span>
+          <span x-show="lang === 'en'">Showing names born around <b class="text-forest" x-text="`${matchFilter?.day}/${matchFilter?.month}`"></b>, within ±<span x-text="matchFilter?.window"></span> days</span>
+        </div>
+        <div class="text-[13px] text-muted mt-1">
+          <span x-text="filtered.length"></span>
+          <span x-text="lang === 'ar' ? 'نتيجة مرتّبةً حسب القرب' : 'results, sorted by closeness'"></span>
+        </div>
+      </div>
+      <button @click="matchFilter = null" class="btn btn-text"
+              x-text="lang === 'ar' ? 'إزالة بحث الميلاد ✕' : 'Clear birthday match ✕'"></button>
+    </div>
+
+    <div class="mb-7">
+      <div class="section-kicker" x-text="lang === 'ar' ? 'السجلّ الكامل' : 'The full registry'"></div>
+      <h2 class="section-title" x-text="lang === 'ar' ? 'أَسْمَاءٌ لا تُنسَى' : 'Names not forgotten'"></h2>
+      <p class="section-sub" x-text="lang === 'ar'
+        ? 'تصفّحْ، ابحثْ، وَرَشِّحْ. كلّ اسم مدخلٌ مفتوحٌ يقبل التصحيح والإضافة.'
+        : 'Browse, search and filter. Every entry remains open for correction and addition.'"></p>
+    </div>
+
+    <!-- Filters -->
+    <div class="grid-filters bg-paper border border-divider rounded-md p-5 mb-6 grid gap-3"
+         style="grid-template-columns: 1.4fr 1fr 1fr 1fr 1fr auto; align-items: end;">
+      <label>
+        <div class="field-label" x-text="lang === 'ar' ? 'بحث بالاسم أو المدينة' : 'Search name or city'"></div>
+        <input type="text" class="input" x-model="filters.q"
+               :placeholder="lang === 'ar' ? 'اكتب اسماً…' : 'Type a name…'">
+      </label>
+      <label>
+        <div class="field-label" x-text="lang === 'ar' ? 'المدينة' : 'City'"></div>
+        <select class="select" x-model="filters.city">
+          <option value="" x-text="lang === 'ar' ? 'كل المدن' : 'All cities'"></option>
+          <template x-for="c in cities" :key="c"><option :value="c" x-text="c"></option></template>
+        </select>
+      </label>
+      <label>
+        <div class="field-label" x-text="lang === 'ar' ? 'الرتبة' : 'Rank'"></div>
+        <select class="select" x-model="filters.rank">
+          <option value="" x-text="lang === 'ar' ? 'أي رتبة' : 'Any'"></option>
+          <template x-for="r in ranks" :key="r"><option :value="r" x-text="r"></option></template>
+        </select>
+      </label>
+      <label>
+        <div class="field-label" x-text="lang === 'ar' ? 'الكتيبة' : 'Battalion'"></div>
+        <select class="select" x-model="filters.batt">
+          <option value="" x-text="lang === 'ar' ? 'كل الكتائب' : 'All'"></option>
+          <template x-for="b in battalions" :key="b"><option :value="b" x-text="b"></option></template>
+        </select>
+      </label>
+      <label>
+        <div class="field-label" x-text="lang === 'ar' ? 'الفئة العمرية' : 'Age'"></div>
+        <select class="select" x-model="filters.age">
+          <option value="" x-text="lang === 'ar' ? 'كل الأعمار' : 'All ages'"></option>
+          <option value="u20" x-text="lang === 'ar' ? 'أقل من ٢٠' : 'Under 20'"></option>
+          <option value="20-30">٢٠ – ٣٠</option>
+          <option value="30-40">٣٠ – ٤٠</option>
+          <option value="o40" x-text="lang === 'ar' ? 'أكثر من ٤٠' : 'Over 40'"></option>
+        </select>
+      </label>
+      <div class="pb-1">
+        <button @click="clearFilters()" class="btn btn-ghost"
+                x-text="lang === 'ar' ? 'مسح' : 'Clear'"></button>
+      </div>
+    </div>
+
+    <!-- Sort row -->
+    <div class="flex items-center justify-between mb-4 px-1">
+      <div class="text-[13px] text-muted">
+        <span x-text="filtered.length"></span>
+        <span x-text="lang === 'ar' ? `من ${all.length} اسماً` : `of ${all.length} names`"></span>
+      </div>
+      <div class="flex gap-1" x-show="!matchFilter">
+        <template x-for="opt in sortOptions" :key="opt.id">
+          <button @click="sort = opt.id"
+                  :class="sort === opt.id ? 'bg-page-3 text-ink' : 'text-muted'"
+                  class="bg-transparent border-0 rounded-full px-3.5 py-1.5 font-body text-[13px] font-medium">
+            <span x-text="lang === 'ar' ? opt.ar : opt.en"></span>
           </button>
         </template>
       </div>
     </div>
 
-    <!-- Custom days input — only when custom mode -->
-    <div x-show="userBirthdate && windowMode==='custom'" class="flex items-center gap-2 bg-bgdark border border-border rounded-lg px-3 py-2">
-      <div>
-        <div class="text-[10px] text-gray-400 uppercase tracking-wide">عدد الأيام</div>
-        <div class="flex items-center gap-2">
-          <input type="number" min="1" max="365" x-model="customDays" @input="applyFilter()"
-            class="bg-transparent w-16 ltr text-sm focus:outline-none">
-          <span class="text-xs text-gray-500">من 1 إلى 365</span>
-        </div>
-      </div>
-      <span x-show="customDaysError" class="text-red-400 text-xs" x-text="customDaysError"></span>
+    <!-- Empty state -->
+    <div x-show="filtered.length === 0" class="text-center py-16 px-6 bg-page-2 rounded-lg" style="border: 1px dashed var(--divider);">
+      <svg width="64" height="64" viewBox="0 0 60 60" style="opacity:.5; margin: 0 auto; display: block;">
+        <g fill="none" stroke="var(--olive)" stroke-width="0.9">
+          <circle cx="30" cy="30" r="20"/><circle cx="30" cy="30" r="14"/>
+          <path d="M30 10 L30 50 M10 30 L50 30 M16 16 L44 44 M44 16 L16 44"/>
+          <path d="M30 14 L44 30 L30 46 L16 30 Z"/>
+        </g>
+      </svg>
+      <h3 class="font-display text-[22px] mt-3.5 mb-2"
+          x-text="lang === 'ar' ? 'لا توجد نتائج تطابق بحثك' : 'No matching names'"></h3>
+      <p class="text-muted max-w-md mx-auto"
+         x-text="lang === 'ar'
+           ? 'جرّبْ توسيعَ النطاق أو إزالةَ بعض الفلاتر — السجلّ قيدُ النموّ المستمر.'
+           : 'Try widening the window or removing filters. The registry keeps growing.'"></p>
     </div>
 
-    <!-- Sort -->
-    <div class="flex items-center gap-2 bg-bgdark border border-border rounded-lg px-3 py-2 hover:border-brand transition-colors">
-      <span class="text-xl">⇅</span>
-      <div>
-        <div class="text-[10px] text-gray-400 uppercase tracking-wide">الترتيب حسب</div>
-        <select x-model="sortMode" @change="applyFilter()"
-          class="bg-transparent text-sm font-bold text-brand focus:outline-none cursor-pointer">
-          <option value="martyrdom_desc" class="bg-bgdark">تاريخ الاستشهاد ↓ (الأحدث)</option>
-          <option value="martyrdom_asc"  class="bg-bgdark">تاريخ الاستشهاد ↑ (الأقدم)</option>
-          <option value="birth_asc"      class="bg-bgdark">تاريخ الميلاد ↑ (الأكبر سناً)</option>
-          <option value="birth_desc"     class="bg-bgdark">تاريخ الميلاد ↓ (الأصغر سناً)</option>
-          <option value="posted_desc"    class="bg-bgdark">تاريخ النشر ↓ (الأحدث)</option>
-          <option value="posted_asc"     class="bg-bgdark">تاريخ النشر ↑ (الأقدم)</option>
-          <option value="name_asc"       class="bg-bgdark">الاسم (أ → ي)</option>
-        </select>
-      </div>
-    </div>
+    <!-- Grid -->
+    <div class="grid gap-4" style="grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));">
+      <template x-for="m in filtered" :key="m.id">
+        <button @click="openMartyr(m.id)" class="card card-hover p-4.5 text-right flex flex-col gap-3.5 cursor-pointer relative"
+                style="padding: 18px;">
+          <div x-show="m.delta !== undefined"
+               class="absolute top-3.5 start-3.5 font-latin-sans text-[11px] tracking-[0.12em] px-2 py-0.5 rounded-full"
+               :style="m.delta === 0 ? 'color: var(--forest); background: rgba(31,61,43,0.10);' : 'color: var(--olive); background: rgba(138,109,59,0.10);'">
+            <span x-show="m.delta === 0" x-text="lang === 'ar' ? 'نفس اليوم' : 'SAME DAY'"></span>
+            <span x-show="m.delta > 0" x-text="`±${m.delta}d`"></span>
+          </div>
 
-    <!-- View mode toggle (grid ↔ list) -->
-    <div role="group" aria-label="نمط العرض"
-         class="inline-flex bg-bgdark border border-border rounded-full p-1">
-      <button @click="setViewMode('grid')"
-              :class="viewMode === 'grid' ? 'bg-brand text-bgdark font-bold' : 'text-gray-400 hover:text-brand'"
-              class="px-3 py-1 rounded-full text-sm transition-colors flex items-center gap-1"
-              aria-pressed="viewMode === 'grid'"
-              title="عرض شبكي">
-        <span aria-hidden="true">▦</span><span>شبكة</span>
-      </button>
-      <button @click="setViewMode('list')"
-              :class="viewMode === 'list' ? 'bg-brand text-bgdark font-bold' : 'text-gray-400 hover:text-brand'"
-              class="px-3 py-1 rounded-full text-sm transition-colors flex items-center gap-1"
-              aria-pressed="viewMode === 'list'"
-              title="عرض قائمة">
-        <span aria-hidden="true">≡</span><span>قائمة</span>
-      </button>
-    </div>
-
-    <!-- Advanced filters toggle -->
-    <button @click="showAdvancedFilters = !showAdvancedFilters"
-      :class="showAdvancedFilters ? 'border-brand text-brand' : 'border-border text-gray-400'"
-      class="flex items-center gap-1 bg-bgdark border rounded-lg px-3 py-2 text-sm hover:border-brand transition-colors">
-      <span>🔍</span>
-      <span>فلاتر متقدمة</span>
-      <span :class="showAdvancedFilters && 'rotate-180'" style="transition: transform 0.2s">▼</span>
-    </button>
-  </div>
-
-  <!-- Advanced filters panel — bottom sheet on mobile, centered panel on sm+ -->
-  <div x-show="view==='public' && !isLoading && showAdvancedFilters"
-       @click.self="showAdvancedFilters = false"
-       x-cloak
-       class="fixed inset-0 z-30 bg-black/60 sm:relative sm:bg-transparent sm:inset-auto sm:z-auto sm:mt-3">
-    <div x-show="showAdvancedFilters" x-transition.opacity
-         class="absolute bottom-0 left-0 right-0 bg-bgcard border-t border-border rounded-t-2xl p-5 space-y-4
-                sm:relative sm:bottom-auto sm:max-w-3xl sm:mx-auto sm:border sm:rounded-lg">
-      <!-- Mobile drag handle -->
-      <div class="sm:hidden flex justify-center -mt-2 mb-2">
-        <div class="w-10 h-1 rounded-full bg-border"></div>
-      </div>
-
-      <!-- Section: Martyrdom date range -->
-      <div>
-        <div class="text-xs text-gray-400 mb-2 font-bold">📅 تاريخ الاستشهاد</div>
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div class="bg-bgdark border border-border rounded-lg px-3 py-2 hover:border-brand transition-colors">
-            <div class="text-[10px] text-gray-400 uppercase tracking-wide">من</div>
-            <div class="flex items-center gap-1">
-              <input type="text" x-ref="martyrdomFromInput" readonly placeholder="انقر لاختيار التاريخ"
-                x-init="initMartyrdomFromPicker($refs.martyrdomFromInput)"
-                class="bg-transparent ltr text-sm focus:outline-none flex-1 cursor-pointer placeholder-gray-600">
-              <button x-show="martyrdomFrom"
-                @click="martyrdomFrom=''; _martyrdomFromPicker.clearSelection(); $refs.martyrdomFromInput.value=''; applyFilter()"
-                title="مسح" class="text-gray-400 hover:text-red-400 px-1">✕</button>
+          <div class="flex gap-3.5 items-start">
+            <div x-html="renderPortrait(m, 64, true)"></div>
+            <div class="flex-1 min-w-0">
+              <div class="font-naskh text-[19px] font-bold text-ink leading-tight">
+                <span class="text-olive text-[14px] ml-1.5" x-text="lang === 'ar' ? 'الشهيد' : ''"></span>
+                <span x-text="m.name"></span>
+              </div>
+              <div class="font-body text-[13px] text-muted mt-1.5">
+                <span x-text="m.city"></span>
+                <span x-show="m.city"> · </span>
+                <span x-text="`${m.age} ${lang === 'ar' ? 'عاماً' : 'yrs'}`"></span>
+              </div>
             </div>
           </div>
-          <div class="bg-bgdark border border-border rounded-lg px-3 py-2 hover:border-brand transition-colors">
-            <div class="text-[10px] text-gray-400 uppercase tracking-wide">إلى</div>
-            <div class="flex items-center gap-1">
-              <input type="text" x-ref="martyrdomToInput" readonly placeholder="انقر لاختيار التاريخ"
-                x-init="initMartyrdomToPicker($refs.martyrdomToInput)"
-                class="bg-transparent ltr text-sm focus:outline-none flex-1 cursor-pointer placeholder-gray-600">
-              <button x-show="martyrdomTo"
-                @click="martyrdomTo=''; _martyrdomToPicker.clearSelection(); $refs.martyrdomToInput.value=''; applyFilter()"
-                title="مسح" class="text-gray-400 hover:text-red-400 px-1">✕</button>
-            </div>
-          </div>
-        </div>
-      </div>
 
-      <!-- Section: Age range -->
-      <div>
-        <div class="text-xs text-gray-400 mb-2 font-bold">⏳ العمر عند الاستشهاد</div>
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div class="bg-bgdark border border-border rounded-lg px-3 py-2 hover:border-brand transition-colors">
-            <div class="text-[10px] text-gray-400 uppercase tracking-wide">من (سنة)</div>
-            <div class="flex items-center gap-1">
-              <input type="number" min="0" max="120" inputmode="numeric"
-                x-model="ageMin" @input="applyFilter()" placeholder="مثال: 18"
-                class="bg-transparent ltr text-sm focus:outline-none w-full placeholder-gray-600">
-              <button x-show="ageMin" @click="ageMin=''; applyFilter()"
-                title="مسح" class="text-gray-400 hover:text-red-400 px-1">✕</button>
-            </div>
+          <div class="grid pt-3 text-[13px]" style="grid-template-columns: auto 1fr; row-gap: 6px; column-gap: 12px; border-top: 1px dashed var(--divider);">
+            <div class="text-muted" x-text="lang === 'ar' ? 'الميلاد' : 'Born'"></div>
+            <div class="text-ink-2 tabular-nums" x-text="formatDate(m.birth)"></div>
+            <div class="text-muted" x-text="lang === 'ar' ? 'الاستشهاد' : 'Martyrdom'"></div>
+            <div class="text-ink-2 tabular-nums" x-text="formatDate(m.martyrdom)"></div>
           </div>
-          <div class="bg-bgdark border border-border rounded-lg px-3 py-2 hover:border-brand transition-colors">
-            <div class="text-[10px] text-gray-400 uppercase tracking-wide">إلى (سنة)</div>
-            <div class="flex items-center gap-1">
-              <input type="number" min="0" max="120" inputmode="numeric"
-                x-model="ageMax" @input="applyFilter()" placeholder="مثال: 45"
-                class="bg-transparent ltr text-sm focus:outline-none w-full placeholder-gray-600">
-              <button x-show="ageMax" @click="ageMax=''; applyFilter()"
-                title="مسح" class="text-gray-400 hover:text-red-400 px-1">✕</button>
-            </div>
-          </div>
-        </div>
-      </div>
 
-      <!-- Clear-all button -->
-      <div x-show="martyrdomFrom || martyrdomTo || ageMin || ageMax" class="flex justify-center pt-2 border-t border-border">
-        <button @click="clearMartyrdomRange(); ageMin=''; ageMax=''; applyFilter()"
-          class="text-xs bg-bgdark border border-border rounded-lg px-4 py-2 hover:border-red-400 hover:text-red-400 transition-colors">
-          🗑 مسح جميع الفلاتر المتقدمة
+          <div class="flex flex-wrap gap-1.5">
+            <span x-show="m.rank" class="badge badge-forest" x-text="m.rank"></span>
+            <span x-show="m.weapon" class="badge badge-olive" x-text="m.weapon"></span>
+            <span class="badge" x-text="m.battalion"></span>
+          </div>
         </button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Result count (announced to screen readers) -->
-  <div x-show="view==='public' && !isLoading" class="max-w-4xl mx-auto mt-2 text-center"
-       aria-live="polite" aria-atomic="true">
-    <span class="text-3xl font-bold text-brand" x-text="filteredResults.length"></span>
-    <span class="text-sm text-gray-400 mr-1" x-show="!userBirthdate && !searchQuery">شهيد · جميع الشهداء</span>
-    <span class="text-sm text-gray-400 mr-1" x-show="userBirthdate && !searchQuery">شهيد بأعمار قريبة من ميلادك</span>
-    <span class="text-sm text-gray-400 mr-1" x-show="searchQuery">شهيد يطابق البحث</span>
-  </div>
-
-  <!-- Admin tip (admin view) -->
-  <div x-show="view==='admin' && !isLoading" class="max-w-7xl mx-auto mt-3 flex flex-wrap items-center gap-3">
-    <span class="text-sm">عدد الشهداء: <span x-text="allRows.length" class="text-brand"></span></span>
-    <button @click="exportOverrides()" x-show="pendingEditCount > 0"
-      class="mr-auto bg-brand text-bgdark px-3 py-1 rounded font-bold text-sm">
-      💾 تصدير <span x-text="pendingEditCount"></span> تعديل
-    </button>
-  </div>
-</header>
-
-<!-- ============ PUBLIC VIEW ============ -->
-<main id="main-content" role="main" x-show="view==='public' && !isLoading" class="max-w-7xl mx-auto p-4">
-  <!-- Hero hint when no filter is active -->
-  <div x-show="!userBirthdate" class="text-center py-6 mb-4 bg-bgcard border border-border rounded-lg">
-    <p class="text-gray-300">
-      💡 أدخل تاريخ ميلادك أعلاه لترى الشهداء بأعمار قريبة من عمرك
-    </p>
-  </div>
-
-  <!-- No results state -->
-  <div x-show="filteredResults.length === 0 && allRows.length > 0 && (searchQuery || userBirthdate || martyrdomFrom || martyrdomTo || ageMin || ageMax)"
-       x-cloak
-       class="max-w-md mx-auto my-12 text-center py-10 px-6 bg-bgcard/60 border border-dashed border-border rounded-xl"
-       role="status">
-    <div class="text-5xl opacity-40 mb-3" aria-hidden="true">🔍</div>
-    <div class="text-base font-bold text-gray-200" x-text="searchQuery ? 'لا يوجد شهداء يطابقون البحث' : 'لا يوجد شهداء يطابقون الفلاتر الحالية'"></div>
-    <div class="text-sm text-gray-400 mt-2"
-         x-text="searchQuery ? 'جرّب كلمات أخرى، أو امسح البحث للرؤية الكاملة' : 'جرّب توسيع نطاق التاريخ، أو امسح بعض الفلاتر'"></div>
-  </div>
-
-  <!-- Grid view -->
-  <template x-if="viewMode === 'grid'">
-    <div x-transition.opacity.duration.150ms
-         class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-      <template x-for="row in filteredResults" :key="row.msg_id">
-        <div class="group card-hover bg-bgcard border border-border rounded-lg overflow-hidden cursor-pointer hover:border-brand hover:shadow-lg hover:shadow-brand/20 relative"
-             tabindex="0"
-             @click="openPhotoModal(row)"
-             @keydown.enter="openPhotoModal(row)"
-             @keydown.space.prevent="openPhotoModal(row)">
-          <div x-show="row._overridden_fields && row._overridden_fields.length > 0" class="edit-dot" title="تعديل يدوي">✏️</div>
-          <div class="aspect-[4/5] bg-gradient-to-br from-bgcard to-bgdark overflow-hidden">
-            <img x-show="row.photo_path" :src="row.photo_path" :alt="row.name" loading="lazy"
-              class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-              @error="$el.style.display='none'; $el.nextElementSibling.style.display='flex'">
-            <div class="photo-placeholder w-full h-full" style="display:none">صورة غير متوفرة</div>
-          </div>
-          <div class="p-3 text-right">
-            <div class="font-bold text-sm leading-tight" x-text="row.name"></div>
-            <div class="text-xs text-gray-400 mt-1 ltr text-left">
-              <span x-text="row.birth_date || '—'"></span> → <span x-text="row.martyrdom_date || '—'"></span>
-            </div>
-            <!-- Age at martyrdom (small inline pill) -->
-            <template x-if="computeAge(row.birth_date, row.martyrdom_date) !== null">
-              <div class="mt-1 inline-block text-[10px] text-gray-500">
-                ⏳ <span class="text-gray-300 font-bold" x-text="computeAge(row.birth_date, row.martyrdom_date)"></span> سنة
-              </div>
-            </template>
-            <!-- Compact delta chip (short text — full description in the photo modal).
-                 Color by direction (older=blue, younger=yellow, same=green). -->
-            <template x-if="userBirthdate && row._delta_days !== undefined">
-              <div class="mt-2 inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded"
-                   :title="describeDelta(row._delta_days).text"
-                   :class="{
-                     'bg-yellow-400/20 text-yellow-300':  describeDeltaShort(row._delta_days).direction === 'younger',
-                     'bg-blue-400/20  text-blue-300':    describeDeltaShort(row._delta_days).direction === 'older',
-                     'bg-green-400/20 text-green-300':   describeDeltaShort(row._delta_days).direction === 'same',
-                   }">
-                <span x-text="describeDeltaShort(row._delta_days).icon"></span>
-                <span x-text="describeDeltaShort(row._delta_days).text"></span>
-              </div>
-            </template>
-          </div>
-        </div>
       </template>
     </div>
-  </template>
+  </main>
 
-  <!-- List view -->
-  <template x-if="viewMode === 'list'">
-    <div x-transition.opacity.duration.150ms
-         class="grid grid-cols-1 md:grid-cols-2 gap-3 max-w-4xl mx-auto">
-      <template x-for="row in filteredResults" :key="row.msg_id">
-        <div class="card-hover bg-bgcard border border-border rounded-lg p-3 flex items-center gap-3 cursor-pointer hover:border-brand relative"
-             tabindex="0"
-             @click="openPhotoModal(row)"
-             @keydown.enter="openPhotoModal(row)"
-             @keydown.space.prevent="openPhotoModal(row)">
-          <div x-show="row._overridden_fields && row._overridden_fields.length > 0" class="edit-dot" title="تعديل يدوي">✏️</div>
+  <!-- ===================== DETAIL ===================== -->
+  <main x-show="view === 'detail' && current" class="max-w-[1100px] mx-auto px-8 pt-8 pb-20" x-cloak>
+    <template x-if="current">
+      <div>
+        <div class="flex items-center gap-2 text-[13px] text-muted mb-7">
+          <button @click="view = 'browse'" class="btn btn-text" style="padding:0;"
+                  x-text="lang === 'ar' ? '← العودة إلى السجلّ' : '← Back to registry'"></button>
+          <span>·</span>
+          <span x-text="current.battalion"></span>
+          <span>·</span>
+          <span x-text="current.city"></span>
+        </div>
 
-          <!-- Photo -->
-          <div class="w-14 h-18 rounded-md overflow-hidden flex-shrink-0 bg-gradient-to-br from-bgcard to-bgdark"
-               style="width: 56px; height: 72px;">
-            <img x-show="row.photo_path" :src="row.photo_path" :alt="row.name" loading="lazy"
-                 class="w-full h-full object-cover"
-                 @error="$el.style.display='none'; $el.nextElementSibling.style.display='flex'">
-            <div class="photo-placeholder w-full h-full text-xs" style="display:none">—</div>
-          </div>
+        <!-- Hero -->
+        <article class="bg-paper border border-divider rounded-lg p-12 relative overflow-hidden" style="padding: 44px 48px;">
+          <div class="grid-detail grid gap-10 items-start" style="grid-template-columns: 200px 1fr;">
+            <div class="grid-detail-portrait" x-html="renderPortrait(current, 200, true)"></div>
+            <div>
+              <div class="font-body text-[14px] text-olive tracking-[0.15em] mb-2"
+                   x-text="lang === 'ar' ? 'الشهيد' : 'Martyr'"></div>
+              <h1 class="font-naskh text-[46px] font-bold text-ink m-0 leading-[1.1]" x-text="current.name"></h1>
+              <div class="mt-4 flex gap-2.5 flex-wrap">
+                <span x-show="current.rank" class="badge badge-forest" x-text="current.rank"></span>
+                <span x-show="current.weapon" class="badge badge-olive" x-text="current.weapon"></span>
+                <span class="badge" x-text="current.battalion"></span>
+                <span class="badge" x-text="current.brigade"></span>
+              </div>
 
-          <!-- Body -->
-          <div class="flex-1 min-w-0 text-right">
-            <div class="font-bold text-sm truncate" x-text="row.name"></div>
-            <div class="text-xs text-gray-400 truncate"
-                 x-text="[row.battalion, row.military_rank].filter(Boolean).join(' · ') || '—'"></div>
-            <div class="text-xs text-gray-500 ltr text-left mt-0.5">
-              <span x-text="row.birth_date || '—'"></span> → <span x-text="row.martyrdom_date || '—'"></span>
+              <div class="dates-strip grid mt-7" style="grid-template-columns: 1fr 1fr 1fr; border-top: 1px solid var(--divider); border-bottom: 1px solid var(--divider);">
+                <div class="py-4 text-center" style="border-inline-start: 1px solid var(--divider); margin-inline-start: -1px;">
+                  <div class="font-body text-[11px] tracking-[0.15em] text-muted uppercase"
+                       x-text="lang === 'ar' ? 'تاريخ الميلاد' : 'Birth date'"></div>
+                  <div class="font-naskh text-[18px] font-bold text-ink mt-1.5" x-text="formatDate(current.birth)"></div>
+                </div>
+                <div class="py-4 text-center" style="border-inline-start: 1px solid var(--divider);">
+                  <div class="font-body text-[11px] tracking-[0.15em] text-muted uppercase"
+                       x-text="lang === 'ar' ? 'تاريخ الاستشهاد' : 'Martyrdom date'"></div>
+                  <div class="font-naskh text-[18px] font-bold text-forest mt-1.5" x-text="formatDate(current.martyrdom)"></div>
+                </div>
+                <div class="py-4 text-center" style="border-inline-start: 1px solid var(--divider);">
+                  <div class="font-body text-[11px] tracking-[0.15em] text-muted uppercase"
+                       x-text="lang === 'ar' ? 'العمر عند الاستشهاد' : 'Age'"></div>
+                  <div class="font-naskh text-[18px] font-bold text-ink mt-1.5">
+                    <span x-text="current.age"></span>
+                    <span x-text="lang === 'ar' ? 'عاماً' : 'yrs'"></span>
+                  </div>
+                </div>
+              </div>
+
+              <div x-show="isAdmin" class="mt-6 flex gap-2.5">
+                <button @click="editMartyr(current.id)" class="btn btn-primary">
+                  ✎ <span x-text="lang === 'ar' ? 'تحرير البيانات' : 'Edit record'"></span>
+                </button>
+                <button class="btn btn-ghost" x-text="lang === 'ar' ? 'إضافة صورة' : 'Add photo'"></button>
+              </div>
             </div>
           </div>
 
-          <!-- Age chip -->
-          <div class="flex-shrink-0 flex flex-col items-center gap-1">
-            <template x-if="computeAge(row.birth_date, row.martyrdom_date) !== null">
-              <span class="inline-block bg-brand/20 text-brand text-xs font-bold px-2 py-0.5 rounded-full whitespace-nowrap">
-                <span x-text="computeAge(row.birth_date, row.martyrdom_date)"></span> سنة
-              </span>
-            </template>
-            <template x-if="userBirthdate && row._delta_days !== undefined">
-              <span class="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full"
-                    :class="{
-                      'bg-yellow-400/20 text-yellow-300': describeDeltaShort(row._delta_days).direction === 'younger',
-                      'bg-blue-400/20  text-blue-300':   describeDeltaShort(row._delta_days).direction === 'older',
-                      'bg-green-400/20 text-green-300':  describeDeltaShort(row._delta_days).direction === 'same',
-                    }">
-                <span x-text="describeDeltaShort(row._delta_days).icon"></span>
-                <span x-text="describeDeltaShort(row._delta_days).text"></span>
-              </span>
-            </template>
+          <div x-show="current.bio" class="mt-9 pt-7 max-w-[720px]" style="border-top: 1px dashed var(--divider);">
+            <div class="font-body text-[12px] text-olive tracking-[0.2em] uppercase mb-2.5"
+                 x-text="lang === 'ar' ? 'نبذة' : 'Profile note'"></div>
+            <p class="font-naskh text-[19px] leading-[1.85] text-ink-2 m-0" x-text="current.bio"></p>
           </div>
-        </div>
-      </template>
-    </div>
-  </template>
-</main>
+        </article>
 
-<!-- ============ ADMIN VIEW ============ -->
-<main id="main-content-admin" role="main" x-show="view==='admin' && !isLoading && loggedIn" class="max-w-7xl mx-auto p-4">
-  <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-    <template x-for="row in allRows" :key="row.msg_id">
-      <div class="bg-bgcard border border-border rounded-lg overflow-hidden relative">
-        <div x-show="row._overridden_fields && row._overridden_fields.length > 0" class="edit-dot" title="تعديل يدوي">✏️</div>
-        <div class="aspect-[4/5] bg-gradient-to-br from-bgcard to-bgdark cursor-pointer"
-             @click="openPhotoModal(row)">
-          <img x-show="row.photo_path" :src="row.photo_path" :alt="row.name" loading="lazy"
-            class="w-full h-full object-cover" @error="$el.style.display='none'; $el.nextElementSibling.style.display='flex'">
-          <div class="photo-placeholder w-full h-full" style="display:none">صورة غير متوفرة</div>
-        </div>
-        <div class="p-3 text-right">
-          <div class="font-bold text-sm" x-text="row.name"></div>
-          <div class="text-xs text-gray-400 mt-1">معرّف: <span x-text="row.msg_id"></span></div>
-          <div class="text-xs text-brand mt-1 ltr text-left" x-text="`${row.birth_date || '—'} → ${row.martyrdom_date || '—'}`"></div>
-          <div class="flex gap-2 mt-2">
-            <button @click="openEditModal(row)" class="text-xs bg-brand text-bgdark px-2 py-1 rounded">✏️ تحرير</button>
-            <a :href="row.message_link" target="_blank" class="text-xs bg-bgdark border border-border px-2 py-1 rounded">↗ تيليجرام</a>
+        <!-- Lifespan timeline -->
+        <section class="mt-7 bg-paper border border-divider rounded-lg" style="padding: 28px 36px;">
+          <div x-html="renderTimeline(current)"></div>
+        </section>
+
+        <!-- Details grid -->
+        <section class="grid-2col grid gap-5 mt-7" style="grid-template-columns: 1fr 1fr;">
+          <div class="bg-paper border border-divider rounded-md p-6">
+            <h4 class="font-display text-[14px] font-medium text-olive m-0 mb-3.5 uppercase tracking-[0.2em]"
+                x-text="lang === 'ar' ? 'البيانات الشخصية' : 'Personal'"></h4>
+            <template x-for="row in personalRows(current)" :key="row.k">
+              <div class="grid py-2.5 text-[14px]" style="grid-template-columns: 140px 1fr; border-bottom: 1px dashed var(--divider);">
+                <div class="text-muted" x-text="row.k"></div>
+                <div class="text-ink-2 font-naskh font-bold" x-text="row.v"></div>
+              </div>
+            </template>
           </div>
-        </div>
+          <div class="bg-paper border border-divider rounded-md p-6">
+            <h4 class="font-display text-[14px] font-medium text-olive m-0 mb-3.5 uppercase tracking-[0.2em]"
+                x-text="lang === 'ar' ? 'البيانات العسكرية' : 'Military'"></h4>
+            <template x-for="row in militaryRows(current)" :key="row.k">
+              <div class="grid py-2.5 text-[14px]" style="grid-template-columns: 140px 1fr; border-bottom: 1px dashed var(--divider);">
+                <div class="text-muted" x-text="row.k"></div>
+                <div class="text-ink-2 font-naskh font-bold" x-text="row.v"></div>
+              </div>
+            </template>
+          </div>
+        </section>
+
+        <!-- Related -->
+        <section class="mt-14" x-show="related.length > 0">
+          <div class="flex items-baseline justify-between mb-4.5">
+            <h3 class="font-display text-[22px] font-medium m-0"
+                x-text="lang === 'ar' ? 'من رفاق نفس الكتيبة' : 'From the same battalion'"></h3>
+            <span class="text-[13px] text-muted" x-text="current.battalion"></span>
+          </div>
+          <div class="grid gap-3.5" style="grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));">
+            <template x-for="m in related" :key="m.id">
+              <button @click="openMartyr(m.id)" class="card card-hover p-4 text-right flex flex-col gap-3 cursor-pointer">
+                <div class="flex gap-3 items-start">
+                  <div x-html="renderPortrait(m, 56, true)"></div>
+                  <div class="flex-1 min-w-0">
+                    <div class="font-naskh text-[17px] font-bold text-ink leading-tight truncate" x-text="m.name"></div>
+                    <div class="text-[12px] text-muted mt-1">
+                      <span x-text="`${m.age} ${lang === 'ar' ? 'عاماً' : 'yrs'}`"></span>
+                      · <span x-text="m.city"></span>
+                    </div>
+                  </div>
+                </div>
+              </button>
+            </template>
+          </div>
+        </section>
       </div>
     </template>
-  </div>
-</main>
+  </main>
 
-<!-- ============ PHOTO ZOOM MODAL ============ -->
-<div x-show="selectedRow" @click.self="closePhotoModal()" x-cloak
-     @keydown.escape.window="closePhotoModal()" x-trap="selectedRow"
-     role="dialog" aria-modal="true" aria-labelledby="photo-modal-title"
-     class="fixed inset-0 bg-black/80 z-20 flex items-center justify-center p-4">
-  <div class="bg-bgcard sm:border border-border sm:rounded-lg overflow-hidden
-              w-full h-full sm:max-w-2xl sm:h-auto sm:max-h-[90vh] flex flex-col">
-    <div class="flex justify-between items-center p-3 border-b border-border">
-      <h3 id="photo-modal-title" class="font-bold" x-text="selectedRow?.name"></h3>
-      <button @click="closePhotoModal()" class="text-xl">✕</button>
-    </div>
-    <div class="overflow-y-auto">
-      <img x-show="selectedRow?.photo_path" :src="selectedRow?.photo_path" :alt="selectedRow?.name"
-           class="w-full max-h-[60vh] object-contain bg-bgdark">
-    <div class="p-3 text-sm space-y-1">
-      <!-- Big call-to-action: open the video in Telegram (the channel's videos are too
-           large for Telegram's web-embed widget, so inline playback isn't reliable). -->
-      <a :href="selectedRow?.message_link" target="_blank"
-        class="block w-full text-center bg-brand text-bgdark px-3 py-2 rounded font-bold text-sm hover:opacity-90 transition-opacity mb-2">
-        ▶ مشاهدة الفيديو في تيليجرام ↗
-      </a>
-      <div>تاريخ الميلاد: <span class="text-brand ltr" x-text="selectedRow?.birth_date || '—'"></span></div>
-      <div>تاريخ الاستشهاد: <span class="text-brand ltr" x-text="selectedRow?.martyrdom_date || '—'"></span></div>
-      <div x-show="selectedRow && computeAge(selectedRow.birth_date, selectedRow.martyrdom_date) !== null">
-        العمر عند الاستشهاد: <span class="text-brand ltr font-bold" x-text="`${computeAge(selectedRow?.birth_date, selectedRow?.martyrdom_date)} سنة`"></span>
-      </div>
-      <div>الرتبة: <span x-text="selectedRow?.military_rank || '—'"></span></div>
-      <div>الكتيبة: <span x-text="selectedRow?.battalion || '—'"></span></div>
-      <div>اللواء: <span x-text="selectedRow?.brigade || '—'"></span></div>
-      <template x-if="userBirthdate && selectedRow?._delta_days !== undefined">
-        <div class="mt-2 pt-2 border-t border-border">
-          <span class="text-xs text-gray-400">بالمقارنة بتاريخ ميلادك:</span>
-          <div class="inline-flex items-center gap-1 mt-1 text-sm font-bold px-3 py-1 rounded"
-               :class="{
-                 'bg-yellow-400/20 text-yellow-300':  describeDelta(selectedRow._delta_days).direction === 'younger',
-                 'bg-blue-400/20  text-blue-300':    describeDelta(selectedRow._delta_days).direction === 'older',
-                 'bg-green-400/20 text-green-300':   describeDelta(selectedRow._delta_days).direction === 'same',
-               }">
-            <span x-text="describeDelta(selectedRow._delta_days).icon"></span>
-            <span x-text="describeDelta(selectedRow._delta_days).text"></span>
-          </div>
+  <!-- ===================== ABOUT ===================== -->
+  <main x-show="view === 'about'" class="max-w-[760px] mx-auto px-8 py-16">
+    <div class="section-kicker" x-text="lang === 'ar' ? 'عن المشروع' : 'About'"></div>
+    <h2 class="section-title" x-text="lang === 'ar' ? 'ذاكرةٌ مفتوحةٌ بأمانة' : 'An open, faithful memory'"></h2>
+    <p class="section-sub" x-text="lang === 'ar'
+      ? 'أَقْمَارُ الطّوفان أرشيفٌ مفتوحُ المصدر يحفظ أسماءَ شهداء معركة طوفان الأقصى من كتائب القسّام، بياناتُهم تُستخلص آلياً من قناة @AqmarTofan ثم تُراجع بشرياً.'
+      : 'AQMAR is an open-source archive preserving the names of those who fell in Tūfān al-Aqṣā from the Qassam Brigades. Data is extracted automatically from the @AqmarTofan channel and human-reviewed.'"></p>
+    <div class="ornament-row mt-7"><span class="ornament-star"></span></div>
+    <div class="grid grid-cols-2 gap-4.5 mt-6">
+      <template x-for="(b, i) in aboutBlocks" :key="i">
+        <div class="bg-paper border border-divider rounded-md p-6">
+          <h4 class="font-display text-[18px] m-0 text-ink" x-text="lang === 'ar' ? b.ar[0] : b.en[0]"></h4>
+          <p class="text-[14px] text-ink-2 mt-2 mb-0 leading-[1.75]" x-text="lang === 'ar' ? b.ar[1] : b.en[1]"></p>
         </div>
       </template>
-      <a :href="selectedRow?.message_link" target="_blank" class="text-brand text-xs underline">عرض في تيليجرام ↗</a>
     </div>
-    </div><!-- /overflow-y-auto -->
-  </div>
-</div>
+    <div class="mt-8 rounded p-6" style="background: linear-gradient(110deg, rgba(31,61,43,0.06), transparent); border-inline-start: 3px solid var(--forest);">
+      <p class="m-0 font-naskh text-[18px] text-ink-2"
+         x-text="lang === 'ar' ? '«إنّ الموتى لا يَموتون ما دامت أسماؤُهم تُذكَر.»' : '“The dead are not dead so long as their names are remembered.”'"></p>
+    </div>
+  </main>
 
-<!-- ============ ADMIN EDIT MODAL ============ -->
-<div x-show="editingMsgId" @click.self="closeEditModal()" x-cloak
-     @keydown.escape.window="closeEditModal()" x-trap="editingMsgId"
-     role="dialog" aria-modal="true" aria-labelledby="edit-modal-title"
-     class="fixed inset-0 bg-black/80 z-20 flex items-end sm:items-center justify-center sm:p-4">
-  <div class="bg-bgcard sm:border border-border rounded-t-2xl sm:rounded-lg overflow-hidden
-              w-full max-h-[85vh] sm:max-w-md mt-auto sm:mt-0 sm:max-h-[90vh] flex flex-col">
-    <div class="flex justify-between items-center p-3 border-b border-border">
-      <h3 id="edit-modal-title" class="font-bold">تحرير الشهيد (معرّف <span x-text="editingMsgId"></span>)</h3>
-      <button @click="closeEditModal()" class="text-xl">✕</button>
+  <!-- ===================== ADMIN ===================== -->
+  <main x-show="view === 'admin' && isAdmin" class="max-w-[1240px] mx-auto px-8 pt-8 pb-20" x-cloak>
+    <div class="admin-banner bg-forest-grad text-paper px-7 py-5 rounded-lg mb-7 flex items-center justify-between gap-6">
+      <div>
+        <div class="font-latin-sans text-[11px] tracking-[0.3em] opacity-70">EDITOR · ADMIN MODE</div>
+        <div class="font-naskh text-[24px] font-bold mt-1"
+             x-text="lang === 'ar' ? 'لوحة تحرير السجلّ' : 'Registry editing dashboard'"></div>
+      </div>
+      <div class="flex items-center gap-3.5">
+        <div class="text-center">
+          <div class="font-naskh text-[26px] font-bold" x-text="Object.keys(edits).length"></div>
+          <div class="text-[11px] opacity-75 tracking-wide"
+               x-text="lang === 'ar' ? 'تعديلٌ قيد الانتظار' : 'pending edits'"></div>
+        </div>
+        <button @click="exportOverrides()" class="btn"
+                style="background: var(--paper); color: var(--forest); border: 1px solid var(--paper);">
+          ⬇ <span x-text="lang === 'ar' ? 'تصدير overrides.json' : 'Export overrides.json'"></span>
+        </button>
+        <button @click="logout()" class="btn btn-text" style="color: rgba(255,255,255,0.75);"
+                x-text="lang === 'ar' ? 'خروج' : 'Sign out'"></button>
+      </div>
     </div>
-    <form @submit.prevent="saveEdit()" class="p-3 space-y-2 overflow-y-auto text-sm">
-      <template x-for="field in ['name','birth_date','martyrdom_date','city','military_rank','weapon','battalion','brigade']">
-        <label class="block">
-          <span class="block text-xs text-gray-300" x-text="field"></span>
-          <input :type="field.includes('date') ? 'date' : 'text'" x-model="editForm[field]"
-            class="w-full bg-bgdark border border-border rounded px-2 py-1 ltr">
-        </label>
+
+    <!-- Edit form -->
+    <div x-show="editingId" class="grid-detail grid gap-7" style="grid-template-columns: 260px 1fr;">
+      <div>
+        <div x-html="renderPortrait(editingMartyr(), 220, true)"></div>
+        <button class="mt-3.5 w-full py-2.5 text-[13px] text-muted bg-transparent rounded font-body"
+                style="border: 1px dashed var(--divider);"
+                x-text="lang === 'ar' ? '⬆ رفعُ صورةٍ جديدة' : '⬆ Upload new photo'"></button>
+        <div class="mt-4 p-4 bg-page-2 rounded-md text-[12px] text-muted leading-[1.7]" style="border: 1px solid var(--divider);">
+          <span x-show="lang === 'ar'">التعديلاتُ تُخزَّن محلياً في <code class="px-1 py-0.5 rounded bg-page-3">localStorage</code>، ثم تُصدَّر إلى <code class="px-1 py-0.5 rounded bg-page-3">overrides.json</code>.</span>
+          <span x-show="lang === 'en'">Edits live in <code class="px-1 py-0.5 rounded bg-page-3">localStorage</code>, then export to <code class="px-1 py-0.5 rounded bg-page-3">overrides.json</code>.</span>
+        </div>
+      </div>
+
+      <div class="bg-paper border border-divider rounded-lg p-8">
+        <div class="flex items-center justify-between mb-5 pb-4.5" style="border-bottom: 1px solid var(--divider);">
+          <div>
+            <div class="font-body text-[11px] tracking-[0.2em] text-olive">
+              SHID #<span x-text="String(editingId).padStart(3, '0')"></span>
+            </div>
+            <h3 class="font-naskh text-[26px] font-bold m-0 mt-1" x-text="editingMartyr()?.name"></h3>
+          </div>
+          <span x-show="draftDirty()" class="badge badge-olive">
+            ● <span x-text="lang === 'ar' ? 'تغييرات غير محفوظة' : 'unsaved changes'"></span>
+          </span>
+        </div>
+
+        <div class="grid gap-x-6" style="grid-template-columns: 1fr 1fr;">
+          <div class="col-span-2">
+            <div class="font-display text-[13px] text-olive tracking-[0.2em] uppercase mb-3 mt-1"
+                 x-text="lang === 'ar' ? 'الحقول الإلزامية' : 'Mandatory fields'"></div>
+          </div>
+          <label class="block mb-4">
+            <div class="field-label" x-text="lang === 'ar' ? 'الاسم الكامل' : 'Full name'"></div>
+            <input class="input" x-model="draft.name">
+          </label>
+          <label class="block mb-4">
+            <div class="field-label" x-text="lang === 'ar' ? 'العمر عند الاستشهاد' : 'Age at martyrdom'"></div>
+            <input class="input" x-model="draft.age">
+          </label>
+          <label class="block mb-4">
+            <div class="field-label" x-text="lang === 'ar' ? 'تاريخ الميلاد' : 'Birth date'"></div>
+            <input class="input" x-model="draft.birth" placeholder="YYYY-MM-DD">
+          </label>
+          <label class="block mb-4">
+            <div class="field-label" x-text="lang === 'ar' ? 'تاريخ الاستشهاد' : 'Martyrdom date'"></div>
+            <input class="input" x-model="draft.martyrdom" placeholder="YYYY-MM-DD">
+          </label>
+
+          <div class="col-span-2 mt-3">
+            <div class="font-display text-[13px] text-olive tracking-[0.2em] uppercase mb-3"
+                 x-text="lang === 'ar' ? 'حقولٌ اختيارية' : 'Optional fields'"></div>
+          </div>
+          <label class="block mb-4">
+            <div class="field-label" x-text="lang === 'ar' ? 'المدينة' : 'City'"></div>
+            <select class="select" x-model="draft.city">
+              <option value="">—</option>
+              <template x-for="c in cities" :key="c"><option :value="c" x-text="c"></option></template>
+            </select>
+          </label>
+          <label class="block mb-4">
+            <div class="field-label" x-text="lang === 'ar' ? 'الرتبة' : 'Rank'"></div>
+            <select class="select" x-model="draft.rank">
+              <option value="">—</option>
+              <template x-for="r in ranks" :key="r"><option :value="r" x-text="r"></option></template>
+            </select>
+          </label>
+          <label class="block mb-4">
+            <div class="field-label" x-text="lang === 'ar' ? 'السلاح' : 'Weapon'"></div>
+            <select class="select" x-model="draft.weapon">
+              <option value="">—</option>
+              <template x-for="w in weapons" :key="w"><option :value="w" x-text="w"></option></template>
+            </select>
+          </label>
+          <label class="block mb-4">
+            <div class="field-label" x-text="lang === 'ar' ? 'الكتيبة' : 'Battalion'"></div>
+            <select class="select" x-model="draft.battalion">
+              <template x-for="b in battalions" :key="b"><option :value="b" x-text="b"></option></template>
+            </select>
+          </label>
+          <label class="block mb-4 col-span-2">
+            <div class="field-label" x-text="lang === 'ar' ? 'نبذة (اختياري)' : 'Profile note (optional)'"></div>
+            <textarea class="input font-naskh text-[16px]" rows="3" style="resize: vertical;" x-model="draft.bio"
+                      :placeholder="lang === 'ar' ? 'نبذةٌ موجزةٌ مأخوذةٌ من القناة…' : 'Short note pulled from the channel…'"></textarea>
+          </label>
+        </div>
+
+        <div class="flex gap-2.5 justify-end mt-3.5 pt-5.5" style="border-top: 1px solid var(--divider);">
+          <button @click="cancelEdit()" class="btn btn-ghost"
+                  x-text="lang === 'ar' ? 'إلغاء' : 'Cancel'"></button>
+          <button @click="saveEdit()" class="btn btn-primary"
+                  :style="draftDirty() ? '' : 'opacity:.5'">
+            💾 <span x-text="lang === 'ar' ? 'حفظ التعديل' : 'Save changes'"></span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Edit list -->
+    <div x-show="!editingId">
+      <div class="bg-paper border border-divider rounded-md p-4 mb-4 flex gap-3.5 items-center">
+        <input class="input flex-1" x-model="adminSearch"
+               :placeholder="lang === 'ar' ? 'ابحث عن سجلٍ لتحريره…' : 'Find a record to edit…'">
+        <div class="text-[13px] text-muted">
+          <span x-text="adminList().length"></span>
+          <span x-text="lang === 'ar' ? 'سجلًّا' : 'records'"></span>
+        </div>
+      </div>
+
+      <table class="w-full bg-paper border border-divider rounded-md overflow-hidden text-[14px]" style="border-collapse: collapse;">
+        <thead>
+          <tr class="bg-page-2" style="border-bottom: 1px solid var(--divider);">
+            <template x-for="h in adminHeaders" :key="h">
+              <th class="p-3.5 text-start font-body text-[11px] font-medium text-muted uppercase tracking-[0.12em]" x-text="h"></th>
+            </template>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <template x-for="m in adminList().slice(0, 30)" :key="m.id">
+            <tr style="border-bottom: 1px solid var(--divider);"
+                :style="edits[m.id] ? 'background: rgba(184,146,74,0.06);' : ''">
+              <td class="p-3.5 text-muted font-latin-sans tabular-nums" x-text="String(m.id).padStart(3,'0')"></td>
+              <td class="p-3.5">
+                <div class="flex items-center gap-2.5">
+                  <div x-html="renderPortrait(m, 36, false)"></div>
+                  <div>
+                    <div class="font-naskh text-[16px] font-bold" x-text="m.name"></div>
+                    <div class="text-[12px] text-muted" x-text="`${m.age} ${lang === 'ar' ? 'عاماً' : 'yrs'}`"></div>
+                  </div>
+                </div>
+              </td>
+              <td class="p-3.5 tabular-nums text-ink-2" x-text="m.birth"></td>
+              <td class="p-3.5 tabular-nums text-ink-2" x-text="m.martyrdom"></td>
+              <td class="p-3.5" x-text="m.city"></td>
+              <td class="p-3.5 text-[13px] text-muted" x-text="m.battalion"></td>
+              <td class="p-3.5">
+                <span x-show="edits[m.id]" class="badge badge-olive" x-text="lang === 'ar' ? 'مُعَدَّل' : 'edited'"></span>
+                <span x-show="!edits[m.id]" class="inline-flex items-center gap-1.5 text-muted text-[12px]">
+                  <span class="w-1.5 h-1.5 rounded-full bg-forest"></span>
+                  <span x-text="lang === 'ar' ? 'مكتمل' : 'complete'"></span>
+                </span>
+              </td>
+              <td class="p-3.5">
+                <button @click="editMartyr(m.id)" class="bg-transparent border border-divider rounded-full px-3 py-1 text-[12px] text-ink-2 font-body">
+                  ✎ <span x-text="lang === 'ar' ? 'تحرير' : 'Edit'"></span>
+                </button>
+              </td>
+            </tr>
+          </template>
+        </tbody>
+      </table>
+    </div>
+  </main>
+
+  <!-- ===================== LOGIN MODAL ===================== -->
+  <div x-show="showLogin" @click.self="showLogin = false; loginError = ''"
+       class="fixed inset-0 z-[100] flex items-center justify-center" style="background: rgba(20,15,10,0.55); backdrop-filter: blur(4px);">
+    <div class="bg-paper w-[420px] rounded-lg p-8 border border-divider" style="box-shadow: 0 40px 80px -30px rgba(0,0,0,0.4);">
+      <div class="text-center mb-4">
+        <svg width="48" height="48" viewBox="0 0 60 60" style="opacity:.45; margin:0 auto; display:block;">
+          <g fill="none" stroke="var(--forest)" stroke-width="0.9">
+            <circle cx="30" cy="30" r="20"/><circle cx="30" cy="30" r="14"/>
+            <path d="M30 10 L30 50 M10 30 L50 30 M16 16 L44 44 M44 16 L16 44"/>
+            <path d="M30 14 L44 30 L30 46 L16 30 Z"/>
+          </g>
+        </svg>
+      </div>
+      <h3 class="font-display text-[22px] font-medium m-0 mb-1 text-center"
+          x-text="lang === 'ar' ? 'دخول المحرّر' : 'Editor login'"></h3>
+      <p class="text-center text-muted text-[13px] mt-0 mb-6"
+         x-text="lang === 'ar' ? 'الاعتماد الافتراضي: admin / aqmar2026' : 'Default: admin / aqmar2026'"></p>
+      <label class="block mb-4">
+        <div class="field-label" x-text="lang === 'ar' ? 'اسم المستخدم' : 'Username'"></div>
+        <input class="input" x-model="loginUser">
+      </label>
+      <label class="block mb-4">
+        <div class="field-label" x-text="lang === 'ar' ? 'كلمة المرور' : 'Password'"></div>
+        <input type="password" class="input" x-model="loginPass" @keyup.enter="doLogin()">
+      </label>
+      <div x-show="loginError" class="text-[13px] mt-[-8px] mb-3" style="color: var(--crimson);" x-text="loginError"></div>
+      <div class="flex gap-2.5 mt-3.5">
+        <button @click="doLogin()" class="btn btn-primary flex-1 justify-center"
+                x-text="lang === 'ar' ? 'دخول' : 'Sign in'"></button>
+        <button @click="showLogin = false; loginError = ''" class="btn btn-ghost"
+                x-text="lang === 'ar' ? 'إلغاء' : 'Cancel'"></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== FOOTER ===================== -->
+  <footer class="mt-16 px-8 pt-10 pb-8 bg-page-2" style="border-top: 1px solid var(--divider);">
+    <div class="footer-grid max-w-[1240px] mx-auto grid gap-8" style="grid-template-columns: 1.5fr 1fr 1fr 1fr;">
+      <div>
+        <div class="flex items-center gap-3 mb-3.5">
+          <svg width="32" height="32" viewBox="0 0 60 60" style="opacity:.45">
+            <g fill="none" stroke="var(--forest)" stroke-width="0.9">
+              <circle cx="30" cy="30" r="20"/><circle cx="30" cy="30" r="14"/>
+              <path d="M30 10 L30 50 M10 30 L50 30 M16 16 L44 44 M44 16 L16 44"/>
+            </g>
+          </svg>
+          <div class="font-naskh text-[20px] font-bold">أَقْمَارُ الطّوفان</div>
+        </div>
+        <p class="text-[13px] text-muted m-0 leading-[1.8] max-w-[380px]"
+           x-text="lang === 'ar'
+             ? 'أرشيفٌ مفتوحُ المصدر، يحفظ أسماءَ شهداء كتائب القسّام في معركة طوفان الأقصى، ويُتيحها للجميع بحفظٍ محلّيٍّ آمن.'
+             : 'An open-source archive preserving the names of the Qassam Brigades martyrs of Tūfān al-Aqṣā — kept locally and openly.'"></p>
+      </div>
+      <template x-for="(col, i) in footerCols()" :key="i">
+        <div>
+          <h5 class="font-display text-[12px] font-semibold tracking-[0.2em] uppercase text-olive m-0 mb-3" x-text="col.title"></h5>
+          <ul class="list-none p-0 m-0">
+            <template x-for="l in col.links" :key="l">
+              <li class="mb-1.5"><a class="text-[13px] text-ink-2" x-text="l"></a></li>
+            </template>
+          </ul>
+        </div>
       </template>
-      <div class="flex gap-2 pt-2">
-        <button type="submit" class="bg-brand text-bgdark px-3 py-1 rounded font-bold flex-1">حفظ التعديل</button>
-        <button type="button" @click="closeEditModal()" class="bg-bgdark border border-border px-3 py-1 rounded">إلغاء</button>
-      </div>
-    </form>
-  </div>
+    </div>
+    <div class="max-w-[1240px] mx-auto mt-7 pt-5 flex justify-between text-[12px] text-muted font-latin-sans" style="border-top: 1px dashed var(--divider);">
+      <div x-text="lang === 'ar' ? '© AQMAR · أرشيفٌ خاصّ، محتوى القناة ملكٌ لأصحابه' : '© AQMAR · Channel content remains property of @AqmarTofan'"></div>
+      <div x-text="lang === 'ar' ? 'آخر تحديث: ١٤ أيار ٢٠٢٦' : 'Last sync: 14 May 2026'"></div>
+    </div>
+  </footer>
+
 </div>
 
-<!-- ============ LOGIN MODAL ============ -->
-<div x-show="showLoginModal" @click.self="showLoginModal=false" x-cloak
-     @keydown.escape.window="showLoginModal=false" x-trap="showLoginModal"
-     role="dialog" aria-modal="true" aria-labelledby="login-modal-title"
-     class="fixed inset-0 bg-black/80 z-20 flex items-center justify-center p-4">
-  <div class="bg-bgcard border border-border rounded-lg p-5 max-w-sm w-full">
-    <h3 id="login-modal-title" class="font-bold mb-3">دخول الإدارة</h3>
-    <form @submit.prevent="login()" class="space-y-2 text-sm">
-      <input type="text" x-model="loginUser" placeholder="اسم المستخدم"
-        class="w-full bg-bgdark border border-border rounded px-2 py-2 ltr">
-      <input type="password" x-model="loginPass" placeholder="كلمة المرور"
-        class="w-full bg-bgdark border border-border rounded px-2 py-2 ltr">
-      <div x-show="loginError" class="text-red-400 text-xs" x-text="loginError"></div>
-      <div class="flex gap-2 pt-2">
-        <button type="submit" class="bg-brand text-bgdark px-3 py-2 rounded font-bold flex-1">دخول</button>
-        <button type="button" @click="showLoginModal=false" class="bg-bgdark border border-border px-3 py-2 rounded">إلغاء</button>
-      </div>
-    </form>
-  </div>
-</div>
-
+<style>[x-cloak]{display:none!important}</style>
+<script src="app.js"></script>
 </body>
 </html>
