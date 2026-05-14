@@ -391,7 +391,7 @@ function aqmar() {
       const usePhotos = (window.AQMAR_CONFIG && window.AQMAR_CONFIG.usePhotos);
       const photo = usePhotos ? (m.photo || (m.id ? `../data/photos/${m.id}.jpg` : null)) : null;
       const photoHtml = photo
-        ? `<img src="${esc(photo)}" alt="" onerror="this.style.display='none'">`
+        ? `<img src="${esc(photo)}" alt="" loading="lazy" decoding="async" onerror="this.style.display='none'">`
         : '';
       return `
         <div class="portrait ${tone} ${frame ? '' : 'naked'}"
