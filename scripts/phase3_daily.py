@@ -13,6 +13,7 @@ Idempotent:
     order means we keep the first of two same-name posts in this batch).
 """
 import asyncio
+import os
 import sys
 import logging
 from pathlib import Path
@@ -46,6 +47,16 @@ async def main():
     cfg = load_config()
     state = State.load(STATE_PATH)
     min_id = (state.last_processed_msg_id or 0) + 1
+
+    # Supabase sync is optional — only built if .env is configured.
+    from src.supabase_client import make_sync_from_config
+    supabase_sync = None
+    if cfg.supabase_url and cfg.supabase_service_role_key:
+        try:
+            supabase_sync = make_sync_from_config(cfg)
+            print(f"Supabase: writing to {cfg.supabase_url}")
+        except Exception as e:
+            logging.warning(f"Supabase init failed (writes will be skipped): {e}")
 
     fetcher = TelegramFetcher(
         cfg.api_id, cfg.api_hash, cfg.phone, cfg.two_fa_password,
@@ -100,6 +111,19 @@ async def main():
             )
             writer.append_row(row)
             state.mark_processed(tg.msg_id, row.extraction_status)
+
+            # NEW: push to Supabase (if configured). Errors don't abort the run —
+            # Excel is still the local backup.
+            if supabase_sync:
+                try:
+                    photo_url = ""
+                    if row.photo_path and os.path.exists(row.photo_path):
+                        supabase_sync.upload_photo(row.msg_id, row.photo_path)
+                        photo_url = supabase_sync.public_photo_url(row.msg_id)
+                    supabase_sync.upsert_martyr_row(row, photo_url=photo_url)
+                except Exception as e:
+                    logging.warning(f"Supabase write failed for msg {tg.msg_id}: {e}")
+
             print(f"  msg {tg.msg_id}: {row.extraction_status} | "
                   f"birth={row.birth_date} | mart={row.martyrdom_date}")
         except Exception as e:
