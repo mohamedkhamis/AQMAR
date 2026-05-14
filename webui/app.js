@@ -168,9 +168,11 @@ function aqmar() {
     get todayMonth() { return new Date().getMonth() + 1; },
     get todayDay()   { return new Date().getDate(); },
     get stats() {
+      const tufanStart = new Date('2023-10-07');
+      const daysSince = Math.max(0, Math.floor((Date.now() - tufanStart.getTime()) / 86400000));
       return [
         { k_ar: this.toArDigits(this.all.length), k_en: this.all.length, v_ar: 'اسماً مُوَثَّقًا', v_en: 'names recorded' },
-        { k_ar: '٥٧٢ يوماً', k_en: '572 days', v_ar: 'منذ بدء الطوفان', v_en: 'since Oct 7' },
+        { k_ar: this.toArDigits(daysSince) + ' يوماً', k_en: daysSince + ' days', v_ar: 'منذ بدء الطوفان', v_en: 'since Oct 7' },
         { k_ar: this.toArDigits(this.battalions.length) + ' كتيبة', k_en: this.battalions.length + ' bn', v_ar: 'تَشمَلُها السجلات', v_en: 'battalions covered' },
         { k_ar: '٪١٠٠', k_en: '100%', v_ar: 'أرشيفٌ مفتوحٌ ومحلي', v_en: 'open & local archive' },
       ];

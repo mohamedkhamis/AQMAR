@@ -59,5 +59,10 @@ window.AQMAR_CONFIG = {
     };
   });
 
-  window.AQMAR_SAMPLE_DATA = data;
+  // Only expose sample data when explicitly requested via ?demo —
+  // prevents 36 fake names from leaking into production if martyrs.json
+  // ever fails to load.
+  if (new URLSearchParams(location.search).has('demo')) {
+    window.AQMAR_SAMPLE_DATA = data;
+  }
 })();
