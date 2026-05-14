@@ -109,22 +109,29 @@ python scripts\excel_to_json.py    # regenerate JSON for the SPA
 
 ## Web UI
 
-A static Alpine.js + Tailwind SPA (no build step) that browses and edits the
-martyr dataset. Two roles:
+A static Alpine.js + Tailwind SPA (no build step) with an editorial multi-view
+design. Bilingual Arabic / English (toggle in the header). Warm earth-tone
+palette with Reem Kufi, Amiri, and Tajawal display fonts; light theme by default,
+dark theme pre-wired via `html[data-theme="dark"]`.
 
-### Public view
+### Views
 
-- Enter your birthday and a window (1 week / 1 month / 2 months / custom days).
-- See martyrs born within ±N days of your date, sorted by closeness.
-- Filter by city, rank, weapon, battalion, brigade, age, or martyrdom date.
-- Litepicker provides Arabic-friendly date selection with year + month dropdowns.
+| | |
+|---|---|
+| **Home (`view: 'home'`)** | Verse, birthday-match hero with live preview, "On this day" anniversaries strip, stats (names recorded, days since Oct 7, battalions, openness). |
+| **Registry (`view: 'browse'`)** | Card grid with Arabic-aware text search (name + city + battalion + brigade), filter dropdowns for city / rank / battalion / age, and three sort modes. |
+| **Detail (`view: 'detail'`)** | Portrait, lifespan timeline, personal + military panels, source link back to the original Telegram post, "from the same battalion" rail. |
+| **Admin (`view: 'admin'`, login required)** | Editable table of every martyr; each row exposes a "تحرير" button. Edits accumulate in `localStorage` and survive pipeline re-runs once exported. |
+| **About (`view: 'about'`)** | Project description (collection / extraction / editing / publication phases). |
 
-### Admin view (login required)
+### Admin edit flow
 
-- Same grid, but each card exposes an "✏️ تحرير" button.
-- Edits accumulate in `localStorage`.
-- Click "💾 تصدير" to download `overrides.json`, then save it to
-  `data/overrides.json` — edits survive future pipeline re-runs.
+- Click "تحرير" on any row → modal with editable fields.
+- Save → diff (only changed fields) is merged into the per-id override in `localStorage` under `aqmar.edits`.
+- Click "تصدير overrides.json" → downloads the override file.
+- Save the downloaded file at `data/overrides.json` and commit it; the UI auto-merges it on next load, and pipeline re-runs won't overwrite the corrections.
+
+The admin flow stays backward-compatible with the v1 SPA's `aqmar.pending_overrides` localStorage key — existing unexported edits migrate on first load.
 
 #### Default admin credentials
 
@@ -153,7 +160,7 @@ start http://localhost:8000/webui/
 
 ### UI tests
 
-Open <http://localhost:8000/webui/tests.html> — all 23 tests run on page load.
+Open <http://localhost:8000/webui/tests.html> — 45 tests run on page load (filter logic, search predicate, Arabic normalization, override-merge, admin edit-diff, and the v1↔editorial schema adapters).
 
 ---
 
