@@ -412,9 +412,10 @@ function aqmar() {
       const ar = this.lang === 'ar';
       const birthY = parseInt(m.birth.slice(0,4), 10);
       const martY  = parseInt(m.martyrdom.slice(0,4), 10);
+      if (!Number.isFinite(birthY) || !Number.isFinite(martY)) return '';
       const endY   = new Date().getFullYear();
       const startY = birthY;
-      const range  = endY - startY || 1;
+      const range  = Math.max(endY - startY, 1);
       const birthPos = ((birthY - startY) / range) * 100;
       const martPos  = ((martY  - startY) / range) * 100;
 
