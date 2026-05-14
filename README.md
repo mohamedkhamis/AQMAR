@@ -31,10 +31,11 @@ serves the dataset through a bilingual web UI.
 data/martyrs.xlsx · data/photos/ · data/state.json
         │
         ▼
-   scripts/excel_to_json.py
+   scripts/migrate_to_supabase.py  (one-shot)
+   scripts/phase3_daily.py         (incremental, every day)
         │
         ▼
-   data/martyrs.json  ─►  Web UI (Alpine + Tailwind SPA)
+   Supabase Postgres + Storage  ─►  Web UI (Alpine + Tailwind SPA)
 ```
 
 - **Idempotent** — re-running on the same messages yields the same Excel.
@@ -56,6 +57,7 @@ data/martyrs.xlsx · data/photos/ · data/state.json
 | Config | python-dotenv |
 | Scheduling | Windows Task Scheduler |
 | Web UI | Alpine.js + Tailwind CSS + Litepicker |
+| Data layer | Supabase (Postgres + Storage + Auth) |
 | Tests | pytest, pytest-asyncio |
 
 ---
@@ -91,7 +93,7 @@ AQMAR/
 ├── scripts/              # entry points (phase0 / phase1 / phase2 / phase3)
 ├── tests/                # pytest suite for parsers, dedup, state, excel
 ├── webui/                # static Alpine + Tailwind SPA
-├── data/                 # outputs (gitignored except overrides.json)
+├── data/                 # local pipeline outputs (xlsx + photos + state)
 ├── docs/superpowers/     # design docs + plans
 └── .env.example          # template for Telegram credentials
 ```
@@ -100,60 +102,57 @@ AQMAR/
 
 ```powershell
 .venv\Scripts\activate
-python scripts\phase3_daily.py     # fetch new posts only
-python scripts\excel_to_json.py    # regenerate JSON for the SPA
-# Reload http://localhost:8000/webui/ — new rows appear.
+python scripts\phase3_daily.py     # fetch new posts; writes to Supabase
+# Reload http://localhost:8000/webui/ — new rows appear (no JSON rebuild step).
 ```
 
 ---
 
 ## Web UI
 
-A static Alpine.js + Tailwind SPA (no build step) that browses and edits the
-martyr dataset. Two roles:
+A static Alpine.js + Tailwind SPA backed by Supabase Postgres + Storage:
 
-### Public view
+- **Public view:** filter martyrs by birthdate proximity, martyrdom date,
+  age, free-text search; sort by various fields; click any card to open
+  a photo modal with full details.
+- **Admin view** (Supabase Auth login required): same grid, plus an
+  "✏️ تحرير" button on each card to fix any field. Edits go live
+  instantly for all visitors (no more JSON export step).
 
-- Enter your birthday and a window (1 week / 1 month / 2 months / custom days).
-- See martyrs born within ±N days of your date, sorted by closeness.
-- Filter by city, rank, weapon, battalion, brigade, age, or martyrdom date.
-- Litepicker provides Arabic-friendly date selection with year + month dropdowns.
+### One-time setup (after `git clone`)
 
-### Admin view (login required)
+1. Sign up at supabase.com and create a project ("AqmarTofan" or similar).
+2. Authentication → Users → Add user → your email + password.
+3. Storage → New bucket → `aqmar-photos` → Public.
+4. SQL Editor → paste `scripts/setup_supabase_schema.sql` → Run.
+5. Project Settings → API → copy URL + anon key + service_role key into
+   `.env` (see `.env.example`).
+6. Paste URL + anon key into `webui/config.js` (the public values).
+7. Run the migration: `python scripts/migrate_to_supabase.py`.
 
-- Same grid, but each card exposes an "✏️ تحرير" button.
-- Edits accumulate in `localStorage`.
-- Click "💾 تصدير" to download `overrides.json`, then save it to
-  `data/overrides.json` — edits survive future pipeline re-runs.
-
-#### Default admin credentials
-
-| | |
-|---|---|
-| Username | `admin` |
-| Password | `aqmar2026` |
-
-To change the password, replace `adminPasswordHash` in `webui/config.js` with
-the SHA-256 hex of your new password:
+### Run locally
 
 ```powershell
-.venv\Scripts\python.exe -c "import hashlib; print(hashlib.sha256(b'YOUR_NEW_PASSWORD').hexdigest())"
+.\scripts\serve.ps1     # starts http://localhost:8000/webui/
 ```
 
-### Run the UI locally
+### Daily flow
 
 ```powershell
 .venv\Scripts\activate
-python scripts\excel_to_json.py    # generate data/martyrs.json from xlsx
-
-# Serve from the PROJECT ROOT so ../data/ paths resolve from webui/:
-python -m http.server 8000
-start http://localhost:8000/webui/
+python scripts\phase3_daily.py     # fetches new posts, writes to Supabase
+# (or run via Windows Task Scheduler — scripts/setup_daily_trigger.ps1)
 ```
 
-### UI tests
+### Tests
 
-Open <http://localhost:8000/webui/tests.html> — all 23 tests run on page load.
+Open `http://localhost:8000/webui/tests.html` — Litepicker / Alpine /
+filter logic / merge logic tests all run on page load.
+
+### Hosting (GitHub Pages)
+
+Push only `webui/` to a `gh-pages` branch — that's it. No data directory
+needed; the SPA reads from Supabase, not from disk.
 
 ---
 
@@ -169,18 +168,17 @@ TELEGRAM_2FA_PASSWORD=
 CHANNEL_USERNAME=AqmarTofan
 SESSION_PATH=session/aqmar
 DAILY_RUN_HOUR=9
+SUPABASE_URL=
+SUPABASE_ANON_KEY=
+SUPABASE_SERVICE_ROLE_KEY=
+SUPABASE_STORAGE_BUCKET=aqmar-photos
 ```
 
-Credentials are obtained from <https://my.telegram.org>. The `.env` file and
-Telethon session are gitignored — never commit them.
-
----
-
-## Hosting the SPA
-
-`webui/` + `data/martyrs.json` + `data/overrides.json` + `data/photos/` can be
-copied verbatim to any static host (GitHub Pages, Netlify, Cloudflare Pages).
-The relative `../data/photos/N.jpg` paths preserve the on-disk structure.
+Telegram credentials are obtained from <https://my.telegram.org>; Supabase
+values come from Project Settings → API in your Supabase dashboard. The
+`.env` file and Telethon session are gitignored — never commit them. The
+`SUPABASE_SERVICE_ROLE_KEY` is server-only — only the URL + anon key go
+into the public `webui/config.js`.
 
 ---
 

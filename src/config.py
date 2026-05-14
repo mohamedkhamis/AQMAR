@@ -1,3 +1,4 @@
+# src/config.py
 from dataclasses import dataclass
 from dotenv import dotenv_values
 
@@ -10,6 +11,12 @@ class Config:
     channel_username: str
     session_path: str
     daily_run_hour: int
+    # Supabase — all four optional (empty string when not configured),
+    # so the existing pipeline keeps running before migration is complete.
+    supabase_url: str
+    supabase_anon_key: str
+    supabase_service_role_key: str
+    supabase_storage_bucket: str
 
 def load_config(env_path: str = ".env") -> Config:
     raw = dotenv_values(env_path)
@@ -21,4 +28,8 @@ def load_config(env_path: str = ".env") -> Config:
         channel_username=raw["CHANNEL_USERNAME"],
         session_path=raw.get("SESSION_PATH", "session/aqmar"),
         daily_run_hour=int(raw.get("DAILY_RUN_HOUR", 9)),
+        supabase_url=raw.get("SUPABASE_URL", ""),
+        supabase_anon_key=raw.get("SUPABASE_ANON_KEY", ""),
+        supabase_service_role_key=raw.get("SUPABASE_SERVICE_ROLE_KEY", ""),
+        supabase_storage_bucket=raw.get("SUPABASE_STORAGE_BUCKET", "aqmar-photos"),
     )
