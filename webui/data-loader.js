@@ -1,14 +1,15 @@
 // webui/data-loader.js
-// Loads martyrs.json + overrides.json from disk, merges them.
+// Loads martyrs from Supabase. Replaces the old fetch-from-JSON path.
 
 (function (global) {
   "use strict";
 
   function mergeOverrides(baseMartyrs, overridesEdits) {
-    // overridesEdits: { "20": { birth_date: "...", _manual_edit_at: "..." }, ... }
+    // Kept for backward compat with any leftover overrides.json files.
+    // In the Supabase world, baseMartyrs are already the canonical merged rows,
+    // so callers typically pass overridesEdits={} and this is a near-no-op.
     const norm = {};
     for (const k of Object.keys(overridesEdits || {})) norm[String(k)] = overridesEdits[k];
-
     return baseMartyrs.map(row => {
       const ov = norm[String(row.msg_id)];
       if (!ov) return { ...row, _overridden_fields: [] };
@@ -19,32 +20,32 @@
     });
   }
 
-  async function loadData(martyrsUrl, overridesUrl) {
-    const [martyrsResp, overridesResp] = await Promise.all([
-      fetch(martyrsUrl),
-      fetch(overridesUrl).catch(() => null),  // overrides may not exist yet
-    ]);
+  // Mark rows that were manually edited (the manual_edited_at column is set
+  // by the admin UI) so the existing ✏️ badge in the cards keeps working.
+  function annotateManualEdits(rows) {
+    return rows.map(r => ({
+      ...r,
+      _overridden_fields: r.manual_edited_at ? ["manual_edit"] : [],
+    }));
+  }
 
-    if (!martyrsResp.ok) {
-      throw new Error(`Cannot load ${martyrsUrl}: ${martyrsResp.status}. ` +
-        `Run 'python scripts/excel_to_json.py' first.`);
+  async function loadData() {
+    if (!global.AQMAR_SB) {
+      throw new Error("Supabase client not initialized. Check webui/config.js " +
+        "for valid supabaseUrl + supabaseAnonKey.");
     }
-    const martyrsData = await martyrsResp.json();
-
-    let overridesData = { version: 1, edits: {} };
-    if (overridesResp && overridesResp.ok) {
-      try {
-        overridesData = await overridesResp.json();
-      } catch (e) {
-        console.warn("Invalid JSON in overrides — ignoring", e);
-      }
-    }
+    const { data, error } = await global.AQMAR_SB
+      .from("martyrs")
+      .select("*")
+      .order("posted_date", { ascending: false });
+    if (error) throw new Error(`Supabase: ${error.message}`);
+    const rows = annotateManualEdits(data || []);
     return {
-      generated_at: martyrsData.generated_at,
-      channel: martyrsData.channel,
-      martyrs: martyrsData.martyrs,
-      overrides: overridesData.edits || {},
-      allRows: mergeOverrides(martyrsData.martyrs, overridesData.edits || {}),
+      generated_at: new Date().toISOString(),
+      channel: "AqmarTofan",
+      martyrs: data || [],
+      overrides: {},      // no longer used; kept for compat with callers
+      allRows: rows,
     };
   }
 

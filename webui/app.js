@@ -89,30 +89,19 @@ function aqmar() {
         try { localStorage.setItem('aqmar.edits', JSON.stringify(v)); } catch (e) {}
       });
 
-      // Try to load real martyrs.json — fall back to sample data if unavailable.
+      // Load martyrs from Supabase. Falls back to sample data if the
+      // client isn't initialized yet or the network is unreachable.
       let martyrs = null;
       try {
-        const res = await fetch('../data/martyrs.json', { cache: 'no-cache' });
-        if (res.ok) {
-          const raw = await res.json();
-          // Our pipeline produces { generated_at, channel, martyrs: [...] }
-          // (an envelope). Handle both bare arrays and the envelope.
-          const rows = Array.isArray(raw) ? raw : (raw.martyrs || []);
-          martyrs = rows.map(adaptMartyrToNewSchema).filter(Boolean);
-        }
-      } catch (e) {}
+        const data = await loadData();
+        const rows = data.martyrs || [];
+        martyrs = rows.map(adaptMartyrToNewSchema).filter(Boolean);
+      } catch (e) {
+        console.warn('Supabase load failed, falling back to sample data:', e.message);
+      }
       if (!martyrs && window.AQMAR_SAMPLE_DATA) martyrs = window.AQMAR_SAMPLE_DATA;
       if (!martyrs) martyrs = [];
-
-      // Also try to load overrides.json (committed corrections from disk).
-      try {
-        const ores = await fetch('../data/overrides.json', { cache: 'no-cache' });
-        if (ores.ok) {
-          const raw = await ores.json();
-          const overrides = adaptOverridesToNewSchema(raw);
-          martyrs = martyrs.map(m => overrides[m.id] ? { ...m, ...overrides[m.id] } : m);
-        }
-      } catch (e) {}
+      // overrides.json fetch removed — admin edits live in Supabase as of Task 10.
 
       // Normalize + compute age
       this.all = martyrs.map(m => ({
