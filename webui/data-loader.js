@@ -64,7 +64,32 @@
     };
   }
 
+  // Field-name remap used inside override entries — mirrors the martyr adapter.
+  const OVERRIDE_FIELD_MAP = {
+    birth_date:     "birth",
+    martyrdom_date: "martyrdom",
+    military_rank:  "rank",
+    photo_path:     "photo",
+  };
+
+  function adaptOverridesToNewSchema(v1) {
+    if (!v1 || !v1.edits) return {};
+    const out = {};
+    for (const id of Object.keys(v1.edits)) {
+      const edit = v1.edits[id];
+      const mapped = {};
+      for (const k of Object.keys(edit)) {
+        if (k.startsWith("_")) continue;  // drop meta fields
+        const newKey = OVERRIDE_FIELD_MAP[k] || k;
+        mapped[newKey] = edit[k];
+      }
+      out[id] = mapped;
+    }
+    return out;
+  }
+
   global.mergeOverrides = mergeOverrides;
   global.loadData = loadData;
   global.adaptMartyrToNewSchema = adaptMartyrToNewSchema;
+  global.adaptOverridesToNewSchema = adaptOverridesToNewSchema;
 })(window);

@@ -48,7 +48,7 @@
   <!-- Modules under test — order matters: dependencies first -->
   <script src="config.js?v=4" charset="UTF-8"></script>
   <script src="filter-logic.js?v=4" charset="UTF-8"></script>
-  <script src="data-loader.js?v=5" charset="UTF-8"></script>
+  <script src="data-loader.js?v=6" charset="UTF-8"></script>
   <script src="admin-edit.js?v=4" charset="UTF-8"></script>
   <script src="app.js?v=4" charset="UTF-8"></script>
 
@@ -352,6 +352,38 @@
       assertEq(out.status, undefined);
       assertEq(out.message_link, undefined);
       assertEq(out._delta_days, undefined);
+    });
+  </script>
+
+  <script>
+    // ===== adaptOverridesToNewSchema =====
+
+    test("adaptOverridesToNewSchema flattens v1 format and renames fields", () => {
+      const v1 = {
+        version: 1,
+        edits: {
+          "20": { birth_date: "1980-01-01", military_rank: "قائد", _manual_edit_at: "2026-05-13" },
+          "21": { city: "رفح" },
+        },
+      };
+      const out = adaptOverridesToNewSchema(v1);
+      assertEq(out, {
+        "20": { birth: "1980-01-01", rank: "قائد" },
+        "21": { city: "رفح" },
+      });
+    });
+
+    test("adaptOverridesToNewSchema strips _manual_edit_at and other meta fields", () => {
+      const v1 = { version: 1, edits: { "5": { name: "Y", _manual_edit_at: "2026", _foo: "bar" } } };
+      assertEq(adaptOverridesToNewSchema(v1), { "5": { name: "Y" } });
+    });
+
+    test("adaptOverridesToNewSchema handles empty/missing input", () => {
+      assertEq(adaptOverridesToNewSchema(null), {});
+      assertEq(adaptOverridesToNewSchema(undefined), {});
+      assertEq(adaptOverridesToNewSchema({}), {});
+      assertEq(adaptOverridesToNewSchema({ version: 1 }), {});
+      assertEq(adaptOverridesToNewSchema({ version: 1, edits: {} }), {});
     });
   </script>
 
