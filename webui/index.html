@@ -560,8 +560,8 @@
                 style="border: 1px dashed var(--divider);"
                 x-text="lang === 'ar' ? '⬆ رفعُ صورةٍ جديدة' : '⬆ Upload new photo'"></button>
         <div class="mt-4 p-4 bg-page-2 rounded-md text-[12px] text-muted leading-[1.7]" style="border: 1px solid var(--divider);">
-          <span x-show="lang === 'ar'">التعديلاتُ تُخزَّن محلياً في <code class="px-1 py-0.5 rounded bg-page-3">localStorage</code>، ثم تُصدَّر إلى <code class="px-1 py-0.5 rounded bg-page-3">overrides.json</code>.</span>
-          <span x-show="lang === 'en'">Edits live in <code class="px-1 py-0.5 rounded bg-page-3">localStorage</code>, then export to <code class="px-1 py-0.5 rounded bg-page-3">overrides.json</code>.</span>
+          <span x-show="lang === 'ar'">التعديلاتُ تُحفظ مباشرةً في <code class="px-1 py-0.5 rounded bg-page-3">Supabase</code>، وتَظهر فوراً لجميع الزوار.</span>
+          <span x-show="lang === 'en'">Edits save directly to <code class="px-1 py-0.5 rounded bg-page-3">Supabase</code> and appear instantly for all visitors.</span>
         </div>
       </div>
 

@@ -14,13 +14,19 @@
     return diff;
   }
 
-  // Translates the SPA's NEW-schema field names (id, birth, martyrdom, rank,
-  // photo, source) back to the Supabase OLD-schema column names. The other
-  // five fields (name, city, weapon, battalion, brigade) pass through.
+  // SPA-side field names → Supabase `martyrs` column names.
+  // The 10 settable fields are listed here so unmapped UI-only state
+  // (e.g. draft.age which is computed, draft.bio which has no column)
+  // can be silently filtered out before the .update() call.
   const FIELD_REVERSE_MAP = {
+    name:      "name",
     birth:     "birth_date",
     martyrdom: "martyrdom_date",
+    city:      "city",
     rank:      "military_rank",
+    weapon:    "weapon",
+    battalion: "battalion",
+    brigade:   "brigade",
     photo:     "photo_path",
     source:    "message_link",
   };
@@ -28,8 +34,9 @@
   function translateToDbSchema(diffInNewSchema) {
     const out = {};
     for (const k of Object.keys(diffInNewSchema)) {
-      if (k === "id") continue;       // id maps to msg_id, which is the WHERE filter, not a column to set
-      const dbKey = FIELD_REVERSE_MAP[k] || k;
+      if (k === "id") continue;            // id maps to msg_id (WHERE filter), not a settable column
+      const dbKey = FIELD_REVERSE_MAP[k];
+      if (!dbKey) continue;                // silently drop SPA-only fields (age, bio, _meta, etc.)
       out[dbKey] = diffInNewSchema[k];
     }
     return out;
