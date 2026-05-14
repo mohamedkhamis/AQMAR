@@ -13,6 +13,9 @@ window.AQMAR_CONFIG = {
 
   adminUsername: 'admin',
   adminPasswordHash: 'aaa9e482389cd1cff1f7640a22225ac99c65bfbc4d063973163ec388fa59eb53', // = SHA-256("aqmar2026")
+
+  supabaseUrl:     "https://YOURPROJECT.supabase.co",
+  supabaseAnonKey: "PASTE_YOUR_ANON_KEY_HERE",
 };
 
 // ============================================================

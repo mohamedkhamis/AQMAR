@@ -20,8 +20,12 @@
 <!-- Design tokens + components -->
 <link rel="stylesheet" href="styles.css">
 
+<!-- Supabase JS SDK (must load BEFORE config.js + supabase-client.js) -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
 <!-- Site config (admin password hash etc.) -->
 <script src="config.js"></script>
+<script src="supabase-client.js"></script>
 
 <!-- Preserved helpers from v1: schema adapter, search predicate, admin diff logic.
      Load BEFORE Alpine + app.js so their globals are available at init time. -->
