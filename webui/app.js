@@ -389,8 +389,12 @@ function aqmar() {
       const init = initials(m.name || '');
       const tone = (m.id % 3 === 0) ? 'tone-olive' : '';
       // Only try photo if config opts-in (silences 404 spam in dev previews).
+      // Photo URLs come from Supabase Storage (post-migration) or are absent;
+      // rows without a photo render the silhouette below cleanly. No fallback
+      // to ../data/photos/ — that path 404s on GitHub Pages where only webui/
+      // is deployed.
       const usePhotos = (window.AQMAR_CONFIG && window.AQMAR_CONFIG.usePhotos);
-      const photo = usePhotos ? (m.photo || (m.id ? `../data/photos/${m.id}.jpg` : null)) : null;
+      const photo = usePhotos ? (m.photo || null) : null;
       const photoHtml = photo
         ? `<img src="${esc(photo)}" alt="" loading="lazy" decoding="async" onerror="this.style.display='none'">`
         : '';

@@ -4,16 +4,15 @@
 /* ============================================================== */
 
 window.AQMAR_CONFIG = {
-  // Admin credentials.
-  // To rotate: PowerShell —
-  //   .venv\Scripts\python.exe -c "import hashlib; print(hashlib.sha256(b'YOUR_NEW_PASSWORD').hexdigest())"
-  // Set to true once data/photos/N.jpg files exist on disk.
-  // When false, every portrait renders as a calligraphic monogram (no 404s).
+  // Set to true once data/photos/N.jpg files exist on disk (or once Supabase
+  // Storage URLs are populated on each row). When false, every portrait
+  // renders as a calligraphic monogram.
   usePhotos: true,
 
-  adminUsername: 'admin',
-  adminPasswordHash: 'aaa9e482389cd1cff1f7640a22225ac99c65bfbc4d063973163ec388fa59eb53', // = SHA-256("aqmar2026")
-
+  // Public Supabase config. The anon key is PUBLIC by design — RLS on the
+  // Postgres tables enforces who-can-do-what server-side. Admin login uses
+  // Supabase Auth (see Authentication → Users in the Dashboard); credentials
+  // are NOT stored in this file.
   supabaseUrl:     "https://YOURPROJECT.supabase.co",
   supabaseAnonKey: "PASTE_YOUR_ANON_KEY_HERE",
 };
