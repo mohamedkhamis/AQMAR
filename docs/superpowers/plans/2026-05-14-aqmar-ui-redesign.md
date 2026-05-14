@@ -297,7 +297,7 @@ And add the export at the bottom:
 
 - [ ] **Step 4: Run tests to verify pass**
 
-Reload. Expected: **48 tests pass** (41 + 4 + 3).
+Reload. Expected: **45 tests pass** (38 baseline after the 3 viewMode tests were removed in commit d518fa2, + 4 adaptMartyr + 3 adaptOverrides).
 
 - [ ] **Step 5: Commit**
 
@@ -418,7 +418,7 @@ Console must be free of errors. If it isn't, STOP and report.
 
 - [ ] **Step 5: Tests still pass**
 
-Reload `http://localhost:8000/webui/tests.html`. Expected: still 48 passed.
+Reload `http://localhost:8000/webui/tests.html`. Expected: still 45 passed.
 
 - [ ] **Step 6: Commit**
 
@@ -566,7 +566,7 @@ Open `http://localhost:8000/webui/`. Log in as admin (`admin` / `aqmar2026`). Na
 
 - [ ] **Step 4: Tests still pass**
 
-48 passing.
+45 passing.
 
 - [ ] **Step 5: Commit**
 
@@ -604,7 +604,7 @@ Spot-check: open detail view for a martyr you know has a photo (e.g. id 100) —
 
 - [ ] **Step 3: Tests still pass**
 
-48 passing.
+45 passing.
 
 - [ ] **Step 4: Commit**
 
@@ -710,7 +710,7 @@ Open `http://localhost:8000/webui/`. Click the URL bar, press Tab. Expected: a g
 
 - [ ] **Step 4: Tests still pass**
 
-48 passing.
+45 passing.
 
 - [ ] **Step 5: Commit**
 
@@ -1026,10 +1026,10 @@ Skip = no commit, move to Task 17.
 
 - [ ] **Step 1: Run the full test suite**
 
-Open `http://localhost:8000/webui/tests.html`. Expected: **48 passed, 0 failed**.
+Open `http://localhost:8000/webui/tests.html`. Expected: **45 passed, 0 failed**.
 
 Breakdown:
-- 41 existing tests (from PR #1)
+- 38 existing tests (41 from PR #1, minus 3 viewMode tests removed in d518fa2 when grid/list toggle was dropped)
 - 4 `adaptMartyrToNewSchema` tests
 - 3 `adaptOverridesToNewSchema` tests
 
@@ -1117,6 +1117,6 @@ The SPA now has:
 - ✅ Arabic-aware search (preserved from PR #1)
 - ✅ Schema adapter so the pipeline doesn't need to change
 - ✅ Backward-compat localStorage migration for admin edits
-- ✅ 48 passing tests
+- ✅ 45 passing tests
 - ✅ ARIA landmarks + skip link + focus traps + ESC handlers
 - ✅ Lighthouse accessibility ≥ 95
