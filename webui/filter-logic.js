@@ -142,6 +142,30 @@
     return { icon, text: `${word} منك بـ ${unit}`, direction };
   }
 
+  function normalizeArabic(text) {
+    if (!text) return "";
+    let s = String(text);
+    s = s.replace(/[ً-ْ]/g, "");      // diacritics
+    s = s.replace(/ـ/g, "");               // tatweel
+    s = s.replace(/[أإآ]/g, "ا");  // أإآ → ا
+    s = s.replace(/ة/g, "ه");         // ة → ه
+    s = s.replace(/ى/g, "ي");         // ى → ي
+    s = s.replace(/\s+/g, " ").trim();
+    return s;
+  }
+
+  function searchPredicate(row, query) {
+    const q = normalizeArabic(query);
+    if (!q) return true;
+    const haystack = [
+      row.name,
+      row.city,
+      row.battalion,
+      row.brigade,
+    ].map(normalizeArabic).join(" | ");
+    return haystack.includes(q);
+  }
+
   global.daysBetween = daysBetween;
   global.windowDaysFromMode = windowDaysFromMode;
   global.filterByProximity = filterByProximity;
@@ -149,4 +173,6 @@
   global.describeDeltaShort = describeDeltaShort;
   global.computeAge = computeAge;
   global.sortRows = sortRows;
+  global.normalizeArabic = normalizeArabic;
+  global.searchPredicate = searchPredicate;
 })(window);

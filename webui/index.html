@@ -21,6 +21,7 @@
   <script src="https://cdn.jsdelivr.net/npm/litepicker/dist/litepicker.js"></script>
 
   <!-- Alpine.js (defer per docs) -->
+  <script defer src="https://unpkg.com/@alpinejs/focus@3.x.x/dist/cdn.min.js"></script>
   <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
 
   <!-- App modules — load order matters -->
@@ -34,12 +35,37 @@
 </head>
 <body x-data="app()" x-init="init()" class="min-h-screen bg-bgdark text-white">
 
+<a href="#main-content" class="skip-link">تخطي إلى المحتوى</a>
+
 <!-- Loading / error banners -->
-<div x-show="isLoading" class="text-center py-12 text-lg">جاري التحميل...</div>
-<div x-show="loadError" class="bg-red-900 text-red-100 p-4 m-4 rounded" x-text="loadError"></div>
+<!-- Loading skeleton (replaces plain text) -->
+<main x-show="isLoading" class="max-w-7xl mx-auto p-4" aria-busy="true" aria-live="polite">
+  <div class="sr-only">جاري تحميل بيانات الشهداء...</div>
+  <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+    <template x-for="i in 12">
+      <div class="bg-bgcard border border-border rounded-lg overflow-hidden">
+        <div class="aspect-[4/5] skeleton"></div>
+        <div class="p-3 space-y-2">
+          <div class="skeleton h-3 rounded w-4/5"></div>
+          <div class="skeleton h-2 rounded w-3/5"></div>
+          <div class="skeleton h-2 rounded w-2/5"></div>
+        </div>
+      </div>
+    </template>
+  </div>
+</main>
+<div x-show="loadError" x-cloak role="alert"
+     class="max-w-md mx-auto my-12 text-center py-6 px-6 bg-red-900/40 border border-red-700 rounded-xl">
+  <div class="text-4xl mb-2" aria-hidden="true">⚠️</div>
+  <div class="text-base font-bold text-red-100" x-text="loadError"></div>
+  <button @click="retryLoad()"
+          class="mt-4 bg-brand text-bgdark px-5 py-2 rounded-full font-bold text-sm hover:opacity-90 transition-opacity">
+    🔄 إعادة المحاولة
+  </button>
+</div>
 
 <!-- Header -->
-<header class="bg-bgcard border-b border-border sticky top-0 z-10 px-4 py-3">
+<header role="banner" class="bg-bgcard border-b border-border sticky top-0 z-10 px-3 sm:px-4 py-2 sm:py-3">
   <div class="max-w-7xl mx-auto flex flex-wrap items-center gap-3">
     <h1 class="text-xl font-bold flex-shrink-0">
       <span x-text="AQMAR_CONFIG.appName"></span>
@@ -62,6 +88,22 @@
 
   <!-- Filter bar (public view) — centered -->
   <div x-show="view==='public' && !isLoading" class="max-w-4xl mx-auto mt-4 flex flex-wrap items-center justify-center gap-3">
+
+    <!-- Search bar (text query over name + city + battalion + brigade) -->
+    <div class="w-full sm:w-auto sm:flex-1 sm:max-w-md">
+      <div class="flex items-center gap-2 bg-bgdark border border-border rounded-full px-4 py-2 hover:border-brand transition-colors"
+           :class="searchQuery && 'border-brand'">
+        <span class="text-lg" aria-hidden="true">🔍</span>
+        <input type="search" :value="searchQuery"
+               @input="setSearchQuery($event.target.value)"
+               placeholder="ابحث · اسم، مدينة، كتيبة، لواء"
+               aria-label="بحث في قاعدة بيانات الشهداء"
+               class="bg-transparent flex-1 focus:outline-none text-sm placeholder-gray-500">
+        <button x-show="searchQuery" @click="setSearchQuery('')" type="button"
+                aria-label="مسح البحث" title="مسح"
+                class="text-gray-400 hover:text-red-400 text-lg">✕</button>
+      </div>
+    </div>
 
     <!-- Birthdate — Litepicker (year + month dropdowns always visible) -->
     <div class="flex items-center gap-2 bg-bgdark border border-border rounded-lg px-3 py-2 hover:border-brand transition-colors min-w-[220px]">
@@ -136,6 +178,25 @@
       </div>
     </div>
 
+    <!-- View mode toggle (grid ↔ list) -->
+    <div role="group" aria-label="نمط العرض"
+         class="inline-flex bg-bgdark border border-border rounded-full p-1">
+      <button @click="setViewMode('grid')"
+              :class="viewMode === 'grid' ? 'bg-brand text-bgdark font-bold' : 'text-gray-400 hover:text-brand'"
+              class="px-3 py-1 rounded-full text-sm transition-colors flex items-center gap-1"
+              aria-pressed="viewMode === 'grid'"
+              title="عرض شبكي">
+        <span aria-hidden="true">▦</span><span>شبكة</span>
+      </button>
+      <button @click="setViewMode('list')"
+              :class="viewMode === 'list' ? 'bg-brand text-bgdark font-bold' : 'text-gray-400 hover:text-brand'"
+              class="px-3 py-1 rounded-full text-sm transition-colors flex items-center gap-1"
+              aria-pressed="viewMode === 'list'"
+              title="عرض قائمة">
+        <span aria-hidden="true">≡</span><span>قائمة</span>
+      </button>
+    </div>
+
     <!-- Advanced filters toggle -->
     <button @click="showAdvancedFilters = !showAdvancedFilters"
       :class="showAdvancedFilters ? 'border-brand text-brand' : 'border-border text-gray-400'"
@@ -146,80 +207,92 @@
     </button>
   </div>
 
-  <!-- Advanced filters panel (collapsible) — fixed width, 2 stacked sections -->
-  <div x-show="view==='public' && !isLoading && showAdvancedFilters" x-transition x-cloak
-    class="max-w-3xl mx-auto mt-3 bg-bgcard border border-border rounded-lg p-5 space-y-4">
+  <!-- Advanced filters panel — bottom sheet on mobile, centered panel on sm+ -->
+  <div x-show="view==='public' && !isLoading && showAdvancedFilters"
+       @click.self="showAdvancedFilters = false"
+       x-cloak
+       class="fixed inset-0 z-30 bg-black/60 sm:relative sm:bg-transparent sm:inset-auto sm:z-auto sm:mt-3">
+    <div x-show="showAdvancedFilters" x-transition.opacity
+         class="absolute bottom-0 left-0 right-0 bg-bgcard border-t border-border rounded-t-2xl p-5 space-y-4
+                sm:relative sm:bottom-auto sm:max-w-3xl sm:mx-auto sm:border sm:rounded-lg">
+      <!-- Mobile drag handle -->
+      <div class="sm:hidden flex justify-center -mt-2 mb-2">
+        <div class="w-10 h-1 rounded-full bg-border"></div>
+      </div>
 
-    <!-- Section: Martyrdom date range -->
-    <div>
-      <div class="text-xs text-gray-400 mb-2 font-bold">📅 تاريخ الاستشهاد</div>
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <div class="bg-bgdark border border-border rounded-lg px-3 py-2 hover:border-brand transition-colors">
-          <div class="text-[10px] text-gray-400 uppercase tracking-wide">من</div>
-          <div class="flex items-center gap-1">
-            <input type="text" x-ref="martyrdomFromInput" readonly placeholder="انقر لاختيار التاريخ"
-              x-init="initMartyrdomFromPicker($refs.martyrdomFromInput)"
-              class="bg-transparent ltr text-sm focus:outline-none flex-1 cursor-pointer placeholder-gray-600">
-            <button x-show="martyrdomFrom"
-              @click="martyrdomFrom=''; _martyrdomFromPicker.clearSelection(); $refs.martyrdomFromInput.value=''; applyFilter()"
-              title="مسح" class="text-gray-400 hover:text-red-400 px-1">✕</button>
+      <!-- Section: Martyrdom date range -->
+      <div>
+        <div class="text-xs text-gray-400 mb-2 font-bold">📅 تاريخ الاستشهاد</div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div class="bg-bgdark border border-border rounded-lg px-3 py-2 hover:border-brand transition-colors">
+            <div class="text-[10px] text-gray-400 uppercase tracking-wide">من</div>
+            <div class="flex items-center gap-1">
+              <input type="text" x-ref="martyrdomFromInput" readonly placeholder="انقر لاختيار التاريخ"
+                x-init="initMartyrdomFromPicker($refs.martyrdomFromInput)"
+                class="bg-transparent ltr text-sm focus:outline-none flex-1 cursor-pointer placeholder-gray-600">
+              <button x-show="martyrdomFrom"
+                @click="martyrdomFrom=''; _martyrdomFromPicker.clearSelection(); $refs.martyrdomFromInput.value=''; applyFilter()"
+                title="مسح" class="text-gray-400 hover:text-red-400 px-1">✕</button>
+            </div>
           </div>
-        </div>
-        <div class="bg-bgdark border border-border rounded-lg px-3 py-2 hover:border-brand transition-colors">
-          <div class="text-[10px] text-gray-400 uppercase tracking-wide">إلى</div>
-          <div class="flex items-center gap-1">
-            <input type="text" x-ref="martyrdomToInput" readonly placeholder="انقر لاختيار التاريخ"
-              x-init="initMartyrdomToPicker($refs.martyrdomToInput)"
-              class="bg-transparent ltr text-sm focus:outline-none flex-1 cursor-pointer placeholder-gray-600">
-            <button x-show="martyrdomTo"
-              @click="martyrdomTo=''; _martyrdomToPicker.clearSelection(); $refs.martyrdomToInput.value=''; applyFilter()"
-              title="مسح" class="text-gray-400 hover:text-red-400 px-1">✕</button>
+          <div class="bg-bgdark border border-border rounded-lg px-3 py-2 hover:border-brand transition-colors">
+            <div class="text-[10px] text-gray-400 uppercase tracking-wide">إلى</div>
+            <div class="flex items-center gap-1">
+              <input type="text" x-ref="martyrdomToInput" readonly placeholder="انقر لاختيار التاريخ"
+                x-init="initMartyrdomToPicker($refs.martyrdomToInput)"
+                class="bg-transparent ltr text-sm focus:outline-none flex-1 cursor-pointer placeholder-gray-600">
+              <button x-show="martyrdomTo"
+                @click="martyrdomTo=''; _martyrdomToPicker.clearSelection(); $refs.martyrdomToInput.value=''; applyFilter()"
+                title="مسح" class="text-gray-400 hover:text-red-400 px-1">✕</button>
+            </div>
           </div>
         </div>
       </div>
-    </div>
 
-    <!-- Section: Age range -->
-    <div>
-      <div class="text-xs text-gray-400 mb-2 font-bold">⏳ العمر عند الاستشهاد</div>
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <div class="bg-bgdark border border-border rounded-lg px-3 py-2 hover:border-brand transition-colors">
-          <div class="text-[10px] text-gray-400 uppercase tracking-wide">من (سنة)</div>
-          <div class="flex items-center gap-1">
-            <input type="number" min="0" max="120" inputmode="numeric"
-              x-model="ageMin" @input="applyFilter()" placeholder="مثال: 18"
-              class="bg-transparent ltr text-sm focus:outline-none w-full placeholder-gray-600">
-            <button x-show="ageMin" @click="ageMin=''; applyFilter()"
-              title="مسح" class="text-gray-400 hover:text-red-400 px-1">✕</button>
+      <!-- Section: Age range -->
+      <div>
+        <div class="text-xs text-gray-400 mb-2 font-bold">⏳ العمر عند الاستشهاد</div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div class="bg-bgdark border border-border rounded-lg px-3 py-2 hover:border-brand transition-colors">
+            <div class="text-[10px] text-gray-400 uppercase tracking-wide">من (سنة)</div>
+            <div class="flex items-center gap-1">
+              <input type="number" min="0" max="120" inputmode="numeric"
+                x-model="ageMin" @input="applyFilter()" placeholder="مثال: 18"
+                class="bg-transparent ltr text-sm focus:outline-none w-full placeholder-gray-600">
+              <button x-show="ageMin" @click="ageMin=''; applyFilter()"
+                title="مسح" class="text-gray-400 hover:text-red-400 px-1">✕</button>
+            </div>
           </div>
-        </div>
-        <div class="bg-bgdark border border-border rounded-lg px-3 py-2 hover:border-brand transition-colors">
-          <div class="text-[10px] text-gray-400 uppercase tracking-wide">إلى (سنة)</div>
-          <div class="flex items-center gap-1">
-            <input type="number" min="0" max="120" inputmode="numeric"
-              x-model="ageMax" @input="applyFilter()" placeholder="مثال: 45"
-              class="bg-transparent ltr text-sm focus:outline-none w-full placeholder-gray-600">
-            <button x-show="ageMax" @click="ageMax=''; applyFilter()"
-              title="مسح" class="text-gray-400 hover:text-red-400 px-1">✕</button>
+          <div class="bg-bgdark border border-border rounded-lg px-3 py-2 hover:border-brand transition-colors">
+            <div class="text-[10px] text-gray-400 uppercase tracking-wide">إلى (سنة)</div>
+            <div class="flex items-center gap-1">
+              <input type="number" min="0" max="120" inputmode="numeric"
+                x-model="ageMax" @input="applyFilter()" placeholder="مثال: 45"
+                class="bg-transparent ltr text-sm focus:outline-none w-full placeholder-gray-600">
+              <button x-show="ageMax" @click="ageMax=''; applyFilter()"
+                title="مسح" class="text-gray-400 hover:text-red-400 px-1">✕</button>
+            </div>
           </div>
         </div>
       </div>
-    </div>
 
-    <!-- Clear-all button -->
-    <div x-show="martyrdomFrom || martyrdomTo || ageMin || ageMax" class="flex justify-center pt-2 border-t border-border">
-      <button @click="clearMartyrdomRange(); ageMin=''; ageMax=''; applyFilter()"
-        class="text-xs bg-bgdark border border-border rounded-lg px-4 py-2 hover:border-red-400 hover:text-red-400 transition-colors">
-        🗑 مسح جميع الفلاتر المتقدمة
-      </button>
+      <!-- Clear-all button -->
+      <div x-show="martyrdomFrom || martyrdomTo || ageMin || ageMax" class="flex justify-center pt-2 border-t border-border">
+        <button @click="clearMartyrdomRange(); ageMin=''; ageMax=''; applyFilter()"
+          class="text-xs bg-bgdark border border-border rounded-lg px-4 py-2 hover:border-red-400 hover:text-red-400 transition-colors">
+          🗑 مسح جميع الفلاتر المتقدمة
+        </button>
+      </div>
     </div>
   </div>
 
-  <!-- Result count — centered on its own line below the filter -->
-  <div x-show="view==='public' && !isLoading" class="max-w-4xl mx-auto mt-2 text-center">
+  <!-- Result count (announced to screen readers) -->
+  <div x-show="view==='public' && !isLoading" class="max-w-4xl mx-auto mt-2 text-center"
+       aria-live="polite" aria-atomic="true">
     <span class="text-3xl font-bold text-brand" x-text="filteredResults.length"></span>
-    <span class="text-sm text-gray-400 mr-1" x-show="!userBirthdate">شهيد · جميع الشهداء</span>
-    <span class="text-sm text-gray-400 mr-1" x-show="userBirthdate">شهيد بأعمار قريبة من ميلادك</span>
+    <span class="text-sm text-gray-400 mr-1" x-show="!userBirthdate && !searchQuery">شهيد · جميع الشهداء</span>
+    <span class="text-sm text-gray-400 mr-1" x-show="userBirthdate && !searchQuery">شهيد بأعمار قريبة من ميلادك</span>
+    <span class="text-sm text-gray-400 mr-1" x-show="searchQuery">شهيد يطابق البحث</span>
   </div>
 
   <!-- Admin tip (admin view) -->
@@ -233,7 +306,7 @@
 </header>
 
 <!-- ============ PUBLIC VIEW ============ -->
-<main x-show="view==='public' && !isLoading" class="max-w-7xl mx-auto p-4">
+<main id="main-content" role="main" x-show="view==='public' && !isLoading" class="max-w-7xl mx-auto p-4">
   <!-- Hero hint when no filter is active -->
   <div x-show="!userBirthdate" class="text-center py-6 mb-4 bg-bgcard border border-border rounded-lg">
     <p class="text-gray-300">
@@ -241,57 +314,123 @@
     </p>
   </div>
 
-  <!-- No results state (any filter active but zero results) -->
-  <div x-show="filteredResults.length === 0 && allRows.length > 0 && (userBirthdate || martyrdomFrom || martyrdomTo || ageMin || ageMax)"
-       class="text-center py-16 text-gray-400">
-    🔍 لا يوجد شهداء يطابقون الفلاتر الحالية. جرّب توسيع نطاق البحث أو امسح بعض الفلاتر.
+  <!-- No results state -->
+  <div x-show="filteredResults.length === 0 && allRows.length > 0 && (searchQuery || userBirthdate || martyrdomFrom || martyrdomTo || ageMin || ageMax)"
+       x-cloak
+       class="max-w-md mx-auto my-12 text-center py-10 px-6 bg-bgcard/60 border border-dashed border-border rounded-xl"
+       role="status">
+    <div class="text-5xl opacity-40 mb-3" aria-hidden="true">🔍</div>
+    <div class="text-base font-bold text-gray-200" x-text="searchQuery ? 'لا يوجد شهداء يطابقون البحث' : 'لا يوجد شهداء يطابقون الفلاتر الحالية'"></div>
+    <div class="text-sm text-gray-400 mt-2"
+         x-text="searchQuery ? 'جرّب كلمات أخرى، أو امسح البحث للرؤية الكاملة' : 'جرّب توسيع نطاق التاريخ، أو امسح بعض الفلاتر'"></div>
   </div>
 
-  <!-- Grid -->
-  <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-    <template x-for="row in filteredResults" :key="row.msg_id">
-      <div class="group bg-bgcard border border-border rounded-lg overflow-hidden cursor-pointer hover:border-brand hover:shadow-lg hover:shadow-brand/20 transition-all duration-200 relative"
-           @click="openPhotoModal(row)">
-        <div x-show="row._overridden_fields && row._overridden_fields.length > 0" class="edit-dot" title="تعديل يدوي">✏️</div>
-        <div class="aspect-[4/5] bg-gradient-to-br from-bgcard to-bgdark overflow-hidden">
-          <img x-show="row.photo_path" :src="row.photo_path" :alt="row.name" loading="lazy"
-            class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-            @error="$el.style.display='none'; $el.nextElementSibling.style.display='flex'">
-          <div class="photo-placeholder w-full h-full" style="display:none">صورة غير متوفرة</div>
-        </div>
-        <div class="p-3 text-right">
-          <div class="font-bold text-sm leading-tight" x-text="row.name"></div>
-          <div class="text-xs text-gray-400 mt-1 ltr text-left">
-            <span x-text="row.birth_date || '—'"></span> → <span x-text="row.martyrdom_date || '—'"></span>
+  <!-- Grid view -->
+  <template x-if="viewMode === 'grid'">
+    <div x-transition.opacity.duration.150ms
+         class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+      <template x-for="row in filteredResults" :key="row.msg_id">
+        <div class="group card-hover bg-bgcard border border-border rounded-lg overflow-hidden cursor-pointer hover:border-brand hover:shadow-lg hover:shadow-brand/20 relative"
+             tabindex="0"
+             @click="openPhotoModal(row)"
+             @keydown.enter="openPhotoModal(row)"
+             @keydown.space.prevent="openPhotoModal(row)">
+          <div x-show="row._overridden_fields && row._overridden_fields.length > 0" class="edit-dot" title="تعديل يدوي">✏️</div>
+          <div class="aspect-[4/5] bg-gradient-to-br from-bgcard to-bgdark overflow-hidden">
+            <img x-show="row.photo_path" :src="row.photo_path" :alt="row.name" loading="lazy"
+              class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+              @error="$el.style.display='none'; $el.nextElementSibling.style.display='flex'">
+            <div class="photo-placeholder w-full h-full" style="display:none">صورة غير متوفرة</div>
           </div>
-          <!-- Age at martyrdom (small inline pill) -->
-          <template x-if="computeAge(row.birth_date, row.martyrdom_date) !== null">
-            <div class="mt-1 inline-block text-[10px] text-gray-500">
-              ⏳ <span class="text-gray-300 font-bold" x-text="computeAge(row.birth_date, row.martyrdom_date)"></span> سنة
+          <div class="p-3 text-right">
+            <div class="font-bold text-sm leading-tight" x-text="row.name"></div>
+            <div class="text-xs text-gray-400 mt-1 ltr text-left">
+              <span x-text="row.birth_date || '—'"></span> → <span x-text="row.martyrdom_date || '—'"></span>
             </div>
-          </template>
-          <!-- Compact delta chip (short text — full description in the photo modal).
-               Color by direction (older=blue, younger=yellow, same=green). -->
-          <template x-if="userBirthdate && row._delta_days !== undefined">
-            <div class="mt-2 inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded"
-                 :title="describeDelta(row._delta_days).text"
-                 :class="{
-                   'bg-yellow-400/20 text-yellow-300':  describeDeltaShort(row._delta_days).direction === 'younger',
-                   'bg-blue-400/20  text-blue-300':    describeDeltaShort(row._delta_days).direction === 'older',
-                   'bg-green-400/20 text-green-300':   describeDeltaShort(row._delta_days).direction === 'same',
-                 }">
-              <span x-text="describeDeltaShort(row._delta_days).icon"></span>
-              <span x-text="describeDeltaShort(row._delta_days).text"></span>
-            </div>
-          </template>
+            <!-- Age at martyrdom (small inline pill) -->
+            <template x-if="computeAge(row.birth_date, row.martyrdom_date) !== null">
+              <div class="mt-1 inline-block text-[10px] text-gray-500">
+                ⏳ <span class="text-gray-300 font-bold" x-text="computeAge(row.birth_date, row.martyrdom_date)"></span> سنة
+              </div>
+            </template>
+            <!-- Compact delta chip (short text — full description in the photo modal).
+                 Color by direction (older=blue, younger=yellow, same=green). -->
+            <template x-if="userBirthdate && row._delta_days !== undefined">
+              <div class="mt-2 inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded"
+                   :title="describeDelta(row._delta_days).text"
+                   :class="{
+                     'bg-yellow-400/20 text-yellow-300':  describeDeltaShort(row._delta_days).direction === 'younger',
+                     'bg-blue-400/20  text-blue-300':    describeDeltaShort(row._delta_days).direction === 'older',
+                     'bg-green-400/20 text-green-300':   describeDeltaShort(row._delta_days).direction === 'same',
+                   }">
+                <span x-text="describeDeltaShort(row._delta_days).icon"></span>
+                <span x-text="describeDeltaShort(row._delta_days).text"></span>
+              </div>
+            </template>
+          </div>
         </div>
-      </div>
-    </template>
-  </div>
+      </template>
+    </div>
+  </template>
+
+  <!-- List view -->
+  <template x-if="viewMode === 'list'">
+    <div x-transition.opacity.duration.150ms
+         class="grid grid-cols-1 md:grid-cols-2 gap-3 max-w-4xl mx-auto">
+      <template x-for="row in filteredResults" :key="row.msg_id">
+        <div class="card-hover bg-bgcard border border-border rounded-lg p-3 flex items-center gap-3 cursor-pointer hover:border-brand relative"
+             tabindex="0"
+             @click="openPhotoModal(row)"
+             @keydown.enter="openPhotoModal(row)"
+             @keydown.space.prevent="openPhotoModal(row)">
+          <div x-show="row._overridden_fields && row._overridden_fields.length > 0" class="edit-dot" title="تعديل يدوي">✏️</div>
+
+          <!-- Photo -->
+          <div class="w-14 h-18 rounded-md overflow-hidden flex-shrink-0 bg-gradient-to-br from-bgcard to-bgdark"
+               style="width: 56px; height: 72px;">
+            <img x-show="row.photo_path" :src="row.photo_path" :alt="row.name" loading="lazy"
+                 class="w-full h-full object-cover"
+                 @error="$el.style.display='none'; $el.nextElementSibling.style.display='flex'">
+            <div class="photo-placeholder w-full h-full text-xs" style="display:none">—</div>
+          </div>
+
+          <!-- Body -->
+          <div class="flex-1 min-w-0 text-right">
+            <div class="font-bold text-sm truncate" x-text="row.name"></div>
+            <div class="text-xs text-gray-400 truncate"
+                 x-text="[row.battalion, row.military_rank].filter(Boolean).join(' · ') || '—'"></div>
+            <div class="text-xs text-gray-500 ltr text-left mt-0.5">
+              <span x-text="row.birth_date || '—'"></span> → <span x-text="row.martyrdom_date || '—'"></span>
+            </div>
+          </div>
+
+          <!-- Age chip -->
+          <div class="flex-shrink-0 flex flex-col items-center gap-1">
+            <template x-if="computeAge(row.birth_date, row.martyrdom_date) !== null">
+              <span class="inline-block bg-brand/20 text-brand text-xs font-bold px-2 py-0.5 rounded-full whitespace-nowrap">
+                <span x-text="computeAge(row.birth_date, row.martyrdom_date)"></span> سنة
+              </span>
+            </template>
+            <template x-if="userBirthdate && row._delta_days !== undefined">
+              <span class="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full"
+                    :class="{
+                      'bg-yellow-400/20 text-yellow-300': describeDeltaShort(row._delta_days).direction === 'younger',
+                      'bg-blue-400/20  text-blue-300':   describeDeltaShort(row._delta_days).direction === 'older',
+                      'bg-green-400/20 text-green-300':  describeDeltaShort(row._delta_days).direction === 'same',
+                    }">
+                <span x-text="describeDeltaShort(row._delta_days).icon"></span>
+                <span x-text="describeDeltaShort(row._delta_days).text"></span>
+              </span>
+            </template>
+          </div>
+        </div>
+      </template>
+    </div>
+  </template>
 </main>
 
 <!-- ============ ADMIN VIEW ============ -->
-<main x-show="view==='admin' && !isLoading && loggedIn" class="max-w-7xl mx-auto p-4">
+<main id="main-content-admin" role="main" x-show="view==='admin' && !isLoading && loggedIn" class="max-w-7xl mx-auto p-4">
   <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
     <template x-for="row in allRows" :key="row.msg_id">
       <div class="bg-bgcard border border-border rounded-lg overflow-hidden relative">
@@ -318,10 +457,13 @@
 
 <!-- ============ PHOTO ZOOM MODAL ============ -->
 <div x-show="selectedRow" @click.self="closePhotoModal()" x-cloak
+     @keydown.escape.window="closePhotoModal()" x-trap="selectedRow"
+     role="dialog" aria-modal="true" aria-labelledby="photo-modal-title"
      class="fixed inset-0 bg-black/80 z-20 flex items-center justify-center p-4">
-  <div class="bg-bgcard border border-border rounded-lg overflow-hidden max-w-2xl w-full max-h-[90vh] flex flex-col">
+  <div class="bg-bgcard sm:border border-border sm:rounded-lg overflow-hidden
+              w-full h-full sm:max-w-2xl sm:h-auto sm:max-h-[90vh] flex flex-col">
     <div class="flex justify-between items-center p-3 border-b border-border">
-      <h3 class="font-bold" x-text="selectedRow?.name"></h3>
+      <h3 id="photo-modal-title" class="font-bold" x-text="selectedRow?.name"></h3>
       <button @click="closePhotoModal()" class="text-xl">✕</button>
     </div>
     <div class="overflow-y-auto">
@@ -364,10 +506,13 @@
 
 <!-- ============ ADMIN EDIT MODAL ============ -->
 <div x-show="editingMsgId" @click.self="closeEditModal()" x-cloak
-     class="fixed inset-0 bg-black/80 z-20 flex items-center justify-center p-4">
-  <div class="bg-bgcard border border-border rounded-lg overflow-hidden max-w-md w-full max-h-[90vh] flex flex-col">
+     @keydown.escape.window="closeEditModal()" x-trap="editingMsgId"
+     role="dialog" aria-modal="true" aria-labelledby="edit-modal-title"
+     class="fixed inset-0 bg-black/80 z-20 flex items-end sm:items-center justify-center sm:p-4">
+  <div class="bg-bgcard sm:border border-border rounded-t-2xl sm:rounded-lg overflow-hidden
+              w-full max-h-[85vh] sm:max-w-md mt-auto sm:mt-0 sm:max-h-[90vh] flex flex-col">
     <div class="flex justify-between items-center p-3 border-b border-border">
-      <h3 class="font-bold">تحرير الشهيد (معرّف <span x-text="editingMsgId"></span>)</h3>
+      <h3 id="edit-modal-title" class="font-bold">تحرير الشهيد (معرّف <span x-text="editingMsgId"></span>)</h3>
       <button @click="closeEditModal()" class="text-xl">✕</button>
     </div>
     <form @submit.prevent="saveEdit()" class="p-3 space-y-2 overflow-y-auto text-sm">
@@ -388,9 +533,11 @@
 
 <!-- ============ LOGIN MODAL ============ -->
 <div x-show="showLoginModal" @click.self="showLoginModal=false" x-cloak
+     @keydown.escape.window="showLoginModal=false" x-trap="showLoginModal"
+     role="dialog" aria-modal="true" aria-labelledby="login-modal-title"
      class="fixed inset-0 bg-black/80 z-20 flex items-center justify-center p-4">
   <div class="bg-bgcard border border-border rounded-lg p-5 max-w-sm w-full">
-    <h3 class="font-bold mb-3">دخول الإدارة</h3>
+    <h3 id="login-modal-title" class="font-bold mb-3">دخول الإدارة</h3>
     <form @submit.prevent="login()" class="space-y-2 text-sm">
       <input type="text" x-model="loginUser" placeholder="اسم المستخدم"
         class="w-full bg-bgdark border border-border rounded px-2 py-2 ltr">

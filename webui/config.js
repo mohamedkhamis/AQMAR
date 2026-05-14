@@ -29,7 +29,8 @@ window.AQMAR_CONFIG = {
 
   // localStorage keys
   storage: {
-    auth:    "aqmar.auth",
-    pending: "aqmar.pending_overrides",
+    auth:     "aqmar.auth",
+    pending:  "aqmar.pending_overrides",
+    viewMode: "aqmar.viewMode",   // 'grid' | 'list'
   },
 };

@@ -1,6 +1,25 @@
 // webui/app.js
 // Alpine.js root component for the AqmarTofan SPA.
 
+// View-mode persistence helpers (exposed on window for tests).
+function readViewMode() {
+  try {
+    const v = localStorage.getItem(AQMAR_CONFIG.storage.viewMode);
+    return (v === "list") ? "list" : "grid";
+  } catch (e) {
+    return "grid";  // localStorage blocked
+  }
+}
+function writeViewMode(mode) {
+  try {
+    localStorage.setItem(AQMAR_CONFIG.storage.viewMode, mode === "list" ? "list" : "grid");
+  } catch (e) {
+    // localStorage blocked — silently degrade.
+  }
+}
+window.readViewMode  = readViewMode;
+window.writeViewMode = writeViewMode;
+
 window.app = function () {
   return {
     // === auth state ===
@@ -22,6 +41,7 @@ window.app = function () {
 
     // === view state ===
     view: "public",                                // 'public' | 'admin'
+    viewMode: readViewMode(),                      // 'grid' | 'list'
     selectedRow: null,                             // photo zoom modal
     editingMsgId: null,                            // admin edit modal target
     editForm: {},                                  // bound to inputs in the modal
@@ -33,6 +53,9 @@ window.app = function () {
     customDays: 30,
     filteredResults: [],
     customDaysError: "",
+    // search (text query over name + city + battalion + brigade)
+    searchQuery: "",
+    _searchDebounceId: null,
     // additional filters + sort
     sortMode: "martyrdom_desc",                    // default: newest martyrdom first
     martyrdomFrom: "",                             // "YYYY-MM-DD"
@@ -137,12 +160,38 @@ window.app = function () {
       }
     },
 
+    async retryLoad() {
+      this.loadError = "";
+      this.isLoading = true;
+      try {
+        const data = await loadData(AQMAR_CONFIG.martyrsJson, AQMAR_CONFIG.overridesJson);
+        this.martyrs = data.martyrs;
+        this.overrides = data.overrides;
+        this.refreshAllRows();
+      } catch (e) {
+        this.loadError = `تعذّر تحميل البيانات: ${e.message}`;
+      } finally {
+        this.isLoading = false;
+      }
+    },
+
     refreshAllRows() {
       this.allRows = mergeOverrides(this.martyrs, this.effectiveOverrides);
       this.applyFilter();
     },
 
-    // === filter pipeline (martyrdom-range → age-range → proximity → sort) ===
+    setSearchQuery(value) {
+      this.searchQuery = value;
+      clearTimeout(this._searchDebounceId);
+      this._searchDebounceId = setTimeout(() => this.applyFilter(), 150);
+    },
+
+    setViewMode(mode) {
+      this.viewMode = mode;
+      writeViewMode(mode);
+    },
+
+    // === filter pipeline (search → martyrdom-range → age-range → proximity → sort) ===
     applyFilter() {
       this.customDaysError = "";
       if (this.windowMode === "custom") {
@@ -151,7 +200,12 @@ window.app = function () {
           this.customDaysError = `${AQMAR_CONFIG.filterCustomDaysMin} - ${AQMAR_CONFIG.filterCustomDaysMax}`;
         }
       }
+
+      // Filter 0: free-text search (cheapest predicate — runs first)
       let rows = this.allRows;
+      if (this.searchQuery && this.searchQuery.trim()) {
+        rows = rows.filter(r => searchPredicate(r, this.searchQuery));
+      }
 
       // Filter 1: martyrdom date range
       if (this.martyrdomFrom) rows = rows.filter(r => r.martyrdom_date && r.martyrdom_date >= this.martyrdomFrom);

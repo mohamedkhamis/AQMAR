@@ -92,3 +92,70 @@ input[type=number] { -moz-appearance: textfield; }
 }
 .litepicker .container__days .week-number { color: #666 !important; }
 .litepicker .container__footer { background: #142914 !important; color: #e8e8e8 !important; }
+
+/* ============================================================
+   Skeleton loaders — shimmer animation for initial load
+   ============================================================ */
+.skeleton {
+  background: linear-gradient(90deg, #1a3a1a 0%, #2d4a2d 50%, #1a3a1a 100%);
+  background-size: 200% 100%;
+  animation: aqmar-shimmer 1.5s infinite;
+}
+@keyframes aqmar-shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position:  200% 0; }
+}
+
+/* ============================================================
+   Focus rings — :focus-visible only (keyboard, not mouse click)
+   ============================================================ */
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid #fbbf24;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 3px rgba(251, 191, 36, 0.3);
+  border-radius: 6px;
+}
+
+/* ============================================================
+   Filter result transition — 150ms opacity crossfade
+   ============================================================ */
+.results-fade-enter-active,
+.results-fade-leave-active { transition: opacity 0.15s ease-in-out; }
+.results-fade-enter,
+.results-fade-leave-to     { opacity: 0; }
+
+/* ============================================================
+   Skip-to-content link — visible only on focus
+   ============================================================ */
+.skip-link {
+  position: absolute; top: -40px; right: 1rem;
+  background: #fbbf24; color: #0c1f0c;
+  padding: 0.5rem 1rem; border-radius: 0 0 6px 6px;
+  font-weight: bold; z-index: 50;
+  transition: top 0.15s ease-out;
+}
+.skip-link:focus { top: 0; }
+
+/* ============================================================
+   Reduced motion — respect user OS preference
+   ============================================================ */
+@media (prefers-reduced-motion: reduce) {
+  .skeleton { animation: none; background: #2d4a2d; }
+  .results-fade-enter-active,
+  .results-fade-leave-active { transition: none; }
+  * { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
+}
+
+/* ============================================================
+   Card hover lift — subtle 200ms transform
+   ============================================================ */
+.card-hover {
+  transition: transform 0.2s ease-out, box-shadow 0.2s ease-out, border-color 0.2s ease-out;
+}
+.card-hover:hover {
+  transform: translateY(-2px);
+}

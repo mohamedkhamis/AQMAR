@@ -46,9 +46,11 @@
   </script>
 
   <!-- Modules under test — order matters: dependencies first -->
-  <script src="filter-logic.js"></script>
-  <script src="data-loader.js"></script>
-  <script src="admin-edit.js"></script>
+  <script src="config.js?v=4" charset="UTF-8"></script>
+  <script src="filter-logic.js?v=4" charset="UTF-8"></script>
+  <script src="data-loader.js?v=4" charset="UTF-8"></script>
+  <script src="admin-edit.js?v=4" charset="UTF-8"></script>
+  <script src="app.js?v=4" charset="UTF-8"></script>
 
   <!-- Test files -->
   <script>
@@ -221,6 +223,162 @@
       const payload = buildExportPayload(edits);
       assertEq(payload.version, 1);
       assertEq(payload.edits, edits);
+    });
+  </script>
+
+  <script>
+    // ===== normalizeArabic =====
+
+    test("normalizeArabic strips diacritics", () => {
+      assertEq(normalizeArabic("مُحَمَّد"), "محمد");
+    });
+
+    test("normalizeArabic unifies alef variants", () => {
+      assertEq(normalizeArabic("أحمد"), "احمد");
+      assertEq(normalizeArabic("إيمان"), "ايمان");
+      assertEq(normalizeArabic("آمنة"), "امنه");
+    });
+
+    test("normalizeArabic converts ya variants", () => {
+      assertEq(normalizeArabic("على"), "علي");
+    });
+
+    test("normalizeArabic collapses whitespace", () => {
+      assertEq(normalizeArabic("  محمد   أحمد  "), "محمد احمد");
+    });
+
+    test("normalizeArabic handles empty/null", () => {
+      assertEq(normalizeArabic(""), "");
+      assertEq(normalizeArabic(null), "");
+      assertEq(normalizeArabic(undefined), "");
+    });
+  </script>
+
+  <script>
+    // ===== searchPredicate =====
+
+    const SAMPLE_ROW = {
+      msg_id: 1,
+      name: "محمد عبد الرحمن",
+      city: "غزة",
+      battalion: "كتيبة الشجاعية",
+      brigade: "لواء غزة",
+      military_rank: "رقيب",
+      weapon: "أر بي جي",
+      birth_date: "1990-03-15",
+      martyrdom_date: "2023-10-12",
+    };
+
+    test("searchPredicate matches exact name", () => {
+      assertEq(searchPredicate(SAMPLE_ROW, "محمد عبد الرحمن"), true);
+    });
+
+    test("searchPredicate matches partial name", () => {
+      assertEq(searchPredicate(SAMPLE_ROW, "عبد"), true);
+    });
+
+    test("searchPredicate matches city", () => {
+      assertEq(searchPredicate(SAMPLE_ROW, "غزة"), true);
+    });
+
+    test("searchPredicate matches battalion", () => {
+      assertEq(searchPredicate(SAMPLE_ROW, "الشجاعية"), true);
+    });
+
+    test("searchPredicate matches brigade", () => {
+      assertEq(searchPredicate(SAMPLE_ROW, "لواء"), true);
+    });
+
+    test("searchPredicate normalizes Arabic in query and field", () => {
+      assertEq(searchPredicate({ ...SAMPLE_ROW, name: "أحمد" }, "احمد"), true);
+    });
+
+    test("searchPredicate returns true for empty query", () => {
+      assertEq(searchPredicate(SAMPLE_ROW, ""), true);
+      assertEq(searchPredicate(SAMPLE_ROW, "   "), true);
+    });
+
+    test("searchPredicate returns false on no match", () => {
+      assertEq(searchPredicate(SAMPLE_ROW, "خانيونس"), false);
+    });
+  </script>
+
+  <script>
+    // ===== viewMode persistence =====
+
+    test("viewMode default is 'grid' when localStorage empty", () => {
+      localStorage.removeItem(AQMAR_CONFIG.storage.viewMode);
+      assertEq(readViewMode(), "grid");
+    });
+
+    test("viewMode reads 'list' from localStorage", () => {
+      localStorage.setItem(AQMAR_CONFIG.storage.viewMode, "list");
+      assertEq(readViewMode(), "list");
+      localStorage.removeItem(AQMAR_CONFIG.storage.viewMode);  // cleanup
+    });
+
+    test("writeViewMode persists to localStorage", () => {
+      writeViewMode("list");
+      assertEq(localStorage.getItem(AQMAR_CONFIG.storage.viewMode), "list");
+      writeViewMode("grid");
+      assertEq(localStorage.getItem(AQMAR_CONFIG.storage.viewMode), "grid");
+      localStorage.removeItem(AQMAR_CONFIG.storage.viewMode);  // cleanup
+    });
+  </script>
+
+  <script>
+    // ===== applyFilter composition (logic only — no Alpine context needed) =====
+
+    function applyFilterPure(rows, opts) {
+      // Pure subset of app.js applyFilter() — only the predicates exercised
+      // by the composition tests (search + age + birthdate proximity).
+      // Out of scope here: martyrdom-date range filter and sort branch.
+      let r = rows;
+      if (opts.searchQuery !== undefined && opts.searchQuery !== "") {
+        r = r.filter(row => searchPredicate(row, opts.searchQuery));
+      }
+      if (opts.ageMin !== undefined || opts.ageMax !== undefined) {
+        r = r.filter(row => {
+          const age = computeAge(row.birth_date, row.martyrdom_date);
+          if (age === null) return false;
+          if (opts.ageMin !== undefined && age < opts.ageMin) return false;
+          if (opts.ageMax !== undefined && age > opts.ageMax) return false;
+          return true;
+        });
+      }
+      if (opts.userBirthdate) {
+        r = filterByProximity(r, opts.userBirthdate, opts.windowDays || 30);
+      }
+      return r;
+    }
+
+    const COMPOSITION_ROWS = [
+      { msg_id: 1, name: "محمد", city: "غزة", birth_date: "1990-03-15", martyrdom_date: "2023-10-12" },
+      { msg_id: 2, name: "أحمد", city: "خانيونس", birth_date: "1995-08-20", martyrdom_date: "2023-11-05" },
+      { msg_id: 3, name: "محمد", city: "رفح", birth_date: "1985-01-10", martyrdom_date: "2023-09-30" },
+    ];
+
+    test("composition: search + birthdate window", () => {
+      // searchQuery "محمد" + userBirthdate near 1990 (±6 years / 2200 days)
+      // Row 1: delta = 0 days ✓; Row 3: delta ≈ 1891 days ✓; Row 2: name mismatch ✗
+      const result = applyFilterPure(COMPOSITION_ROWS, {
+        searchQuery: "محمد",
+        userBirthdate: "1990-03-15",
+        windowDays: 2200,  // ±6 years — wide enough to include both محمد rows
+      });
+      assertEq(result.map(r => r.msg_id).sort(), [1, 3]);
+    });
+
+    test("composition: search + age range", () => {
+      // searchQuery "محمد" + age between 33 and 40
+      const result = applyFilterPure(COMPOSITION_ROWS, {
+        searchQuery: "محمد",
+        ageMin: 33,
+        ageMax: 40,
+      });
+      // msg_id 1: age 33 (1990→2023) ✓
+      // msg_id 3: age 38 (1985→2023) ✓
+      assertEq(result.map(r => r.msg_id).sort(), [1, 3]);
     });
   </script>
 </body>
