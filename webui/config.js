@@ -9,7 +9,7 @@ window.AQMAR_CONFIG = {
   //   .venv\Scripts\python.exe -c "import hashlib; print(hashlib.sha256(b'YOUR_NEW_PASSWORD').hexdigest())"
   // Set to true once data/photos/N.jpg files exist on disk.
   // When false, every portrait renders as a calligraphic monogram (no 404s).
-  usePhotos: false,
+  usePhotos: true,
 
   adminUsername: 'admin',
   adminPasswordHash: 'aaa9e482389cd1cff1f7640a22225ac99c65bfbc4d063973163ec388fa59eb53', // = SHA-256("aqmar2026")
