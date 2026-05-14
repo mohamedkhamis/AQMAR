@@ -48,7 +48,7 @@
   <!-- Modules under test — order matters: dependencies first -->
   <script src="config.js?v=4" charset="UTF-8"></script>
   <script src="filter-logic.js?v=4" charset="UTF-8"></script>
-  <script src="data-loader.js?v=4" charset="UTF-8"></script>
+  <script src="data-loader.js?v=5" charset="UTF-8"></script>
   <script src="admin-edit.js?v=4" charset="UTF-8"></script>
   <script src="app.js?v=4" charset="UTF-8"></script>
 
@@ -323,6 +323,58 @@
       writeViewMode("grid");
       assertEq(localStorage.getItem(AQMAR_CONFIG.storage.viewMode), "grid");
       localStorage.removeItem(AQMAR_CONFIG.storage.viewMode);  // cleanup
+    });
+  </script>
+
+  <script>
+    // ===== adaptMartyrToNewSchema =====
+
+    test("adaptMartyrToNewSchema maps full row 1:1", () => {
+      const row = {
+        msg_id: 20, name: "محمد", name_normalized: "محمد",
+        birth_date: "1990-03-15", martyrdom_date: "2023-10-12",
+        city: "غزة", military_rank: "رقيب", weapon: "RPG",
+        battalion: "كتيبة الشجاعية", brigade: "لواء غزة",
+        photo_path: "../data/photos/20.jpg",
+        message_link: "https://t.me/AqmarTofan/20",
+        posted_date: "2024-01-01", status: "complete",
+      };
+      const out = adaptMartyrToNewSchema(row);
+      assertEq(out, {
+        id: 20, name: "محمد",
+        birth: "1990-03-15", martyrdom: "2023-10-12",
+        city: "غزة", rank: "رقيب", weapon: "RPG",
+        battalion: "كتيبة الشجاعية", brigade: "لواء غزة",
+        photo: "../data/photos/20.jpg",
+      });
+    });
+
+    test("adaptMartyrToNewSchema maps sparse row (only mandatory fields)", () => {
+      const row = { msg_id: 5, name: "أحمد", birth_date: "1995-01-01", martyrdom_date: "2024-06-01" };
+      const out = adaptMartyrToNewSchema(row);
+      assertEq(out.id, 5);
+      assertEq(out.name, "أحمد");
+      assertEq(out.birth, "1995-01-01");
+      assertEq(out.martyrdom, "2024-06-01");
+      assertEq(out.city, "");
+      assertEq(out.rank, "");
+    });
+
+    test("adaptMartyrToNewSchema returns null for rows without msg_id", () => {
+      assertEq(adaptMartyrToNewSchema({ name: "بلا معرّف" }), null);
+      assertEq(adaptMartyrToNewSchema(null), null);
+      assertEq(adaptMartyrToNewSchema(undefined), null);
+    });
+
+    test("adaptMartyrToNewSchema drops unmapped fields", () => {
+      const row = { msg_id: 1, name: "X", name_normalized: "X", posted_date: "2024",
+                    status: "complete", message_link: "https://...", _delta_days: 99 };
+      const out = adaptMartyrToNewSchema(row);
+      assertEq(out.name_normalized, undefined);
+      assertEq(out.posted_date, undefined);
+      assertEq(out.status, undefined);
+      assertEq(out.message_link, undefined);
+      assertEq(out._delta_days, undefined);
     });
   </script>
 

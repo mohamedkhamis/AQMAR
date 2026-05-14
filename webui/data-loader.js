@@ -48,6 +48,23 @@
     };
   }
 
+  function adaptMartyrToNewSchema(row) {
+    if (!row || row.msg_id === undefined || row.msg_id === null) return null;
+    return {
+      id:        row.msg_id,
+      name:      row.name || "",
+      birth:     row.birth_date || "",
+      martyrdom: row.martyrdom_date || "",
+      city:      row.city || "",
+      rank:      row.military_rank || "",
+      weapon:    row.weapon || "",
+      battalion: row.battalion || "",
+      brigade:   row.brigade || "",
+      photo:     row.photo_path || "",
+    };
+  }
+
   global.mergeOverrides = mergeOverrides;
   global.loadData = loadData;
+  global.adaptMartyrToNewSchema = adaptMartyrToNewSchema;
 })(window);
