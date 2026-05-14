@@ -20,8 +20,12 @@
     });
   }
 
-  // Mark rows that were manually edited (the manual_edited_at column is set
-  // by the admin UI) so the existing ✏️ badge in the cards keeps working.
+  // Mark rows whose manual_edited_at column is non-null with
+  // _overridden_fields: ["manual_edit"]. Currently consumed only via the
+  // `allRows` key in loadData()'s return; Task 10 (admin-edit) will wire
+  // this into the Alpine state so the ✏️ badge surfaces edits made through
+  // the new Supabase admin flow (the legacy badge reads localStorage
+  // edits[m.id] instead — see index.html).
   function annotateManualEdits(rows) {
     return rows.map(r => ({
       ...r,
