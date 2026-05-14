@@ -726,12 +726,12 @@
       <p class="text-center text-muted text-[13px] mt-0 mb-6"
          x-text="lang === 'ar' ? 'الاعتماد الافتراضي: admin / aqmar2026' : 'Default: admin / aqmar2026'"></p>
       <label class="block mb-4">
-        <div class="field-label" x-text="lang === 'ar' ? 'اسم المستخدم' : 'Username'"></div>
-        <input class="input" x-model="loginUser">
+        <div class="field-label" x-text="lang === 'ar' ? 'البريد الإلكتروني' : 'Email'"></div>
+        <input type="email" class="input" x-model="loginUser" autocomplete="email" :placeholder="lang === 'ar' ? 'admin@example.com' : 'admin@example.com'">
       </label>
       <label class="block mb-4">
         <div class="field-label" x-text="lang === 'ar' ? 'كلمة المرور' : 'Password'"></div>
-        <input type="password" class="input" x-model="loginPass" @keyup.enter="doLogin()">
+        <input type="password" class="input" x-model="loginPass" @keyup.enter="doLogin()" autocomplete="current-password">
       </label>
       <div x-show="loginError" class="text-[13px] mt-[-8px] mb-3" style="color: var(--crimson);" x-text="loginError"></div>
       <div class="flex gap-2.5 mt-3.5">

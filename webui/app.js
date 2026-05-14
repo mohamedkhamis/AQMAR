@@ -10,7 +10,7 @@ function aqmar() {
     lang: 'ar',
     isAdmin: false,
     showLogin: false,
-    loginUser: 'admin',
+    loginUser: '',
     loginPass: '',
     loginError: '',
     selectedId: null,
@@ -60,6 +60,7 @@ function aqmar() {
     // INIT
     // ============================================================
     async init() {
+      await this.checkSession();
       // Apply lang/dir
       this.$watch('lang', (l) => {
         document.documentElement.lang = l;
@@ -250,22 +251,32 @@ function aqmar() {
     // ============================================================
     // ADMIN — login / edit / export
     // ============================================================
+    async checkSession() {
+      if (!window.AQMAR_SB) return;
+      const { data: { session } } = await window.AQMAR_SB.auth.getSession();
+      this.isAdmin = !!session;
+    },
     async doLogin() {
       this.loginError = '';
-      const cfg = window.AQMAR_CONFIG || {};
-      const expectedHash = cfg.adminPasswordHash || '';
-      const expectedUser = cfg.adminUsername || 'admin';
-      const enteredHash = await sha256(this.loginPass);
-      if (this.loginUser === expectedUser && enteredHash === expectedHash) {
-        this.isAdmin = true;
-        this.showLogin = false;
-        this.loginPass = '';
-        this.view = 'admin';
-      } else {
-        this.loginError = this.lang === 'ar' ? 'بيانات الدخول غير صحيحة' : 'Invalid credentials';
+      if (!window.AQMAR_SB) {
+        this.loginError = this.lang === 'ar' ? 'لم تتم تهيئة Supabase' : 'Supabase not configured';
+        return;
       }
+      const { error } = await window.AQMAR_SB.auth.signInWithPassword({
+        email: this.loginUser,
+        password: this.loginPass,
+      });
+      if (error) {
+        this.loginError = this.lang === 'ar' ? 'بيانات الدخول غير صحيحة' : 'Invalid credentials';
+        return;
+      }
+      this.isAdmin = true;
+      this.showLogin = false;
+      this.loginPass = '';
+      this.view = 'admin';
     },
-    logout() {
+    async logout() {
+      if (window.AQMAR_SB) await window.AQMAR_SB.auth.signOut();
       this.isAdmin = false;
       this.editingId = null;
       this.view = 'home';
