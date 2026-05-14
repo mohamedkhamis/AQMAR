@@ -61,6 +61,7 @@
       battalion: row.battalion || "",
       brigade:   row.brigade || "",
       photo:     row.photo_path || "",
+      source:    row.message_link || "",
     };
   }
 

@@ -467,6 +467,15 @@
                 <div class="text-ink-2 font-naskh font-bold" x-text="row.v"></div>
               </div>
             </template>
+            <template x-if="current && current.source">
+              <div class="mt-4 pt-3" style="border-top: 1px dashed var(--divider);">
+                <a :href="current.source" target="_blank" rel="noopener"
+                   class="text-[12px] text-olive inline-flex items-center gap-1.5 hover:text-forest transition-colors">
+                  <span x-text="lang === 'ar' ? 'المصدر على تيليجرام' : 'Source on Telegram'"></span>
+                  <span aria-hidden="true">↗</span>
+                </a>
+              </div>
+            </template>
           </div>
         </section>
 
