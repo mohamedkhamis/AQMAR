@@ -69,7 +69,19 @@ function aqmar() {
       // Restore admin edits from localStorage
       try {
         const cached = localStorage.getItem('aqmar.edits');
-        if (cached) this.edits = JSON.parse(cached);
+        if (cached) {
+          this.edits = JSON.parse(cached);
+        } else {
+          // One-time migration: if the v1 SPA stored pending overrides under
+          // the legacy key, lift them into the new key so the admin doesn't
+          // lose unexported edits.
+          const v1 = localStorage.getItem('aqmar.pending_overrides');
+          if (v1) {
+            const parsed = JSON.parse(v1);
+            this.edits = adaptOverridesToNewSchema(parsed);
+            localStorage.setItem('aqmar.edits', JSON.stringify(this.edits));
+          }
+        }
       } catch (e) {}
 
       // Persist admin edits
@@ -305,14 +317,19 @@ function aqmar() {
     saveEdit() {
       const m = this.editingMartyr();
       if (!m) return;
-      const changed = {};
-      for (const k of Object.keys(this.draft)) {
-        if (this.draft[k] !== m[k]) changed[k] = this.draft[k];
+      // Compute the diff using the shared v1 helper (ignores untouched fields
+      // and underscore-prefixed meta).
+      const diff = buildEditDiff(m, this.draft);
+      if (Object.keys(diff).length === 0) {
+        this.editingId = null;
+        this.draft = {};
+        return;
       }
-      this.edits = { ...this.edits, [m.id]: changed };
-      // Also reflect immediately in this.all so the UI updates without reload
+      // Merge the new diff into the existing per-id override.
+      this.edits = { ...this.edits, [m.id]: { ...(this.edits[m.id] || {}), ...diff } };
+      // Reflect immediately so the UI updates without reload.
       const idx = this.all.findIndex(x => x.id === m.id);
-      if (idx >= 0) this.all[idx] = { ...this.all[idx], ...changed };
+      if (idx >= 0) this.all[idx] = { ...this.all[idx], ...diff };
       this.editingId = null;
       this.draft = {};
     },
