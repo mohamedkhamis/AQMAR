@@ -36,9 +36,10 @@
 
 <body>
 <div id="root" x-data="aqmar()" x-init="init()" x-cloak>
+  <a href="#main-content" class="skip-link" x-text="lang === 'ar' ? 'تخطي إلى المحتوى' : 'Skip to content'"></a>
 
   <!-- ===================== HEADER ===================== -->
-  <header class="sticky top-0 z-50 border-b border-divider" style="background: color-mix(in oklab, var(--bg) 88%, transparent); backdrop-filter: blur(10px);">
+  <header role="banner" class="sticky top-0 z-50 border-b border-divider" style="background: color-mix(in oklab, var(--bg) 88%, transparent); backdrop-filter: blur(10px);">
     <div class="max-w-[1240px] mx-auto px-8 py-3.5 flex items-center gap-6">
       <!-- Logo -->
       <button @click="goto('home')" class="flex items-center gap-3 bg-transparent border-0 p-0">
@@ -89,7 +90,7 @@
   </header>
 
   <!-- ===================== LANDING ===================== -->
-  <main x-show="view === 'home'" class="relative pt-6">
+  <main id="main-content" role="main" x-show="view === 'home'" class="relative pt-6">
     <!-- Verse -->
     <div class="max-w-[760px] mx-auto pt-7 px-8 text-center">
       <div class="font-naskh text-[17px] text-olive leading-[1.9]">
@@ -224,7 +225,7 @@
   </main>
 
   <!-- ===================== BROWSE ===================== -->
-  <main x-show="view === 'browse'" class="max-w-[1240px] mx-auto px-8 py-12">
+  <main id="main-content-browse" role="main" x-show="view === 'browse'" class="max-w-[1240px] mx-auto px-8 py-12">
     <!-- Birthday match banner -->
     <div x-show="matchFilter"
          class="mb-7 px-5 py-4 rounded-md flex items-center justify-between gap-4 flex-wrap"
@@ -376,7 +377,7 @@
   </main>
 
   <!-- ===================== DETAIL ===================== -->
-  <main x-show="view === 'detail' && current" class="max-w-[1100px] mx-auto px-8 pt-8 pb-20" x-cloak>
+  <main id="main-content-detail" role="main" x-show="view === 'detail' && current" class="max-w-[1100px] mx-auto px-8 pt-8 pb-20" x-cloak>
     <template x-if="current">
       <div>
         <div class="flex items-center gap-2 text-[13px] text-muted mb-7">
@@ -498,7 +499,7 @@
   </main>
 
   <!-- ===================== ABOUT ===================== -->
-  <main x-show="view === 'about'" class="max-w-[760px] mx-auto px-8 py-16">
+  <main id="main-content-about" role="main" x-show="view === 'about'" class="max-w-[760px] mx-auto px-8 py-16">
     <div class="section-kicker" x-text="lang === 'ar' ? 'عن المشروع' : 'About'"></div>
     <h2 class="section-title" x-text="lang === 'ar' ? 'ذاكرةٌ مفتوحةٌ بأمانة' : 'An open, faithful memory'"></h2>
     <p class="section-sub" x-text="lang === 'ar'
@@ -520,7 +521,7 @@
   </main>
 
   <!-- ===================== ADMIN ===================== -->
-  <main x-show="view === 'admin' && isAdmin" class="max-w-[1240px] mx-auto px-8 pt-8 pb-20" x-cloak>
+  <main id="main-content-admin" role="main" x-show="view === 'admin' && isAdmin" class="max-w-[1240px] mx-auto px-8 pt-8 pb-20" x-cloak>
     <div class="admin-banner bg-forest-grad text-paper px-7 py-5 rounded-lg mb-7 flex items-center justify-between gap-6">
       <div>
         <div class="font-latin-sans text-[11px] tracking-[0.3em] opacity-70">EDITOR · ADMIN MODE</div>

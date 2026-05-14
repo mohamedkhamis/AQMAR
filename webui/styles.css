@@ -285,3 +285,14 @@ html[data-theme="dark"] body::before { mix-blend-mode: screen; opacity: 0.4; }
   .section-title { font-size: 28px !important; }
   .hero-pad { padding: 24px !important; }
 }
+
+/* Skip-to-content link — visible only on keyboard focus */
+.skip-link {
+  position: absolute; top: -40px; inset-inline-start: 1rem;
+  background: var(--forest); color: var(--paper);
+  padding: 0.5rem 1rem; border-radius: 0 0 6px 6px;
+  font-weight: bold; z-index: 100;
+  transition: top 0.15s ease-out;
+  font-family: var(--font-body);
+}
+.skip-link:focus { top: 0; }
