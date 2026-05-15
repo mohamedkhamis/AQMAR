@@ -42,6 +42,20 @@
 <div id="root" x-data="aqmar()" x-init="init()" x-cloak>
   <a href="#main-content" class="skip-link" x-text="lang === 'ar' ? 'تخطي إلى المحتوى' : 'Skip to content'"></a>
 
+  <!-- Configuration banner — only renders when Supabase URL is still the placeholder. -->
+  <template x-if="window.AQMAR_SUPABASE_PLACEHOLDER">
+    <div role="status"
+         class="px-4 py-2.5 text-center text-[13px]"
+         style="background:#fef3c7; color:#78350f; border-bottom:1px solid #fbbf24;">
+      <span x-show="lang === 'ar'">
+        ⚠️ بيانات العرض التجريبية مفعّلة — حدّد <code class="font-latin-sans">supabaseUrl</code> و <code class="font-latin-sans">supabaseAnonKey</code> في <code class="font-latin-sans">webui/config.js</code> لرؤية البيانات الفعلية.
+      </span>
+      <span x-show="lang === 'en'">
+        ⚠️ Demo data active — set <code class="font-latin-sans">supabaseUrl</code> and <code class="font-latin-sans">supabaseAnonKey</code> in <code class="font-latin-sans">webui/config.js</code> to see real data.
+      </span>
+    </div>
+  </template>
+
   <!-- ===================== HEADER ===================== -->
   <header role="banner" class="sticky top-0 z-50 border-b border-divider" style="background: color-mix(in oklab, var(--bg) 88%, transparent); backdrop-filter: blur(10px);">
     <div class="max-w-[1240px] mx-auto px-8 py-3.5 flex items-center gap-6">

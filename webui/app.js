@@ -252,9 +252,13 @@ function aqmar() {
     // ADMIN — login / edit / export
     // ============================================================
     async checkSession() {
-      if (!window.AQMAR_SB) return;
-      const { data: { session } } = await window.AQMAR_SB.auth.getSession();
-      this.isAdmin = !!session;
+      if (!window.AQMAR_SB || window.AQMAR_SUPABASE_PLACEHOLDER) return;
+      try {
+        const { data: { session } } = await window.AQMAR_SB.auth.getSession();
+        this.isAdmin = !!session;
+      } catch (e) {
+        // Network error or bad URL — leave isAdmin=false silently.
+      }
     },
     async doLogin() {
       this.loginError = '';

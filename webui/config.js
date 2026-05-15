@@ -61,10 +61,15 @@ window.AQMAR_CONFIG = {
     };
   });
 
-  // Only expose sample data when explicitly requested via ?demo —
-  // prevents 36 fake names from leaking into production if martyrs.json
-  // ever fails to load.
-  if (new URLSearchParams(location.search).has('demo')) {
+  // Expose sample data when:
+  //  - ?demo is in the URL (manual preview)
+  //  - the Supabase URL is still the placeholder (developer hasn't configured
+  //    real credentials yet — better to show 36 sample rows than a blank page)
+  const cfg = window.AQMAR_CONFIG || {};
+  const placeholder = !cfg.supabaseUrl || cfg.supabaseUrl.includes('YOURPROJECT');
+  const demoFlag = new URLSearchParams(location.search).has('demo');
+  if (demoFlag || placeholder) {
     window.AQMAR_SAMPLE_DATA = data;
+    window.AQMAR_SUPABASE_PLACEHOLDER = placeholder;
   }
 })();
