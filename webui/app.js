@@ -22,6 +22,7 @@ function aqmar() {
     mobileNavOpen: false,
     loading: true,            // true until the initial loadData() resolves (or errors out)
     lastSyncIso: null,        // most recent posted_date across all rows — drives the footer "Last sync"
+    dataSource: null,         // 'supabase' | 'local-json' | 'sample-data' | null — drives the banner copy
 
     // ----- data -----
     all: [],
@@ -100,24 +101,44 @@ function aqmar() {
         try { localStorage.setItem('aqmar.edits', JSON.stringify(v)); } catch (e) {}
       });
 
-      // Load martyrs from Supabase. Falls back to sample data if the
-      // client isn't initialized yet or the network is unreachable.
+      // Load martyrs. Tries three sources in priority order:
+      //   1. Supabase (the canonical source post-migration)
+      //   2. Local data/martyrs.json (lets you test locally with real 388-row
+      //      dataset before Supabase is configured)
+      //   3. AQMAR_SAMPLE_DATA (36 synthetic rows, last resort)
       let martyrs = null;
-      try {
-        const data = await loadData();
-        const rows = data.martyrs || [];
+      const ingestRows = (rows) => {
         martyrs = rows.map(adaptMartyrToNewSchema).filter(Boolean);
-        // Stash the most-recent ingest timestamp for the footer "Last sync" line.
         const dates = rows.map(r => r && r.posted_date).filter(Boolean);
         if (dates.length) this.lastSyncIso = dates.sort().reverse()[0];
+      };
+      try {
+        const data = await loadData();
+        ingestRows(data.martyrs || []);
+        this.dataSource = 'supabase';
       } catch (e) {
-        console.warn('Supabase load failed, falling back to sample data:', e.message);
+        console.warn('Supabase load failed, trying local data/martyrs.json:', e.message);
+        try {
+          const res = await fetch('../data/martyrs.json', { cache: 'no-cache' });
+          if (res.ok) {
+            const raw = await res.json();
+            const rows = Array.isArray(raw) ? raw : (raw.martyrs || []);
+            ingestRows(rows);
+            this.dataSource = 'local-json';
+            console.info(`Loaded ${rows.length} rows from local data/martyrs.json`);
+          }
+        } catch (e2) {
+          console.warn('Local JSON also unreachable:', e2.message);
+        }
       } finally {
-        // Flip loading off regardless of success/failure so the empty-state
+        // Flip loading off regardless of which path succeeded so the empty-state
         // message switches from "Loading…" to "No matching names" cleanly.
         this.loading = false;
       }
-      if (!martyrs && window.AQMAR_SAMPLE_DATA) martyrs = window.AQMAR_SAMPLE_DATA;
+      if (!martyrs && window.AQMAR_SAMPLE_DATA) {
+        martyrs = window.AQMAR_SAMPLE_DATA;
+        this.dataSource = 'sample-data';
+      }
       if (!martyrs) martyrs = [];
       // overrides.json fetch removed — admin edits live in Supabase as of Task 10.
 

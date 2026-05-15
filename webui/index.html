@@ -55,16 +55,31 @@
   <!-- Skip link points to the CURRENTLY ACTIVE main, not the hidden home view. -->
   <a :href="'#main-content' + (view === 'home' ? '' : '-' + view)" class="skip-link" x-text="lang === 'ar' ? 'تخطي إلى المحتوى' : 'Skip to content'"></a>
 
-  <!-- Configuration banner — only renders when Supabase URL is still the placeholder. -->
+  <!-- Configuration banner — renders when Supabase is still placeholder, with
+       copy that reflects which fallback path the SPA actually used:
+         · 'local-json' → green/info tone (real 388-row data from disk)
+         · 'sample-data' → amber/warning tone (36 synthetic rows). -->
   <template x-if="window.AQMAR_SUPABASE_PLACEHOLDER">
     <div role="status"
          class="px-4 py-2.5 text-center text-[13px]"
-         style="background:#fef3c7; color:#78350f; border-bottom:1px solid #fbbf24;">
+         :style="dataSource === 'local-json'
+           ? 'background:#dcfce7; color:#14532d; border-bottom:1px solid #4ade80;'
+           : 'background:#fef3c7; color:#78350f; border-bottom:1px solid #fbbf24;'">
       <span x-show="lang === 'ar'">
-        ⚠️ بيانات العرض التجريبية مفعّلة — حدّد <code class="font-latin-sans">supabaseUrl</code> و <code class="font-latin-sans">supabaseAnonKey</code> في <code class="font-latin-sans">webui/config.js</code> لرؤية البيانات الفعلية.
+        <span x-show="dataSource === 'local-json'">
+          📂 يتم تحميل البيانات من <code class="font-latin-sans">data/martyrs.json</code> محلياً — اضبط <code class="font-latin-sans">supabaseUrl</code> و <code class="font-latin-sans">supabaseAnonKey</code> في <code class="font-latin-sans">webui/config.js</code> للنشر.
+        </span>
+        <span x-show="dataSource === 'sample-data' || dataSource === null">
+          ⚠️ بيانات العرض التجريبية مفعّلة — حدّد <code class="font-latin-sans">supabaseUrl</code> و <code class="font-latin-sans">supabaseAnonKey</code> في <code class="font-latin-sans">webui/config.js</code> لرؤية البيانات الفعلية.
+        </span>
       </span>
       <span x-show="lang === 'en'">
-        ⚠️ Demo data active — set <code class="font-latin-sans">supabaseUrl</code> and <code class="font-latin-sans">supabaseAnonKey</code> in <code class="font-latin-sans">webui/config.js</code> to see real data.
+        <span x-show="dataSource === 'local-json'">
+          📂 Loading from local <code class="font-latin-sans">data/martyrs.json</code> — set <code class="font-latin-sans">supabaseUrl</code> and <code class="font-latin-sans">supabaseAnonKey</code> in <code class="font-latin-sans">webui/config.js</code> to deploy.
+        </span>
+        <span x-show="dataSource === 'sample-data' || dataSource === null">
+          ⚠️ Demo data active — set <code class="font-latin-sans">supabaseUrl</code> and <code class="font-latin-sans">supabaseAnonKey</code> in <code class="font-latin-sans">webui/config.js</code> to see real data.
+        </span>
       </span>
     </div>
   </template>
