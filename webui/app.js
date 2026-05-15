@@ -18,6 +18,11 @@ function aqmar() {
     draft: {},
     edits: {},
     adminSearch: '',
+    adminLimit: 30,           // pagination cap for the admin table — bumped by "Show more"
+    mobileNavOpen: false,
+    loading: true,            // true until the initial loadData() resolves (or errors out)
+    lastSyncIso: null,        // most recent posted_date across all rows — drives the footer "Last sync"
+    dataSource: null,         // 'supabase' | 'local-json' | 'sample-data' | null — drives the banner copy
 
     // ----- data -----
     all: [],
@@ -65,7 +70,13 @@ function aqmar() {
       this.$watch('lang', (l) => {
         document.documentElement.lang = l;
         document.documentElement.dir = l === 'ar' ? 'rtl' : 'ltr';
+        if (window.__updateTitle) window.__updateTitle(this.view, l);
       });
+      // Keep document.title in sync with the active view + language.
+      this.$watch('view', (v) => {
+        if (window.__updateTitle) window.__updateTitle(v, this.lang);
+      });
+      if (window.__updateTitle) window.__updateTitle(this.view, this.lang);
 
       // Restore admin edits from localStorage
       try {
@@ -90,19 +101,52 @@ function aqmar() {
         try { localStorage.setItem('aqmar.edits', JSON.stringify(v)); } catch (e) {}
       });
 
-      // Load martyrs from Supabase. Falls back to sample data if the
-      // client isn't initialized yet or the network is unreachable.
+      // Load martyrs. Tries three sources in priority order:
+      //   1. Supabase (the canonical source post-migration)
+      //   2. Local data/martyrs.json (lets you test locally with real 388-row
+      //      dataset before Supabase is configured)
+      //   3. AQMAR_SAMPLE_DATA (36 synthetic rows, last resort)
       let martyrs = null;
+      const ingestRows = (rows) => {
+        martyrs = rows.map(adaptMartyrToNewSchema).filter(Boolean);
+        const dates = rows.map(r => r && r.posted_date).filter(Boolean);
+        if (dates.length) this.lastSyncIso = dates.sort().reverse()[0];
+      };
       try {
         const data = await loadData();
-        const rows = data.martyrs || [];
-        martyrs = rows.map(adaptMartyrToNewSchema).filter(Boolean);
+        ingestRows(data.martyrs || []);
+        this.dataSource = 'supabase';
       } catch (e) {
-        console.warn('Supabase load failed, falling back to sample data:', e.message);
+        console.warn('Supabase load failed, trying local data/martyrs.json:', e.message);
+        try {
+          const res = await fetch('../data/martyrs.json', { cache: 'no-cache' });
+          if (res.ok) {
+            const raw = await res.json();
+            const rows = Array.isArray(raw) ? raw : (raw.martyrs || []);
+            ingestRows(rows);
+            this.dataSource = 'local-json';
+            console.info(`Loaded ${rows.length} rows from local data/martyrs.json`);
+          }
+        } catch (e2) {
+          console.warn('Local JSON also unreachable:', e2.message);
+        }
+      } finally {
+        // Flip loading off regardless of which path succeeded so the empty-state
+        // message switches from "Loading…" to "No matching names" cleanly.
+        this.loading = false;
       }
-      if (!martyrs && window.AQMAR_SAMPLE_DATA) martyrs = window.AQMAR_SAMPLE_DATA;
+      if (!martyrs && window.AQMAR_SAMPLE_DATA) {
+        martyrs = window.AQMAR_SAMPLE_DATA;
+        this.dataSource = 'sample-data';
+      }
       if (!martyrs) martyrs = [];
       // overrides.json fetch removed — admin edits live in Supabase as of Task 10.
+
+      // Clamp bday.day whenever the month changes — so picking Feb after day=31
+      // doesn't leave an out-of-range value floating around.
+      this.$watch('bday.month', () => {
+        if (this.bday.day > this.bdayDaysInMonth) this.bday.day = this.bdayDaysInMonth;
+      });
 
       // Normalize + compute age
       this.all = martyrs.map(m => ({
@@ -126,6 +170,7 @@ function aqmar() {
       this.matchFilter = null;
       this.selectedId = null;
       this.editingId = null;
+      this.mobileNavOpen = false;
       window.scrollTo({ top: 0, behavior: 'smooth' });
     },
     openMartyr(id) {
@@ -164,7 +209,7 @@ function aqmar() {
         { k_ar: this.toArDigits(this.all.length), k_en: this.all.length, v_ar: 'اسماً مُوَثَّقًا', v_en: 'names recorded' },
         { k_ar: this.toArDigits(daysSince) + ' يوماً', k_en: daysSince + ' days', v_ar: 'منذ بدء الطوفان', v_en: 'since Oct 7' },
         { k_ar: this.toArDigits(this.battalions.length) + ' كتيبة', k_en: this.battalions.length + ' bn', v_ar: 'تَشمَلُها السجلات', v_en: 'battalions covered' },
-        { k_ar: '٪١٠٠', k_en: '100%', v_ar: 'أرشيفٌ مفتوحٌ ومحلي', v_en: 'open & local archive' },
+        { k_ar: '٪١٠٠', k_en: '100%', v_ar: 'أرشيفٌ مفتوحٌ ودائم', v_en: 'open · always free' },
       ];
     },
     get aboutBlocks() {
@@ -202,10 +247,13 @@ function aqmar() {
       if (f.city) list = list.filter(m => m.city === f.city);
       if (f.rank) list = list.filter(m => m.rank === f.rank);
       if (f.batt) list = list.filter(m => m.battalion === f.batt);
-      if (f.age === 'u20')   list = list.filter(m => m.age < 20);
-      if (f.age === '20-30') list = list.filter(m => m.age >= 20 && m.age < 30);
-      if (f.age === '30-40') list = list.filter(m => m.age >= 30 && m.age < 40);
-      if (f.age === 'o40')   list = list.filter(m => m.age >= 40);
+      // Age filters require a finite age — rows with missing/malformed birth or
+      // martyrdom dates (35% of the dataset) have m.age=null and must NOT pass
+      // any age bucket (null < 20 is true in JS — old bug surfaced them as "Under 20").
+      if (f.age === 'u20')   list = list.filter(m => Number.isFinite(m.age) && m.age < 20);
+      if (f.age === '20-30') list = list.filter(m => Number.isFinite(m.age) && m.age >= 20 && m.age < 30);
+      if (f.age === '30-40') list = list.filter(m => Number.isFinite(m.age) && m.age >= 30 && m.age < 40);
+      if (f.age === 'o40')   list = list.filter(m => Number.isFinite(m.age) && m.age >= 40);
 
       if (this.matchFilter) {
         list.sort((a, b) => a.delta - b.delta);
@@ -233,10 +281,10 @@ function aqmar() {
     },
     personalRows(m) {
       return [
-        { k: this.lang === 'ar' ? 'الاسم' : 'Name', v: m.name },
+        { k: this.lang === 'ar' ? 'الاسم' : 'Name', v: m.name || '—' },
         { k: this.lang === 'ar' ? 'تاريخ الميلاد' : 'Born', v: this.formatDate(m.birth) },
         { k: this.lang === 'ar' ? 'المدينة' : 'City', v: m.city || '—' },
-        { k: this.lang === 'ar' ? 'العمر' : 'Age', v: `${m.age} ${this.lang === 'ar' ? 'عاماً' : 'years'}` },
+        { k: this.lang === 'ar' ? 'العمر' : 'Age', v: this.ageLabel(m) },
       ];
     },
     militaryRows(m) {
@@ -252,14 +300,24 @@ function aqmar() {
     // ADMIN — login / edit / export
     // ============================================================
     async checkSession() {
-      if (!window.AQMAR_SB) return;
-      const { data: { session } } = await window.AQMAR_SB.auth.getSession();
-      this.isAdmin = !!session;
+      if (!window.AQMAR_SB || window.AQMAR_SUPABASE_PLACEHOLDER) return;
+      try {
+        const { data: { session } } = await window.AQMAR_SB.auth.getSession();
+        this.isAdmin = !!session;
+      } catch (e) {
+        // Network error or bad URL — leave isAdmin=false silently.
+      }
     },
     async doLogin() {
       this.loginError = '';
-      if (!window.AQMAR_SB) {
-        this.loginError = this.lang === 'ar' ? 'لم تتم تهيئة Supabase' : 'Supabase not configured';
+      // Placeholder Supabase URL ("https://YOURPROJECT.supabase.co") would
+      // produce a DNS error on signInWithPassword — surface a clearer message
+      // and skip the network call entirely so the user understands they need
+      // to configure webui/config.js first.
+      if (!window.AQMAR_SB || window.AQMAR_SUPABASE_PLACEHOLDER) {
+        this.loginError = this.lang === 'ar'
+          ? 'الواجهة في وضع المعاينة — حدّث webui/config.js بمفاتيح Supabase لتفعيل الإدارة'
+          : 'Preview mode — set real Supabase keys in webui/config.js to enable admin';
         return;
       }
       const { error } = await window.AQMAR_SB.auth.signInWithPassword({
@@ -282,14 +340,27 @@ function aqmar() {
       this.view = 'home';
     },
 
-    adminHeaders: ['#', 'الاسم / Name', 'الميلاد / Born', 'الاستشهاد / Martyrdom', 'المدينة / City', 'الكتيبة / Battalion', 'الحالة / Status'],
+    get adminHeaders() {
+      // Switches with lang. Previously a static array of "Arabic / English"
+      // dual-language strings — inconsistent with the rest of the SPA.
+      const ar = this.lang === 'ar';
+      return [
+        '#',
+        ar ? 'الاسم' : 'Name',
+        ar ? 'الميلاد' : 'Born',
+        ar ? 'الاستشهاد' : 'Martyrdom',
+        ar ? 'المدينة' : 'City',
+        ar ? 'الكتيبة' : 'Battalion',
+        ar ? 'الحالة' : 'Status',
+      ];
+    },
     adminList() {
-      const q = this.adminSearch.trim().toLowerCase();
+      // Delegate to the same Arabic-aware searchPredicate the browse view uses
+      // (handles diacritics, alef forms, ta-marbouta vs. ha-marbouta, lam-alef
+      // ligatures) instead of plain ASCII lowercase + substring.
+      const q = this.adminSearch.trim();
       if (!q) return this.all;
-      return this.all.filter(m =>
-        (m.name && m.name.toLowerCase().includes(q)) ||
-        (m.city && m.city.toLowerCase().includes(q))
-      );
+      return this.all.filter(m => searchPredicate(m, q));
     },
 
     editMartyr(id) {
@@ -348,22 +419,23 @@ function aqmar() {
     // FOOTER
     // ============================================================
     footerCols() {
+      // Each link now carries an action: either `go` (internal view switch via
+      // goto()) or `href` (real URL, opens in new tab if external). Old version
+      // emitted <a> tags with no href — looked clickable but did nothing.
       const ar = this.lang === 'ar';
       return [
         { title: ar ? 'المشروع' : 'Project', links: [
-          ar ? 'البنية التقنية' : 'Architecture',
-          ar ? 'خط الأنابيب' : 'Pipeline',
-          ar ? 'الاختبارات' : 'Tests',
+          { text: ar ? 'عن المشروع' : 'About',     go: 'about' },
+          { text: ar ? 'الاختبارات' : 'Tests',     href: 'tests.html' },
+          { text: ar ? 'الكود المصدري' : 'Source', href: 'https://github.com/mohamedkhamis/AQMAR', external: true },
         ]},
         { title: ar ? 'السجلّ' : 'Registry', links: [
-          ar ? 'كل الأسماء' : 'All names',
-          ar ? 'حسب الكتيبة' : 'By battalion',
-          ar ? 'حسب المدينة' : 'By city',
+          { text: ar ? 'كل الأسماء' : 'All names',     go: 'browse' },
+          { text: ar ? 'في مثل هذا اليوم' : 'On this day', go: 'home' },
         ]},
         { title: ar ? 'تواصل' : 'Contact', links: [
-          '@AqmarTofan',
-          'github.com/mohamedkhamis/AQMAR',
-          ar ? 'بلّغ عن خطأ' : 'Report correction',
+          { text: '@AqmarTofan',                      href: 'https://t.me/AqmarTofan', external: true },
+          { text: ar ? 'بلّغ عن خطأ' : 'Report correction', href: 'mailto:info@azkapmo.com?subject=AQMAR%20correction' },
         ]},
       ];
     },
@@ -373,8 +445,43 @@ function aqmar() {
     // ============================================================
     formatDate(iso) { return formatDate(iso, this.lang); },
     computeAge(birth, martyrdom) {
+      // Returns null if either date is missing OR malformed (e.g. "فبرايسر")
+      // so downstream templates can render '—' instead of "null عاماً".
       if (!birth || !martyrdom) return null;
-      return parseInt(martyrdom.slice(0,4), 10) - parseInt(birth.slice(0,4), 10);
+      const by = parseInt(String(birth).slice(0,4), 10);
+      const my = parseInt(String(martyrdom).slice(0,4), 10);
+      if (!Number.isFinite(by) || !Number.isFinite(my)) return null;
+      const age = my - by;
+      // Sanity bound — negative or unrealistic ages indicate scrambled OCR.
+      if (age < 0 || age > 120) return null;
+      return age;
+    },
+    // Short-form "X عاماً" / "X yrs" with em-dash fallback for missing/malformed.
+    ageLabel(m) {
+      if (!m || !Number.isFinite(m.age)) return '—';
+      return `${m.age} ${this.lang === 'ar' ? 'عاماً' : 'yrs'}`;
+    },
+    // Extracts and locale-converts a 4-digit year from an ISO date.
+    // Returns '—' for malformed input.
+    yearLabel(iso) {
+      const m = String(iso || '').match(/^(\d{4})/);
+      if (!m) return '—';
+      return this.lang === 'ar' ? this.toArDigits(m[1]) : m[1];
+    },
+    // Days available in the currently-selected birthday-match month.
+    // Lets Feb cap at 29 and short months at 30. Avoids "Feb 31" silently
+    // remapping into Mar in dayDelta's flat-365 cumulative table.
+    get bdayDaysInMonth() {
+      const m = this.bday.month;
+      if (m === 2) return 29;
+      if ([4, 6, 9, 11].includes(m)) return 30;
+      return 31;
+    },
+    // Formatted "Last sync" timestamp for the footer. Derived from the
+    // max posted_date across all rows (set in init).
+    get lastSyncLabel() {
+      if (!this.lastSyncIso) return '—';
+      return formatDate(this.lastSyncIso, this.lang);
     },
     toArDigits(n) {
       const map = ['٠','١','٢','٣','٤','٥','٦','٧','٨','٩'];
@@ -506,14 +613,22 @@ function esc(s) {
 }
 
 function formatDate(iso, locale = 'ar') {
-  if (!iso) return '—';
-  const [y, m, d] = iso.split('-');
+  // Validate strictly: must be a YYYY-MM-DD prefix with month 1-12 and day 1-31.
+  // Malformed OCR output (e.g. "فبرايسر", "٥٤٤ 2025") and missing/null values
+  // fall through to em-dash instead of rendering "NaN undefined undefined".
+  if (!iso || typeof iso !== 'string') return '—';
+  const match = iso.match(/^(\d{4})-(\d{1,2})-(\d{1,2})\b/);
+  if (!match) return '—';
+  const y = match[1];
+  const mIdx = parseInt(match[2], 10) - 1;
+  const d = parseInt(match[3], 10);
+  if (mIdx < 0 || mIdx > 11 || d < 1 || d > 31) return '—';
   if (locale === 'en') {
     const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-    return `${parseInt(d,10)} ${months[parseInt(m,10)-1]} ${y}`;
+    return `${d} ${months[mIdx]} ${y}`;
   }
   const arMonths = ['كانون الثاني','شباط','آذار','نيسان','أيار','حزيران','تموز','آب','أيلول','تشرين الأول','تشرين الثاني','كانون الأول'];
-  return `${parseInt(d,10)} ${arMonths[parseInt(m,10)-1]} ${y}`;
+  return `${d} ${arMonths[mIdx]} ${y}`;
 }
 
 async function sha256(text) {

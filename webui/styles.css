@@ -296,3 +296,18 @@ html[data-theme="dark"] body::before { mix-blend-mode: screen; opacity: 0.4; }
   font-family: var(--font-body);
 }
 .skip-link:focus { top: 0; }
+
+/* Mobile nav drawer + hamburger — desktop hides hamburger; mobile hides nav-links */
+.nav-hamburger {
+  display: none;
+  background: transparent; border: 1px solid var(--divider);
+  border-radius: 8px; padding: 6px;
+  color: var(--ink); cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+.nav-hamburger:hover { background: var(--bg-2); border-color: var(--olive); }
+.mobile-nav { display: none; }
+@media (max-width: 900px) {
+  .nav-hamburger { display: inline-flex; }
+  .mobile-nav { display: block; }
+}

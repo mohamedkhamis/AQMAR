@@ -3,6 +3,18 @@
 <head>
 <meta charset="utf-8" />
 <title>أقمار الطوفان — AQMAR</title>
+<script>
+  // Update <title> as Alpine view + lang change (audit P1 #7).
+  window.__updateTitle = function (view, lang) {
+    const titles = {
+      ar: { home: 'أقمار الطوفان', browse: 'السجلّ — أقمار الطوفان', detail: 'تفاصيل — أقمار الطوفان',
+            admin: 'لوحة التحرير — أقمار الطوفان', about: 'عن الموقع — أقمار الطوفان' },
+      en: { home: 'AQMAR — Memorial', browse: 'Registry — AQMAR', detail: 'Detail — AQMAR',
+            admin: 'Admin — AQMAR', about: 'About — AQMAR' },
+    };
+    document.title = (titles[lang] || titles.ar)[view] || 'AQMAR';
+  };
+</script>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <meta name="description" content="أرشيف مفتوح يحفظ أسماء شهداء كتائب القسام في معركة طوفان الأقصى" />
 
@@ -40,7 +52,37 @@
 
 <body>
 <div id="root" x-data="aqmar()" x-init="init()" x-cloak>
-  <a href="#main-content" class="skip-link" x-text="lang === 'ar' ? 'تخطي إلى المحتوى' : 'Skip to content'"></a>
+  <!-- Skip link points to the CURRENTLY ACTIVE main, not the hidden home view. -->
+  <a :href="'#main-content' + (view === 'home' ? '' : '-' + view)" class="skip-link" x-text="lang === 'ar' ? 'تخطي إلى المحتوى' : 'Skip to content'"></a>
+
+  <!-- Configuration banner — renders when Supabase is still placeholder, with
+       copy that reflects which fallback path the SPA actually used:
+         · 'local-json' → green/info tone (real 388-row data from disk)
+         · 'sample-data' → amber/warning tone (36 synthetic rows). -->
+  <template x-if="window.AQMAR_SUPABASE_PLACEHOLDER">
+    <div role="status"
+         class="px-4 py-2.5 text-center text-[13px]"
+         :style="dataSource === 'local-json'
+           ? 'background:#dcfce7; color:#14532d; border-bottom:1px solid #4ade80;'
+           : 'background:#fef3c7; color:#78350f; border-bottom:1px solid #fbbf24;'">
+      <span x-show="lang === 'ar'">
+        <span x-show="dataSource === 'local-json'">
+          📂 يتم تحميل البيانات من <code class="font-latin-sans">data/martyrs.json</code> محلياً — اضبط <code class="font-latin-sans">supabaseUrl</code> و <code class="font-latin-sans">supabaseAnonKey</code> في <code class="font-latin-sans">webui/config.js</code> للنشر.
+        </span>
+        <span x-show="dataSource === 'sample-data' || dataSource === null">
+          ⚠️ بيانات العرض التجريبية مفعّلة — حدّد <code class="font-latin-sans">supabaseUrl</code> و <code class="font-latin-sans">supabaseAnonKey</code> في <code class="font-latin-sans">webui/config.js</code> لرؤية البيانات الفعلية.
+        </span>
+      </span>
+      <span x-show="lang === 'en'">
+        <span x-show="dataSource === 'local-json'">
+          📂 Loading from local <code class="font-latin-sans">data/martyrs.json</code> — set <code class="font-latin-sans">supabaseUrl</code> and <code class="font-latin-sans">supabaseAnonKey</code> in <code class="font-latin-sans">webui/config.js</code> to deploy.
+        </span>
+        <span x-show="dataSource === 'sample-data' || dataSource === null">
+          ⚠️ Demo data active — set <code class="font-latin-sans">supabaseUrl</code> and <code class="font-latin-sans">supabaseAnonKey</code> in <code class="font-latin-sans">webui/config.js</code> to see real data.
+        </span>
+      </span>
+    </div>
+  </template>
 
   <!-- ===================== HEADER ===================== -->
   <header role="banner" class="sticky top-0 z-50 border-b border-divider" style="background: color-mix(in oklab, var(--bg) 88%, transparent); backdrop-filter: blur(10px);">
@@ -74,6 +116,17 @@
 
       <div class="flex-1"></div>
 
+      <!-- Mobile-only hamburger toggle (hidden ≥901px via .nav-links breakpoint) -->
+      <button class="nav-hamburger" @click="mobileNavOpen = !mobileNavOpen"
+              :aria-expanded="mobileNavOpen ? 'true' : 'false'"
+              aria-controls="mobile-nav"
+              :aria-label="lang === 'ar' ? 'القائمة' : 'Menu'">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <template x-if="!mobileNavOpen"><g><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></g></template>
+          <template x-if="mobileNavOpen"><g><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></g></template>
+        </svg>
+      </button>
+
       <button @click="lang = (lang === 'ar' ? 'en' : 'ar')"
               class="bg-transparent border border-divider rounded-full px-3.5 py-1.5 font-latin-sans text-[12px] text-muted tracking-[0.1em]">
         <span x-text="lang === 'ar' ? 'EN' : 'ع'"></span>
@@ -91,10 +144,34 @@
         </button>
       </template>
     </div>
+
+    <!-- Mobile nav drawer — slides below the header bar; toggled by .nav-hamburger.
+         x-trap keeps Tab inside the drawer while open and returns focus to the
+         hamburger button on close. -->
+    <nav id="mobile-nav" x-show="mobileNavOpen" x-cloak
+         x-transition.opacity.duration.150ms
+         x-trap="mobileNavOpen"
+         @keydown.escape.window="mobileNavOpen = false"
+         class="mobile-nav border-t border-divider"
+         style="background: var(--paper);">
+      <template x-for="l in nav" :key="l.id">
+        <button @click="goto(l.id)"
+                :class="view === l.id ? 'text-ink bg-page-2' : 'text-muted'"
+                class="block w-full text-right bg-transparent border-0 px-8 py-3.5 text-[15px] font-medium"
+                style="border-bottom: 1px solid var(--divider);">
+          <span x-text="lang === 'ar' ? l.ar : l.en"></span>
+        </button>
+      </template>
+    </nav>
   </header>
 
+  <!-- Single <main> wrapper for HTML5 spec compliance (one main per document).
+       Each view becomes a <section>; the wrapper itself owns the role="main"
+       and the id the skip link targets. -->
+  <main id="main-content" role="main">
+
   <!-- ===================== LANDING ===================== -->
-  <main id="main-content" role="main" x-show="view === 'home'" class="relative pt-6">
+  <section x-show="view === 'home'" :aria-hidden="view !== 'home'" class="relative pt-6">
     <!-- Verse -->
     <div class="max-w-[760px] mx-auto pt-7 px-8 text-center">
       <div class="font-naskh text-[17px] text-olive leading-[1.9]">
@@ -132,8 +209,9 @@
         <div class="grid-bday grid gap-3" style="grid-template-columns: 1fr 1fr 1.2fr auto; align-items: end;">
           <label class="block">
             <div class="field-label" x-text="lang === 'ar' ? 'اليوم' : 'Day'"></div>
+            <!-- bdayDaysInMonth caps the day range per selected month (28→Feb, 30→Apr/Jun/Sep/Nov, 31 otherwise) -->
             <select class="select" x-model.number="bday.day">
-              <template x-for="d in 31" :key="d"><option :value="d" x-text="d"></option></template>
+              <template x-for="d in bdayDaysInMonth" :key="d"><option :value="d" x-text="d"></option></template>
             </select>
           </label>
           <label class="block">
@@ -149,6 +227,7 @@
             <div class="flex gap-1.5 flex-wrap">
               <template x-for="opt in windowOptions" :key="opt.v">
                 <button @click="bday.window = opt.v" type="button"
+                        :aria-pressed="bday.window === opt.v ? 'true' : 'false'"
                         :class="bday.window === opt.v ? 'bg-ink text-paper' : 'bg-transparent text-muted'"
                         class="btn"
                         style="padding: 8px 14px; font-size: 13px;"
@@ -208,8 +287,9 @@
                     style="border-inline-start: 2px solid var(--forest);">
               <div class="font-naskh text-[16px] font-bold text-ink truncate" x-text="m.name"></div>
               <div class="text-[12px] text-muted flex justify-between">
-                <span x-text="m.battalion"></span>
-                <span class="text-forest font-latin-sans tabular-nums" x-text="m.martyrdom.slice(0,4)"></span>
+                <span x-text="m.battalion || '—'"></span>
+                <!-- yearLabel handles ar-digit conversion + null guard -->
+                <span class="text-forest font-latin-sans tabular-nums" x-text="yearLabel(m.martyrdom)"></span>
               </div>
             </button>
           </template>
@@ -226,10 +306,10 @@
         </template>
       </div>
     </div>
-  </main>
+  </section>
 
   <!-- ===================== BROWSE ===================== -->
-  <main id="main-content-browse" role="main" x-show="view === 'browse'" class="max-w-[1240px] mx-auto px-8 py-12">
+  <section id="main-content-browse" x-show="view === 'browse'" :aria-hidden="view !== 'browse'" class="max-w-[1240px] mx-auto px-8 py-12">
     <!-- Birthday match banner -->
     <div x-show="matchFilter"
          class="mb-7 px-5 py-4 rounded-md flex items-center justify-between gap-4 flex-wrap"
@@ -291,8 +371,8 @@
         <select class="select" x-model="filters.age">
           <option value="" x-text="lang === 'ar' ? 'كل الأعمار' : 'All ages'"></option>
           <option value="u20" x-text="lang === 'ar' ? 'أقل من ٢٠' : 'Under 20'"></option>
-          <option value="20-30">٢٠ – ٣٠</option>
-          <option value="30-40">٣٠ – ٤٠</option>
+          <option value="20-30" x-text="lang === 'ar' ? '٢٠ – ٣٠' : '20 – 30'"></option>
+          <option value="30-40" x-text="lang === 'ar' ? '٣٠ – ٤٠' : '30 – 40'"></option>
           <option value="o40" x-text="lang === 'ar' ? 'أكثر من ٤٠' : 'Over 40'"></option>
         </select>
       </label>
@@ -319,8 +399,21 @@
       </div>
     </div>
 
-    <!-- Empty state -->
-    <div x-show="filtered.length === 0" class="text-center py-16 px-6 bg-page-2 rounded-lg" style="border: 1px dashed var(--divider);">
+    <!-- Loading state — separate from empty state so users see "Loading…" instead of
+         "No matching names" while the initial Supabase fetch is in flight. -->
+    <div x-show="loading && filtered.length === 0" class="text-center py-16 px-6 bg-page-2 rounded-lg" style="border: 1px dashed var(--divider);">
+      <svg width="48" height="48" viewBox="0 0 60 60" style="margin: 0 auto; display: block; animation: spin 1.2s linear infinite;">
+        <g fill="none" stroke="var(--olive)" stroke-width="2" stroke-linecap="round">
+          <circle cx="30" cy="30" r="22" stroke-dasharray="22 100" stroke-opacity="0.7"/>
+        </g>
+      </svg>
+      <style>@keyframes spin { to { transform: rotate(360deg); } }</style>
+      <h3 class="font-display text-[20px] mt-3.5 mb-2 text-muted"
+          x-text="lang === 'ar' ? 'جاري تحميل السجلّ…' : 'Loading registry…'"></h3>
+    </div>
+
+    <!-- Empty state — shows once loading is done and the filter still has no matches. -->
+    <div x-show="!loading && filtered.length === 0" class="text-center py-16 px-6 bg-page-2 rounded-lg" style="border: 1px dashed var(--divider);">
       <svg width="64" height="64" viewBox="0 0 60 60" style="opacity:.5; margin: 0 auto; display: block;">
         <g fill="none" stroke="var(--olive)" stroke-width="0.9">
           <circle cx="30" cy="30" r="20"/><circle cx="30" cy="30" r="14"/>
@@ -341,7 +434,9 @@
       <template x-for="m in filtered" :key="m.id">
         <button @click="openMartyr(m.id)" class="card card-hover p-4.5 text-right flex flex-col gap-3.5 cursor-pointer relative"
                 style="padding: 18px;">
-          <div x-show="m.delta !== undefined"
+          <!-- Delta badge: hidden entirely when delta is NaN (malformed birth date).
+               Previously `m.delta !== undefined` let NaN through and rendered "±NaNd". -->
+          <div x-show="Number.isFinite(m.delta)"
                class="absolute top-3.5 start-3.5 font-latin-sans text-[11px] tracking-[0.12em] px-2 py-0.5 rounded-full"
                :style="m.delta === 0 ? 'color: var(--forest); background: rgba(31,61,43,0.10);' : 'color: var(--olive); background: rgba(138,109,59,0.10);'">
             <span x-show="m.delta === 0" x-text="lang === 'ar' ? 'نفس اليوم' : 'SAME DAY'"></span>
@@ -358,7 +453,7 @@
               <div class="font-body text-[13px] text-muted mt-1.5">
                 <span x-text="m.city"></span>
                 <span x-show="m.city"> · </span>
-                <span x-text="`${m.age} ${lang === 'ar' ? 'عاماً' : 'yrs'}`"></span>
+                <span x-text="ageLabel(m)"></span>
               </div>
             </div>
           </div>
@@ -373,24 +468,26 @@
           <div class="flex flex-wrap gap-1.5">
             <span x-show="m.rank" class="badge badge-forest" x-text="m.rank"></span>
             <span x-show="m.weapon" class="badge badge-olive" x-text="m.weapon"></span>
-            <span class="badge" x-text="m.battalion"></span>
+            <span x-show="m.battalion" class="badge" x-text="m.battalion"></span>
           </div>
         </button>
       </template>
     </div>
-  </main>
+  </section>
 
   <!-- ===================== DETAIL ===================== -->
-  <main id="main-content-detail" role="main" x-show="view === 'detail' && current" class="max-w-[1100px] mx-auto px-8 pt-8 pb-20" x-cloak>
+  <section id="main-content-detail" x-show="view === 'detail' && current" :aria-hidden="view !== 'detail'" class="max-w-[1100px] mx-auto px-8 pt-8 pb-20" x-cloak>
     <template x-if="current">
       <div>
+        <!-- Breadcrumb: only emits each dot+text pair when the field is populated.
+             Old version produced naked dots ("· · ") for rows missing battalion or city. -->
         <div class="flex items-center gap-2 text-[13px] text-muted mb-7">
           <button @click="view = 'browse'" class="btn btn-text" style="padding:0;"
                   x-text="lang === 'ar' ? '← العودة إلى السجلّ' : '← Back to registry'"></button>
-          <span>·</span>
-          <span x-text="current.battalion"></span>
-          <span>·</span>
-          <span x-text="current.city"></span>
+          <template x-if="current.battalion"><span>·</span></template>
+          <template x-if="current.battalion"><span x-text="current.battalion"></span></template>
+          <template x-if="current.city"><span>·</span></template>
+          <template x-if="current.city"><span x-text="current.city"></span></template>
         </div>
 
         <!-- Hero -->
@@ -400,12 +497,13 @@
             <div>
               <div class="font-body text-[14px] text-olive tracking-[0.15em] mb-2"
                    x-text="lang === 'ar' ? 'الشهيد' : 'Martyr'"></div>
-              <h1 class="font-naskh text-[46px] font-bold text-ink m-0 leading-[1.1]" x-text="current.name"></h1>
+              <h1 class="font-naskh font-bold text-ink m-0 leading-[1.1]" style="font-size: clamp(28px, 5vw, 46px); overflow-wrap: break-word; word-break: break-word;" x-text="current.name"></h1>
               <div class="mt-4 flex gap-2.5 flex-wrap">
                 <span x-show="current.rank" class="badge badge-forest" x-text="current.rank"></span>
                 <span x-show="current.weapon" class="badge badge-olive" x-text="current.weapon"></span>
-                <span class="badge" x-text="current.battalion"></span>
-                <span class="badge" x-text="current.brigade"></span>
+                <!-- x-show guards so empty rows don't render pill placeholders -->
+                <span x-show="current.battalion" class="badge" x-text="current.battalion"></span>
+                <span x-show="current.brigade" class="badge" x-text="current.brigade"></span>
               </div>
 
               <div class="dates-strip grid mt-7" style="grid-template-columns: 1fr 1fr 1fr; border-top: 1px solid var(--divider); border-bottom: 1px solid var(--divider);">
@@ -422,10 +520,7 @@
                 <div class="py-4 text-center" style="border-inline-start: 1px solid var(--divider);">
                   <div class="font-body text-[11px] tracking-[0.15em] text-muted uppercase"
                        x-text="lang === 'ar' ? 'العمر عند الاستشهاد' : 'Age'"></div>
-                  <div class="font-naskh text-[18px] font-bold text-ink mt-1.5">
-                    <span x-text="current.age"></span>
-                    <span x-text="lang === 'ar' ? 'عاماً' : 'yrs'"></span>
-                  </div>
+                  <div class="font-naskh text-[18px] font-bold text-ink mt-1.5" x-text="ageLabel(current)"></div>
                 </div>
               </div>
 
@@ -498,8 +593,8 @@
                   <div class="flex-1 min-w-0">
                     <div class="font-naskh text-[17px] font-bold text-ink leading-tight truncate" x-text="m.name"></div>
                     <div class="text-[12px] text-muted mt-1">
-                      <span x-text="`${m.age} ${lang === 'ar' ? 'عاماً' : 'yrs'}`"></span>
-                      · <span x-text="m.city"></span>
+                      <span x-text="ageLabel(m)"></span>
+                      · <span x-text="m.city || '—'"></span>
                     </div>
                   </div>
                 </div>
@@ -509,10 +604,10 @@
         </section>
       </div>
     </template>
-  </main>
+  </section>
 
   <!-- ===================== ABOUT ===================== -->
-  <main id="main-content-about" role="main" x-show="view === 'about'" class="max-w-[760px] mx-auto px-8 py-16">
+  <section id="main-content-about" x-show="view === 'about'" :aria-hidden="view !== 'about'" class="max-w-[760px] mx-auto px-8 py-16">
     <div class="section-kicker" x-text="lang === 'ar' ? 'عن المشروع' : 'About'"></div>
     <h2 class="section-title" x-text="lang === 'ar' ? 'ذاكرةٌ مفتوحةٌ بأمانة' : 'An open, faithful memory'"></h2>
     <p class="section-sub" x-text="lang === 'ar'
@@ -531,10 +626,10 @@
       <p class="m-0 font-naskh text-[18px] text-ink-2"
          x-text="lang === 'ar' ? '«إنّ الموتى لا يَموتون ما دامت أسماؤُهم تُذكَر.»' : '“The dead are not dead so long as their names are remembered.”'"></p>
     </div>
-  </main>
+  </section>
 
   <!-- ===================== ADMIN ===================== -->
-  <main id="main-content-admin" role="main" x-show="view === 'admin' && isAdmin" class="max-w-[1240px] mx-auto px-8 pt-8 pb-20" x-cloak>
+  <section id="main-content-admin" x-show="view === 'admin' && isAdmin" :aria-hidden="view !== 'admin'" class="max-w-[1240px] mx-auto px-8 pt-8 pb-20" x-cloak>
     <div class="admin-banner bg-forest-grad text-paper px-7 py-5 rounded-lg mb-7 flex items-center justify-between gap-6">
       <div>
         <div class="font-latin-sans text-[11px] tracking-[0.3em] opacity-70">EDITOR · ADMIN MODE</div>
@@ -544,8 +639,10 @@
       <div class="flex items-center gap-3.5">
         <div class="text-center">
           <div class="font-naskh text-[26px] font-bold" x-text="Object.keys(edits).length"></div>
+          <!-- Post-Supabase, edits write through immediately — this counter shows how
+               many records the admin touched in *this session*, not pending exports. -->
           <div class="text-[11px] opacity-75 tracking-wide"
-               x-text="lang === 'ar' ? 'تعديلٌ قيد الانتظار' : 'pending edits'"></div>
+               x-text="lang === 'ar' ? 'تعديلٌ في هذه الجلسة' : 'edits this session'"></div>
         </div>
         <button @click="logout()" class="btn btn-text" style="color: rgba(255,255,255,0.75);"
                 x-text="lang === 'ar' ? 'خروج' : 'Sign out'"></button>
@@ -556,9 +653,13 @@
     <div x-show="editingId" class="grid-detail grid gap-7" style="grid-template-columns: 260px 1fr;">
       <div>
         <div x-html="renderPortrait(editingMartyr(), 220, true)"></div>
-        <button class="mt-3.5 w-full py-2.5 text-[13px] text-muted bg-transparent rounded font-body"
+        <!-- Photo upload not yet implemented (would need Supabase Storage write path
+             plus image cropping/resizing). Disabled until the feature lands. -->
+        <button class="mt-3.5 w-full py-2.5 text-[13px] text-faint bg-transparent rounded font-body cursor-not-allowed"
                 style="border: 1px dashed var(--divider);"
-                x-text="lang === 'ar' ? '⬆ رفعُ صورةٍ جديدة' : '⬆ Upload new photo'"></button>
+                disabled
+                :title="lang === 'ar' ? 'سيُتاح لاحقاً' : 'Coming soon'"
+                x-text="lang === 'ar' ? '⬆ رفعُ صورةٍ جديدة (قريباً)' : '⬆ Upload new photo (soon)'"></button>
         <div class="mt-4 p-4 bg-page-2 rounded-md text-[12px] text-muted leading-[1.7]" style="border: 1px solid var(--divider);">
           <span x-show="lang === 'ar'">التعديلاتُ تُحفظ مباشرةً في <code class="px-1 py-0.5 rounded bg-page-3">Supabase</code>، وتَظهر فوراً لجميع الزوار.</span>
           <span x-show="lang === 'en'">Edits save directly to <code class="px-1 py-0.5 rounded bg-page-3">Supabase</code> and appear instantly for all visitors.</span>
@@ -628,6 +729,7 @@
           <label class="block mb-4">
             <div class="field-label" x-text="lang === 'ar' ? 'الكتيبة' : 'Battalion'"></div>
             <select class="select" x-model="draft.battalion">
+              <option value="">—</option>
               <template x-for="b in battalions" :key="b"><option :value="b" x-text="b"></option></template>
             </select>
           </label>
@@ -670,7 +772,7 @@
           </tr>
         </thead>
         <tbody>
-          <template x-for="m in adminList().slice(0, 30)" :key="m.id">
+          <template x-for="m in adminList().slice(0, adminLimit)" :key="m.id">
             <tr style="border-bottom: 1px solid var(--divider);"
                 :style="edits[m.id] ? 'background: rgba(184,146,74,0.06);' : ''">
               <td class="p-3.5 text-muted font-latin-sans tabular-nums" x-text="String(m.id).padStart(3,'0')"></td>
@@ -679,7 +781,7 @@
                   <div x-html="renderPortrait(m, 36, false)"></div>
                   <div>
                     <div class="font-naskh text-[16px] font-bold" x-text="m.name"></div>
-                    <div class="text-[12px] text-muted" x-text="`${m.age} ${lang === 'ar' ? 'عاماً' : 'yrs'}`"></div>
+                    <div class="text-[12px] text-muted" x-text="ageLabel(m)"></div>
                   </div>
                 </div>
               </td>
@@ -703,12 +805,31 @@
           </template>
         </tbody>
       </table>
+
+      <!-- Pagination — visible only when more rows exist beyond the current limit.
+           Previously the admin table was hard-capped at 30, hiding ~92% of the
+           dataset. Search still narrows down faster than paging through. -->
+      <div x-show="adminList().length > adminLimit" class="flex flex-wrap items-center justify-center gap-3 mt-5 pt-4" style="border-top: 1px dashed var(--divider);">
+        <button @click="adminLimit += 30" class="btn btn-ghost"
+                x-text="lang === 'ar'
+                  ? `عرض ٣٠ سجلًّا إضافياً (${adminList().length - adminLimit} متبقّ)`
+                  : `Show 30 more (${adminList().length - adminLimit} left)`"></button>
+        <button @click="adminLimit = adminList().length" class="btn btn-text"
+                x-text="lang === 'ar'
+                  ? `عرض الكل (${adminList().length})`
+                  : `Show all (${adminList().length})`"></button>
+      </div>
     </div>
+  </section>
+
   </main>
+  <!-- /single-main-wrapper -->
 
   <!-- ===================== LOGIN MODAL ===================== -->
   <div x-show="showLogin" @click.self="showLogin = false; loginError = ''"
-       @keydown.escape.window="showLogin = false; loginError = ''" x-trap="showLogin"
+       @keydown.escape.window="showLogin = false; loginError = ''"
+       x-trap.inert.noscroll="showLogin"
+       x-effect="if (showLogin) $nextTick(() => $el.querySelector('input[type=email]')?.focus())"
        role="dialog" aria-modal="true" aria-labelledby="login-modal-title"
        class="fixed inset-0 z-[100] flex items-center justify-center" style="background: rgba(20,15,10,0.55); backdrop-filter: blur(4px);">
     <div class="bg-paper w-[420px] rounded-lg p-8 border border-divider" style="box-shadow: 0 40px 80px -30px rgba(0,0,0,0.4);">
@@ -765,8 +886,21 @@
         <div>
           <h5 class="font-display text-[12px] font-semibold tracking-[0.2em] uppercase text-olive m-0 mb-3" x-text="col.title"></h5>
           <ul class="list-none p-0 m-0">
-            <template x-for="l in col.links" :key="l">
-              <li class="mb-1.5"><a class="text-[13px] text-ink-2" x-text="l"></a></li>
+            <template x-for="l in col.links" :key="l.text">
+              <li class="mb-1.5">
+                <!-- Internal view-switch (go: 'browse' | 'home' | 'about' | ...) -->
+                <template x-if="l.go">
+                  <button @click="goto(l.go)"
+                          class="text-[13px] text-ink-2 bg-transparent border-0 p-0 cursor-pointer hover:text-forest transition-colors"
+                          x-text="l.text"></button>
+                </template>
+                <!-- Real URL (mailto:, https:, relative tests.html). External opens new tab. -->
+                <template x-if="l.href">
+                  <a :href="l.href" :target="l.external ? '_blank' : null" :rel="l.external ? 'noopener noreferrer' : null"
+                     class="text-[13px] text-ink-2 hover:text-forest transition-colors"
+                     x-text="l.text"></a>
+                </template>
+              </li>
             </template>
           </ul>
         </div>
@@ -774,7 +908,8 @@
     </div>
     <div class="max-w-[1240px] mx-auto mt-7 pt-5 flex justify-between text-[12px] text-muted font-latin-sans" style="border-top: 1px dashed var(--divider);">
       <div x-text="lang === 'ar' ? '© AQMAR · أرشيفٌ خاصّ، محتوى القناة ملكٌ لأصحابه' : '© AQMAR · Channel content remains property of @AqmarTofan'"></div>
-      <div x-text="lang === 'ar' ? 'آخر تحديث: ١٤ أيار ٢٠٢٦' : 'Last sync: 14 May 2026'"></div>
+      <!-- lastSyncLabel is derived from max(posted_date) across all rows — no more hardcoded date. -->
+      <div x-text="lang === 'ar' ? `آخر مزامنة: ${lastSyncLabel}` : `Last sync: ${lastSyncLabel}`"></div>
     </div>
   </footer>
 
