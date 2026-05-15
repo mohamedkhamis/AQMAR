@@ -130,9 +130,12 @@
       </template>
     </div>
 
-    <!-- Mobile nav drawer — slides below the header bar; toggled by .nav-hamburger -->
+    <!-- Mobile nav drawer — slides below the header bar; toggled by .nav-hamburger.
+         x-trap keeps Tab inside the drawer while open and returns focus to the
+         hamburger button on close. -->
     <nav id="mobile-nav" x-show="mobileNavOpen" x-cloak
          x-transition.opacity.duration.150ms
+         x-trap="mobileNavOpen"
          @keydown.escape.window="mobileNavOpen = false"
          class="mobile-nav border-t border-divider"
          style="background: var(--paper);">
@@ -147,8 +150,13 @@
     </nav>
   </header>
 
+  <!-- Single <main> wrapper for HTML5 spec compliance (one main per document).
+       Each view becomes a <section>; the wrapper itself owns the role="main"
+       and the id the skip link targets. -->
+  <main id="main-content" role="main">
+
   <!-- ===================== LANDING ===================== -->
-  <main id="main-content" role="main" x-show="view === 'home'" :aria-hidden="view !== 'home'" class="relative pt-6">
+  <section x-show="view === 'home'" :aria-hidden="view !== 'home'" class="relative pt-6">
     <!-- Verse -->
     <div class="max-w-[760px] mx-auto pt-7 px-8 text-center">
       <div class="font-naskh text-[17px] text-olive leading-[1.9]">
@@ -283,10 +291,10 @@
         </template>
       </div>
     </div>
-  </main>
+  </section>
 
   <!-- ===================== BROWSE ===================== -->
-  <main id="main-content-browse" role="main" x-show="view === 'browse'" :aria-hidden="view !== 'browse'" class="max-w-[1240px] mx-auto px-8 py-12">
+  <section id="main-content-browse" x-show="view === 'browse'" :aria-hidden="view !== 'browse'" class="max-w-[1240px] mx-auto px-8 py-12">
     <!-- Birthday match banner -->
     <div x-show="matchFilter"
          class="mb-7 px-5 py-4 rounded-md flex items-center justify-between gap-4 flex-wrap"
@@ -450,10 +458,10 @@
         </button>
       </template>
     </div>
-  </main>
+  </section>
 
   <!-- ===================== DETAIL ===================== -->
-  <main id="main-content-detail" role="main" x-show="view === 'detail' && current" :aria-hidden="view !== 'detail'" class="max-w-[1100px] mx-auto px-8 pt-8 pb-20" x-cloak>
+  <section id="main-content-detail" x-show="view === 'detail' && current" :aria-hidden="view !== 'detail'" class="max-w-[1100px] mx-auto px-8 pt-8 pb-20" x-cloak>
     <template x-if="current">
       <div>
         <!-- Breadcrumb: only emits each dot+text pair when the field is populated.
@@ -581,10 +589,10 @@
         </section>
       </div>
     </template>
-  </main>
+  </section>
 
   <!-- ===================== ABOUT ===================== -->
-  <main id="main-content-about" role="main" x-show="view === 'about'" :aria-hidden="view !== 'about'" class="max-w-[760px] mx-auto px-8 py-16">
+  <section id="main-content-about" x-show="view === 'about'" :aria-hidden="view !== 'about'" class="max-w-[760px] mx-auto px-8 py-16">
     <div class="section-kicker" x-text="lang === 'ar' ? 'عن المشروع' : 'About'"></div>
     <h2 class="section-title" x-text="lang === 'ar' ? 'ذاكرةٌ مفتوحةٌ بأمانة' : 'An open, faithful memory'"></h2>
     <p class="section-sub" x-text="lang === 'ar'
@@ -603,10 +611,10 @@
       <p class="m-0 font-naskh text-[18px] text-ink-2"
          x-text="lang === 'ar' ? '«إنّ الموتى لا يَموتون ما دامت أسماؤُهم تُذكَر.»' : '“The dead are not dead so long as their names are remembered.”'"></p>
     </div>
-  </main>
+  </section>
 
   <!-- ===================== ADMIN ===================== -->
-  <main id="main-content-admin" role="main" x-show="view === 'admin' && isAdmin" :aria-hidden="view !== 'admin'" class="max-w-[1240px] mx-auto px-8 pt-8 pb-20" x-cloak>
+  <section id="main-content-admin" x-show="view === 'admin' && isAdmin" :aria-hidden="view !== 'admin'" class="max-w-[1240px] mx-auto px-8 pt-8 pb-20" x-cloak>
     <div class="admin-banner bg-forest-grad text-paper px-7 py-5 rounded-lg mb-7 flex items-center justify-between gap-6">
       <div>
         <div class="font-latin-sans text-[11px] tracking-[0.3em] opacity-70">EDITOR · ADMIN MODE</div>
@@ -706,6 +714,7 @@
           <label class="block mb-4">
             <div class="field-label" x-text="lang === 'ar' ? 'الكتيبة' : 'Battalion'"></div>
             <select class="select" x-model="draft.battalion">
+              <option value="">—</option>
               <template x-for="b in battalions" :key="b"><option :value="b" x-text="b"></option></template>
             </select>
           </label>
@@ -796,7 +805,10 @@
                   : `Show all (${adminList().length})`"></button>
       </div>
     </div>
+  </section>
+
   </main>
+  <!-- /single-main-wrapper -->
 
   <!-- ===================== LOGIN MODAL ===================== -->
   <div x-show="showLogin" @click.self="showLogin = false; loginError = ''"

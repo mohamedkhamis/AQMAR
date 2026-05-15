@@ -188,7 +188,7 @@ function aqmar() {
         { k_ar: this.toArDigits(this.all.length), k_en: this.all.length, v_ar: 'اسماً مُوَثَّقًا', v_en: 'names recorded' },
         { k_ar: this.toArDigits(daysSince) + ' يوماً', k_en: daysSince + ' days', v_ar: 'منذ بدء الطوفان', v_en: 'since Oct 7' },
         { k_ar: this.toArDigits(this.battalions.length) + ' كتيبة', k_en: this.battalions.length + ' bn', v_ar: 'تَشمَلُها السجلات', v_en: 'battalions covered' },
-        { k_ar: '٪١٠٠', k_en: '100%', v_ar: 'أرشيفٌ مفتوحٌ ومحلي', v_en: 'open & local archive' },
+        { k_ar: '٪١٠٠', k_en: '100%', v_ar: 'أرشيفٌ مفتوحٌ ودائم', v_en: 'open · always free' },
       ];
     },
     get aboutBlocks() {
@@ -334,12 +334,12 @@ function aqmar() {
       ];
     },
     adminList() {
-      const q = this.adminSearch.trim().toLowerCase();
+      // Delegate to the same Arabic-aware searchPredicate the browse view uses
+      // (handles diacritics, alef forms, ta-marbouta vs. ha-marbouta, lam-alef
+      // ligatures) instead of plain ASCII lowercase + substring.
+      const q = this.adminSearch.trim();
       if (!q) return this.all;
-      return this.all.filter(m =>
-        (m.name && m.name.toLowerCase().includes(q)) ||
-        (m.city && m.city.toLowerCase().includes(q))
-      );
+      return this.all.filter(m => searchPredicate(m, q));
     },
 
     editMartyr(id) {
