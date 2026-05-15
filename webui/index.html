@@ -3,6 +3,18 @@
 <head>
 <meta charset="utf-8" />
 <title>أقمار الطوفان — AQMAR</title>
+<script>
+  // Update <title> as Alpine view + lang change (audit P1 #7).
+  window.__updateTitle = function (view, lang) {
+    const titles = {
+      ar: { home: 'أقمار الطوفان', browse: 'السجلّ — أقمار الطوفان', detail: 'تفاصيل — أقمار الطوفان',
+            admin: 'لوحة التحرير — أقمار الطوفان', about: 'عن الموقع — أقمار الطوفان' },
+      en: { home: 'AQMAR — Memorial', browse: 'Registry — AQMAR', detail: 'Detail — AQMAR',
+            admin: 'Admin — AQMAR', about: 'About — AQMAR' },
+    };
+    document.title = (titles[lang] || titles.ar)[view] || 'AQMAR';
+  };
+</script>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <meta name="description" content="أرشيف مفتوح يحفظ أسماء شهداء كتائب القسام في معركة طوفان الأقصى" />
 
@@ -135,7 +147,7 @@
   </header>
 
   <!-- ===================== LANDING ===================== -->
-  <main id="main-content" role="main" x-show="view === 'home'" class="relative pt-6">
+  <main id="main-content" role="main" x-show="view === 'home'" :aria-hidden="view !== 'home'" class="relative pt-6">
     <!-- Verse -->
     <div class="max-w-[760px] mx-auto pt-7 px-8 text-center">
       <div class="font-naskh text-[17px] text-olive leading-[1.9]">
@@ -190,6 +202,7 @@
             <div class="flex gap-1.5 flex-wrap">
               <template x-for="opt in windowOptions" :key="opt.v">
                 <button @click="bday.window = opt.v" type="button"
+                        :aria-pressed="bday.window === opt.v ? 'true' : 'false'"
                         :class="bday.window === opt.v ? 'bg-ink text-paper' : 'bg-transparent text-muted'"
                         class="btn"
                         style="padding: 8px 14px; font-size: 13px;"
@@ -270,7 +283,7 @@
   </main>
 
   <!-- ===================== BROWSE ===================== -->
-  <main id="main-content-browse" role="main" x-show="view === 'browse'" class="max-w-[1240px] mx-auto px-8 py-12">
+  <main id="main-content-browse" role="main" x-show="view === 'browse'" :aria-hidden="view !== 'browse'" class="max-w-[1240px] mx-auto px-8 py-12">
     <!-- Birthday match banner -->
     <div x-show="matchFilter"
          class="mb-7 px-5 py-4 rounded-md flex items-center justify-between gap-4 flex-wrap"
@@ -422,7 +435,7 @@
   </main>
 
   <!-- ===================== DETAIL ===================== -->
-  <main id="main-content-detail" role="main" x-show="view === 'detail' && current" class="max-w-[1100px] mx-auto px-8 pt-8 pb-20" x-cloak>
+  <main id="main-content-detail" role="main" x-show="view === 'detail' && current" :aria-hidden="view !== 'detail'" class="max-w-[1100px] mx-auto px-8 pt-8 pb-20" x-cloak>
     <template x-if="current">
       <div>
         <div class="flex items-center gap-2 text-[13px] text-muted mb-7">
@@ -441,7 +454,7 @@
             <div>
               <div class="font-body text-[14px] text-olive tracking-[0.15em] mb-2"
                    x-text="lang === 'ar' ? 'الشهيد' : 'Martyr'"></div>
-              <h1 class="font-naskh text-[46px] font-bold text-ink m-0 leading-[1.1]" x-text="current.name"></h1>
+              <h1 class="font-naskh font-bold text-ink m-0 leading-[1.1]" style="font-size: clamp(28px, 5vw, 46px); overflow-wrap: break-word; word-break: break-word;" x-text="current.name"></h1>
               <div class="mt-4 flex gap-2.5 flex-wrap">
                 <span x-show="current.rank" class="badge badge-forest" x-text="current.rank"></span>
                 <span x-show="current.weapon" class="badge badge-olive" x-text="current.weapon"></span>
@@ -553,7 +566,7 @@
   </main>
 
   <!-- ===================== ABOUT ===================== -->
-  <main id="main-content-about" role="main" x-show="view === 'about'" class="max-w-[760px] mx-auto px-8 py-16">
+  <main id="main-content-about" role="main" x-show="view === 'about'" :aria-hidden="view !== 'about'" class="max-w-[760px] mx-auto px-8 py-16">
     <div class="section-kicker" x-text="lang === 'ar' ? 'عن المشروع' : 'About'"></div>
     <h2 class="section-title" x-text="lang === 'ar' ? 'ذاكرةٌ مفتوحةٌ بأمانة' : 'An open, faithful memory'"></h2>
     <p class="section-sub" x-text="lang === 'ar'
@@ -575,7 +588,7 @@
   </main>
 
   <!-- ===================== ADMIN ===================== -->
-  <main id="main-content-admin" role="main" x-show="view === 'admin' && isAdmin" class="max-w-[1240px] mx-auto px-8 pt-8 pb-20" x-cloak>
+  <main id="main-content-admin" role="main" x-show="view === 'admin' && isAdmin" :aria-hidden="view !== 'admin'" class="max-w-[1240px] mx-auto px-8 pt-8 pb-20" x-cloak>
     <div class="admin-banner bg-forest-grad text-paper px-7 py-5 rounded-lg mb-7 flex items-center justify-between gap-6">
       <div>
         <div class="font-latin-sans text-[11px] tracking-[0.3em] opacity-70">EDITOR · ADMIN MODE</div>
@@ -749,7 +762,9 @@
 
   <!-- ===================== LOGIN MODAL ===================== -->
   <div x-show="showLogin" @click.self="showLogin = false; loginError = ''"
-       @keydown.escape.window="showLogin = false; loginError = ''" x-trap="showLogin"
+       @keydown.escape.window="showLogin = false; loginError = ''"
+       x-trap.inert.noscroll="showLogin"
+       x-effect="if (showLogin) $nextTick(() => $el.querySelector('input[type=email]')?.focus())"
        role="dialog" aria-modal="true" aria-labelledby="login-modal-title"
        class="fixed inset-0 z-[100] flex items-center justify-center" style="background: rgba(20,15,10,0.55); backdrop-filter: blur(4px);">
     <div class="bg-paper w-[420px] rounded-lg p-8 border border-divider" style="box-shadow: 0 40px 80px -30px rgba(0,0,0,0.4);">

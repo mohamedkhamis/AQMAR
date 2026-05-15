@@ -66,7 +66,13 @@ function aqmar() {
       this.$watch('lang', (l) => {
         document.documentElement.lang = l;
         document.documentElement.dir = l === 'ar' ? 'rtl' : 'ltr';
+        if (window.__updateTitle) window.__updateTitle(this.view, l);
       });
+      // Keep document.title in sync with the active view + language.
+      this.$watch('view', (v) => {
+        if (window.__updateTitle) window.__updateTitle(v, this.lang);
+      });
+      if (window.__updateTitle) window.__updateTitle(this.view, this.lang);
 
       // Restore admin edits from localStorage
       try {
