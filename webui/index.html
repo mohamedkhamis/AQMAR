@@ -186,8 +186,9 @@
         <div class="grid-bday grid gap-3" style="grid-template-columns: 1fr 1fr 1.2fr auto; align-items: end;">
           <label class="block">
             <div class="field-label" x-text="lang === 'ar' ? 'اليوم' : 'Day'"></div>
+            <!-- bdayDaysInMonth caps the day range per selected month (28→Feb, 30→Apr/Jun/Sep/Nov, 31 otherwise) -->
             <select class="select" x-model.number="bday.day">
-              <template x-for="d in 31" :key="d"><option :value="d" x-text="d"></option></template>
+              <template x-for="d in bdayDaysInMonth" :key="d"><option :value="d" x-text="d"></option></template>
             </select>
           </label>
           <label class="block">
@@ -263,8 +264,9 @@
                     style="border-inline-start: 2px solid var(--forest);">
               <div class="font-naskh text-[16px] font-bold text-ink truncate" x-text="m.name"></div>
               <div class="text-[12px] text-muted flex justify-between">
-                <span x-text="m.battalion"></span>
-                <span class="text-forest font-latin-sans tabular-nums" x-text="m.martyrdom.slice(0,4)"></span>
+                <span x-text="m.battalion || '—'"></span>
+                <!-- yearLabel handles ar-digit conversion + null guard -->
+                <span class="text-forest font-latin-sans tabular-nums" x-text="yearLabel(m.martyrdom)"></span>
               </div>
             </button>
           </template>
@@ -374,8 +376,21 @@
       </div>
     </div>
 
-    <!-- Empty state -->
-    <div x-show="filtered.length === 0" class="text-center py-16 px-6 bg-page-2 rounded-lg" style="border: 1px dashed var(--divider);">
+    <!-- Loading state — separate from empty state so users see "Loading…" instead of
+         "No matching names" while the initial Supabase fetch is in flight. -->
+    <div x-show="loading && filtered.length === 0" class="text-center py-16 px-6 bg-page-2 rounded-lg" style="border: 1px dashed var(--divider);">
+      <svg width="48" height="48" viewBox="0 0 60 60" style="margin: 0 auto; display: block; animation: spin 1.2s linear infinite;">
+        <g fill="none" stroke="var(--olive)" stroke-width="2" stroke-linecap="round">
+          <circle cx="30" cy="30" r="22" stroke-dasharray="22 100" stroke-opacity="0.7"/>
+        </g>
+      </svg>
+      <style>@keyframes spin { to { transform: rotate(360deg); } }</style>
+      <h3 class="font-display text-[20px] mt-3.5 mb-2 text-muted"
+          x-text="lang === 'ar' ? 'جاري تحميل السجلّ…' : 'Loading registry…'"></h3>
+    </div>
+
+    <!-- Empty state — shows once loading is done and the filter still has no matches. -->
+    <div x-show="!loading && filtered.length === 0" class="text-center py-16 px-6 bg-page-2 rounded-lg" style="border: 1px dashed var(--divider);">
       <svg width="64" height="64" viewBox="0 0 60 60" style="opacity:.5; margin: 0 auto; display: block;">
         <g fill="none" stroke="var(--olive)" stroke-width="0.9">
           <circle cx="30" cy="30" r="20"/><circle cx="30" cy="30" r="14"/>
@@ -430,7 +445,7 @@
           <div class="flex flex-wrap gap-1.5">
             <span x-show="m.rank" class="badge badge-forest" x-text="m.rank"></span>
             <span x-show="m.weapon" class="badge badge-olive" x-text="m.weapon"></span>
-            <span class="badge" x-text="m.battalion"></span>
+            <span x-show="m.battalion" class="badge" x-text="m.battalion"></span>
           </div>
         </button>
       </template>
@@ -441,13 +456,15 @@
   <main id="main-content-detail" role="main" x-show="view === 'detail' && current" :aria-hidden="view !== 'detail'" class="max-w-[1100px] mx-auto px-8 pt-8 pb-20" x-cloak>
     <template x-if="current">
       <div>
+        <!-- Breadcrumb: only emits each dot+text pair when the field is populated.
+             Old version produced naked dots ("· · ") for rows missing battalion or city. -->
         <div class="flex items-center gap-2 text-[13px] text-muted mb-7">
           <button @click="view = 'browse'" class="btn btn-text" style="padding:0;"
                   x-text="lang === 'ar' ? '← العودة إلى السجلّ' : '← Back to registry'"></button>
-          <span>·</span>
-          <span x-text="current.battalion"></span>
-          <span>·</span>
-          <span x-text="current.city"></span>
+          <template x-if="current.battalion"><span>·</span></template>
+          <template x-if="current.battalion"><span x-text="current.battalion"></span></template>
+          <template x-if="current.city"><span>·</span></template>
+          <template x-if="current.city"><span x-text="current.city"></span></template>
         </div>
 
         <!-- Hero -->
@@ -461,8 +478,9 @@
               <div class="mt-4 flex gap-2.5 flex-wrap">
                 <span x-show="current.rank" class="badge badge-forest" x-text="current.rank"></span>
                 <span x-show="current.weapon" class="badge badge-olive" x-text="current.weapon"></span>
-                <span class="badge" x-text="current.battalion"></span>
-                <span class="badge" x-text="current.brigade"></span>
+                <!-- x-show guards so empty rows don't render pill placeholders -->
+                <span x-show="current.battalion" class="badge" x-text="current.battalion"></span>
+                <span x-show="current.brigade" class="badge" x-text="current.brigade"></span>
               </div>
 
               <div class="dates-strip grid mt-7" style="grid-template-columns: 1fr 1fr 1fr; border-top: 1px solid var(--divider); border-bottom: 1px solid var(--divider);">
@@ -598,8 +616,10 @@
       <div class="flex items-center gap-3.5">
         <div class="text-center">
           <div class="font-naskh text-[26px] font-bold" x-text="Object.keys(edits).length"></div>
+          <!-- Post-Supabase, edits write through immediately — this counter shows how
+               many records the admin touched in *this session*, not pending exports. -->
           <div class="text-[11px] opacity-75 tracking-wide"
-               x-text="lang === 'ar' ? 'تعديلٌ قيد الانتظار' : 'pending edits'"></div>
+               x-text="lang === 'ar' ? 'تعديلٌ في هذه الجلسة' : 'edits this session'"></div>
         </div>
         <button @click="logout()" class="btn btn-text" style="color: rgba(255,255,255,0.75);"
                 x-text="lang === 'ar' ? 'خروج' : 'Sign out'"></button>
@@ -861,7 +881,8 @@
     </div>
     <div class="max-w-[1240px] mx-auto mt-7 pt-5 flex justify-between text-[12px] text-muted font-latin-sans" style="border-top: 1px dashed var(--divider);">
       <div x-text="lang === 'ar' ? '© AQMAR · أرشيفٌ خاصّ، محتوى القناة ملكٌ لأصحابه' : '© AQMAR · Channel content remains property of @AqmarTofan'"></div>
-      <div x-text="lang === 'ar' ? 'آخر تحديث: ١٤ أيار ٢٠٢٦' : 'Last sync: 14 May 2026'"></div>
+      <!-- lastSyncLabel is derived from max(posted_date) across all rows — no more hardcoded date. -->
+      <div x-text="lang === 'ar' ? `آخر مزامنة: ${lastSyncLabel}` : `Last sync: ${lastSyncLabel}`"></div>
     </div>
   </footer>
 

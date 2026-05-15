@@ -20,6 +20,8 @@ function aqmar() {
     adminSearch: '',
     adminLimit: 30,           // pagination cap for the admin table — bumped by "Show more"
     mobileNavOpen: false,
+    loading: true,            // true until the initial loadData() resolves (or errors out)
+    lastSyncIso: null,        // most recent posted_date across all rows — drives the footer "Last sync"
 
     // ----- data -----
     all: [],
@@ -105,12 +107,25 @@ function aqmar() {
         const data = await loadData();
         const rows = data.martyrs || [];
         martyrs = rows.map(adaptMartyrToNewSchema).filter(Boolean);
+        // Stash the most-recent ingest timestamp for the footer "Last sync" line.
+        const dates = rows.map(r => r && r.posted_date).filter(Boolean);
+        if (dates.length) this.lastSyncIso = dates.sort().reverse()[0];
       } catch (e) {
         console.warn('Supabase load failed, falling back to sample data:', e.message);
+      } finally {
+        // Flip loading off regardless of success/failure so the empty-state
+        // message switches from "Loading…" to "No matching names" cleanly.
+        this.loading = false;
       }
       if (!martyrs && window.AQMAR_SAMPLE_DATA) martyrs = window.AQMAR_SAMPLE_DATA;
       if (!martyrs) martyrs = [];
       // overrides.json fetch removed — admin edits live in Supabase as of Task 10.
+
+      // Clamp bday.day whenever the month changes — so picking Feb after day=31
+      // doesn't leave an out-of-range value floating around.
+      this.$watch('bday.month', () => {
+        if (this.bday.day > this.bdayDaysInMonth) this.bday.day = this.bdayDaysInMonth;
+      });
 
       // Normalize + compute age
       this.all = martyrs.map(m => ({
@@ -274,8 +289,14 @@ function aqmar() {
     },
     async doLogin() {
       this.loginError = '';
-      if (!window.AQMAR_SB) {
-        this.loginError = this.lang === 'ar' ? 'لم تتم تهيئة Supabase' : 'Supabase not configured';
+      // Placeholder Supabase URL ("https://YOURPROJECT.supabase.co") would
+      // produce a DNS error on signInWithPassword — surface a clearer message
+      // and skip the network call entirely so the user understands they need
+      // to configure webui/config.js first.
+      if (!window.AQMAR_SB || window.AQMAR_SUPABASE_PLACEHOLDER) {
+        this.loginError = this.lang === 'ar'
+          ? 'الواجهة في وضع المعاينة — حدّث webui/config.js بمفاتيح Supabase لتفعيل الإدارة'
+          : 'Preview mode — set real Supabase keys in webui/config.js to enable admin';
         return;
       }
       const { error } = await window.AQMAR_SB.auth.signInWithPassword({
@@ -298,7 +319,20 @@ function aqmar() {
       this.view = 'home';
     },
 
-    adminHeaders: ['#', 'الاسم / Name', 'الميلاد / Born', 'الاستشهاد / Martyrdom', 'المدينة / City', 'الكتيبة / Battalion', 'الحالة / Status'],
+    get adminHeaders() {
+      // Switches with lang. Previously a static array of "Arabic / English"
+      // dual-language strings — inconsistent with the rest of the SPA.
+      const ar = this.lang === 'ar';
+      return [
+        '#',
+        ar ? 'الاسم' : 'Name',
+        ar ? 'الميلاد' : 'Born',
+        ar ? 'الاستشهاد' : 'Martyrdom',
+        ar ? 'المدينة' : 'City',
+        ar ? 'الكتيبة' : 'Battalion',
+        ar ? 'الحالة' : 'Status',
+      ];
+    },
     adminList() {
       const q = this.adminSearch.trim().toLowerCase();
       if (!q) return this.all;
@@ -405,6 +439,28 @@ function aqmar() {
     ageLabel(m) {
       if (!m || !Number.isFinite(m.age)) return '—';
       return `${m.age} ${this.lang === 'ar' ? 'عاماً' : 'yrs'}`;
+    },
+    // Extracts and locale-converts a 4-digit year from an ISO date.
+    // Returns '—' for malformed input.
+    yearLabel(iso) {
+      const m = String(iso || '').match(/^(\d{4})/);
+      if (!m) return '—';
+      return this.lang === 'ar' ? this.toArDigits(m[1]) : m[1];
+    },
+    // Days available in the currently-selected birthday-match month.
+    // Lets Feb cap at 29 and short months at 30. Avoids "Feb 31" silently
+    // remapping into Mar in dayDelta's flat-365 cumulative table.
+    get bdayDaysInMonth() {
+      const m = this.bday.month;
+      if (m === 2) return 29;
+      if ([4, 6, 9, 11].includes(m)) return 30;
+      return 31;
+    },
+    // Formatted "Last sync" timestamp for the footer. Derived from the
+    // max posted_date across all rows (set in init).
+    get lastSyncLabel() {
+      if (!this.lastSyncIso) return '—';
+      return formatDate(this.lastSyncIso, this.lang);
     },
     toArDigits(n) {
       const map = ['٠','١','٢','٣','٤','٥','٦','٧','٨','٩'];
