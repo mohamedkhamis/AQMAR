@@ -18,6 +18,7 @@ function aqmar() {
     draft: {},
     edits: {},
     adminSearch: '',
+    adminLimit: 30,           // pagination cap for the admin table — bumped by "Show more"
     mobileNavOpen: false,
 
     // ----- data -----
@@ -210,10 +211,13 @@ function aqmar() {
       if (f.city) list = list.filter(m => m.city === f.city);
       if (f.rank) list = list.filter(m => m.rank === f.rank);
       if (f.batt) list = list.filter(m => m.battalion === f.batt);
-      if (f.age === 'u20')   list = list.filter(m => m.age < 20);
-      if (f.age === '20-30') list = list.filter(m => m.age >= 20 && m.age < 30);
-      if (f.age === '30-40') list = list.filter(m => m.age >= 30 && m.age < 40);
-      if (f.age === 'o40')   list = list.filter(m => m.age >= 40);
+      // Age filters require a finite age — rows with missing/malformed birth or
+      // martyrdom dates (35% of the dataset) have m.age=null and must NOT pass
+      // any age bucket (null < 20 is true in JS — old bug surfaced them as "Under 20").
+      if (f.age === 'u20')   list = list.filter(m => Number.isFinite(m.age) && m.age < 20);
+      if (f.age === '20-30') list = list.filter(m => Number.isFinite(m.age) && m.age >= 20 && m.age < 30);
+      if (f.age === '30-40') list = list.filter(m => Number.isFinite(m.age) && m.age >= 30 && m.age < 40);
+      if (f.age === 'o40')   list = list.filter(m => Number.isFinite(m.age) && m.age >= 40);
 
       if (this.matchFilter) {
         list.sort((a, b) => a.delta - b.delta);
@@ -241,10 +245,10 @@ function aqmar() {
     },
     personalRows(m) {
       return [
-        { k: this.lang === 'ar' ? 'الاسم' : 'Name', v: m.name },
+        { k: this.lang === 'ar' ? 'الاسم' : 'Name', v: m.name || '—' },
         { k: this.lang === 'ar' ? 'تاريخ الميلاد' : 'Born', v: this.formatDate(m.birth) },
         { k: this.lang === 'ar' ? 'المدينة' : 'City', v: m.city || '—' },
-        { k: this.lang === 'ar' ? 'العمر' : 'Age', v: `${m.age} ${this.lang === 'ar' ? 'عاماً' : 'years'}` },
+        { k: this.lang === 'ar' ? 'العمر' : 'Age', v: this.ageLabel(m) },
       ];
     },
     militaryRows(m) {
@@ -360,22 +364,23 @@ function aqmar() {
     // FOOTER
     // ============================================================
     footerCols() {
+      // Each link now carries an action: either `go` (internal view switch via
+      // goto()) or `href` (real URL, opens in new tab if external). Old version
+      // emitted <a> tags with no href — looked clickable but did nothing.
       const ar = this.lang === 'ar';
       return [
         { title: ar ? 'المشروع' : 'Project', links: [
-          ar ? 'البنية التقنية' : 'Architecture',
-          ar ? 'خط الأنابيب' : 'Pipeline',
-          ar ? 'الاختبارات' : 'Tests',
+          { text: ar ? 'عن المشروع' : 'About',     go: 'about' },
+          { text: ar ? 'الاختبارات' : 'Tests',     href: 'tests.html' },
+          { text: ar ? 'الكود المصدري' : 'Source', href: 'https://github.com/mohamedkhamis/AQMAR', external: true },
         ]},
         { title: ar ? 'السجلّ' : 'Registry', links: [
-          ar ? 'كل الأسماء' : 'All names',
-          ar ? 'حسب الكتيبة' : 'By battalion',
-          ar ? 'حسب المدينة' : 'By city',
+          { text: ar ? 'كل الأسماء' : 'All names',     go: 'browse' },
+          { text: ar ? 'في مثل هذا اليوم' : 'On this day', go: 'home' },
         ]},
         { title: ar ? 'تواصل' : 'Contact', links: [
-          '@AqmarTofan',
-          'github.com/mohamedkhamis/AQMAR',
-          ar ? 'بلّغ عن خطأ' : 'Report correction',
+          { text: '@AqmarTofan',                      href: 'https://t.me/AqmarTofan', external: true },
+          { text: ar ? 'بلّغ عن خطأ' : 'Report correction', href: 'mailto:info@azkapmo.com?subject=AQMAR%20correction' },
         ]},
       ];
     },
@@ -385,8 +390,21 @@ function aqmar() {
     // ============================================================
     formatDate(iso) { return formatDate(iso, this.lang); },
     computeAge(birth, martyrdom) {
+      // Returns null if either date is missing OR malformed (e.g. "فبرايسر")
+      // so downstream templates can render '—' instead of "null عاماً".
       if (!birth || !martyrdom) return null;
-      return parseInt(martyrdom.slice(0,4), 10) - parseInt(birth.slice(0,4), 10);
+      const by = parseInt(String(birth).slice(0,4), 10);
+      const my = parseInt(String(martyrdom).slice(0,4), 10);
+      if (!Number.isFinite(by) || !Number.isFinite(my)) return null;
+      const age = my - by;
+      // Sanity bound — negative or unrealistic ages indicate scrambled OCR.
+      if (age < 0 || age > 120) return null;
+      return age;
+    },
+    // Short-form "X عاماً" / "X yrs" with em-dash fallback for missing/malformed.
+    ageLabel(m) {
+      if (!m || !Number.isFinite(m.age)) return '—';
+      return `${m.age} ${this.lang === 'ar' ? 'عاماً' : 'yrs'}`;
     },
     toArDigits(n) {
       const map = ['٠','١','٢','٣','٤','٥','٦','٧','٨','٩'];
@@ -518,14 +536,22 @@ function esc(s) {
 }
 
 function formatDate(iso, locale = 'ar') {
-  if (!iso) return '—';
-  const [y, m, d] = iso.split('-');
+  // Validate strictly: must be a YYYY-MM-DD prefix with month 1-12 and day 1-31.
+  // Malformed OCR output (e.g. "فبرايسر", "٥٤٤ 2025") and missing/null values
+  // fall through to em-dash instead of rendering "NaN undefined undefined".
+  if (!iso || typeof iso !== 'string') return '—';
+  const match = iso.match(/^(\d{4})-(\d{1,2})-(\d{1,2})\b/);
+  if (!match) return '—';
+  const y = match[1];
+  const mIdx = parseInt(match[2], 10) - 1;
+  const d = parseInt(match[3], 10);
+  if (mIdx < 0 || mIdx > 11 || d < 1 || d > 31) return '—';
   if (locale === 'en') {
     const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-    return `${parseInt(d,10)} ${months[parseInt(m,10)-1]} ${y}`;
+    return `${d} ${months[mIdx]} ${y}`;
   }
   const arMonths = ['كانون الثاني','شباط','آذار','نيسان','أيار','حزيران','تموز','آب','أيلول','تشرين الأول','تشرين الثاني','كانون الأول'];
-  return `${parseInt(d,10)} ${arMonths[parseInt(m,10)-1]} ${y}`;
+  return `${d} ${arMonths[mIdx]} ${y}`;
 }
 
 async function sha256(text) {

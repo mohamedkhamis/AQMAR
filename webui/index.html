@@ -52,7 +52,8 @@
 
 <body>
 <div id="root" x-data="aqmar()" x-init="init()" x-cloak>
-  <a href="#main-content" class="skip-link" x-text="lang === 'ar' ? 'تخطي إلى المحتوى' : 'Skip to content'"></a>
+  <!-- Skip link points to the CURRENTLY ACTIVE main, not the hidden home view. -->
+  <a :href="'#main-content' + (view === 'home' ? '' : '-' + view)" class="skip-link" x-text="lang === 'ar' ? 'تخطي إلى المحتوى' : 'Skip to content'"></a>
 
   <!-- Configuration banner — only renders when Supabase URL is still the placeholder. -->
   <template x-if="window.AQMAR_SUPABASE_PLACEHOLDER">
@@ -395,7 +396,9 @@
       <template x-for="m in filtered" :key="m.id">
         <button @click="openMartyr(m.id)" class="card card-hover p-4.5 text-right flex flex-col gap-3.5 cursor-pointer relative"
                 style="padding: 18px;">
-          <div x-show="m.delta !== undefined"
+          <!-- Delta badge: hidden entirely when delta is NaN (malformed birth date).
+               Previously `m.delta !== undefined` let NaN through and rendered "±NaNd". -->
+          <div x-show="Number.isFinite(m.delta)"
                class="absolute top-3.5 start-3.5 font-latin-sans text-[11px] tracking-[0.12em] px-2 py-0.5 rounded-full"
                :style="m.delta === 0 ? 'color: var(--forest); background: rgba(31,61,43,0.10);' : 'color: var(--olive); background: rgba(138,109,59,0.10);'">
             <span x-show="m.delta === 0" x-text="lang === 'ar' ? 'نفس اليوم' : 'SAME DAY'"></span>
@@ -412,7 +415,7 @@
               <div class="font-body text-[13px] text-muted mt-1.5">
                 <span x-text="m.city"></span>
                 <span x-show="m.city"> · </span>
-                <span x-text="`${m.age} ${lang === 'ar' ? 'عاماً' : 'yrs'}`"></span>
+                <span x-text="ageLabel(m)"></span>
               </div>
             </div>
           </div>
@@ -476,10 +479,7 @@
                 <div class="py-4 text-center" style="border-inline-start: 1px solid var(--divider);">
                   <div class="font-body text-[11px] tracking-[0.15em] text-muted uppercase"
                        x-text="lang === 'ar' ? 'العمر عند الاستشهاد' : 'Age'"></div>
-                  <div class="font-naskh text-[18px] font-bold text-ink mt-1.5">
-                    <span x-text="current.age"></span>
-                    <span x-text="lang === 'ar' ? 'عاماً' : 'yrs'"></span>
-                  </div>
+                  <div class="font-naskh text-[18px] font-bold text-ink mt-1.5" x-text="ageLabel(current)"></div>
                 </div>
               </div>
 
@@ -552,8 +552,8 @@
                   <div class="flex-1 min-w-0">
                     <div class="font-naskh text-[17px] font-bold text-ink leading-tight truncate" x-text="m.name"></div>
                     <div class="text-[12px] text-muted mt-1">
-                      <span x-text="`${m.age} ${lang === 'ar' ? 'عاماً' : 'yrs'}`"></span>
-                      · <span x-text="m.city"></span>
+                      <span x-text="ageLabel(m)"></span>
+                      · <span x-text="m.city || '—'"></span>
                     </div>
                   </div>
                 </div>
@@ -610,9 +610,13 @@
     <div x-show="editingId" class="grid-detail grid gap-7" style="grid-template-columns: 260px 1fr;">
       <div>
         <div x-html="renderPortrait(editingMartyr(), 220, true)"></div>
-        <button class="mt-3.5 w-full py-2.5 text-[13px] text-muted bg-transparent rounded font-body"
+        <!-- Photo upload not yet implemented (would need Supabase Storage write path
+             plus image cropping/resizing). Disabled until the feature lands. -->
+        <button class="mt-3.5 w-full py-2.5 text-[13px] text-faint bg-transparent rounded font-body cursor-not-allowed"
                 style="border: 1px dashed var(--divider);"
-                x-text="lang === 'ar' ? '⬆ رفعُ صورةٍ جديدة' : '⬆ Upload new photo'"></button>
+                disabled
+                :title="lang === 'ar' ? 'سيُتاح لاحقاً' : 'Coming soon'"
+                x-text="lang === 'ar' ? '⬆ رفعُ صورةٍ جديدة (قريباً)' : '⬆ Upload new photo (soon)'"></button>
         <div class="mt-4 p-4 bg-page-2 rounded-md text-[12px] text-muted leading-[1.7]" style="border: 1px solid var(--divider);">
           <span x-show="lang === 'ar'">التعديلاتُ تُحفظ مباشرةً في <code class="px-1 py-0.5 rounded bg-page-3">Supabase</code>، وتَظهر فوراً لجميع الزوار.</span>
           <span x-show="lang === 'en'">Edits save directly to <code class="px-1 py-0.5 rounded bg-page-3">Supabase</code> and appear instantly for all visitors.</span>
@@ -724,7 +728,7 @@
           </tr>
         </thead>
         <tbody>
-          <template x-for="m in adminList().slice(0, 30)" :key="m.id">
+          <template x-for="m in adminList().slice(0, adminLimit)" :key="m.id">
             <tr style="border-bottom: 1px solid var(--divider);"
                 :style="edits[m.id] ? 'background: rgba(184,146,74,0.06);' : ''">
               <td class="p-3.5 text-muted font-latin-sans tabular-nums" x-text="String(m.id).padStart(3,'0')"></td>
@@ -733,7 +737,7 @@
                   <div x-html="renderPortrait(m, 36, false)"></div>
                   <div>
                     <div class="font-naskh text-[16px] font-bold" x-text="m.name"></div>
-                    <div class="text-[12px] text-muted" x-text="`${m.age} ${lang === 'ar' ? 'عاماً' : 'yrs'}`"></div>
+                    <div class="text-[12px] text-muted" x-text="ageLabel(m)"></div>
                   </div>
                 </div>
               </td>
@@ -757,6 +761,20 @@
           </template>
         </tbody>
       </table>
+
+      <!-- Pagination — visible only when more rows exist beyond the current limit.
+           Previously the admin table was hard-capped at 30, hiding ~92% of the
+           dataset. Search still narrows down faster than paging through. -->
+      <div x-show="adminList().length > adminLimit" class="flex flex-wrap items-center justify-center gap-3 mt-5 pt-4" style="border-top: 1px dashed var(--divider);">
+        <button @click="adminLimit += 30" class="btn btn-ghost"
+                x-text="lang === 'ar'
+                  ? `عرض ٣٠ سجلًّا إضافياً (${adminList().length - adminLimit} متبقّ)`
+                  : `Show 30 more (${adminList().length - adminLimit} left)`"></button>
+        <button @click="adminLimit = adminList().length" class="btn btn-text"
+                x-text="lang === 'ar'
+                  ? `عرض الكل (${adminList().length})`
+                  : `Show all (${adminList().length})`"></button>
+      </div>
     </div>
   </main>
 
@@ -821,8 +839,21 @@
         <div>
           <h5 class="font-display text-[12px] font-semibold tracking-[0.2em] uppercase text-olive m-0 mb-3" x-text="col.title"></h5>
           <ul class="list-none p-0 m-0">
-            <template x-for="l in col.links" :key="l">
-              <li class="mb-1.5"><a class="text-[13px] text-ink-2" x-text="l"></a></li>
+            <template x-for="l in col.links" :key="l.text">
+              <li class="mb-1.5">
+                <!-- Internal view-switch (go: 'browse' | 'home' | 'about' | ...) -->
+                <template x-if="l.go">
+                  <button @click="goto(l.go)"
+                          class="text-[13px] text-ink-2 bg-transparent border-0 p-0 cursor-pointer hover:text-forest transition-colors"
+                          x-text="l.text"></button>
+                </template>
+                <!-- Real URL (mailto:, https:, relative tests.html). External opens new tab. -->
+                <template x-if="l.href">
+                  <a :href="l.href" :target="l.external ? '_blank' : null" :rel="l.external ? 'noopener noreferrer' : null"
+                     class="text-[13px] text-ink-2 hover:text-forest transition-colors"
+                     x-text="l.text"></a>
+                </template>
+              </li>
             </template>
           </ul>
         </div>
