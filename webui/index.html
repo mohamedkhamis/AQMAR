@@ -345,8 +345,8 @@
         <select class="select" x-model="filters.age">
           <option value="" x-text="lang === 'ar' ? 'كل الأعمار' : 'All ages'"></option>
           <option value="u20" x-text="lang === 'ar' ? 'أقل من ٢٠' : 'Under 20'"></option>
-          <option value="20-30">٢٠ – ٣٠</option>
-          <option value="30-40">٣٠ – ٤٠</option>
+          <option value="20-30" x-text="lang === 'ar' ? '٢٠ – ٣٠' : '20 – 30'"></option>
+          <option value="30-40" x-text="lang === 'ar' ? '٣٠ – ٤٠' : '30 – 40'"></option>
           <option value="o40" x-text="lang === 'ar' ? 'أكثر من ٤٠' : 'Over 40'"></option>
         </select>
       </label>
