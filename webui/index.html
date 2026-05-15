@@ -88,6 +88,17 @@
 
       <div class="flex-1"></div>
 
+      <!-- Mobile-only hamburger toggle (hidden ≥901px via .nav-links breakpoint) -->
+      <button class="nav-hamburger" @click="mobileNavOpen = !mobileNavOpen"
+              :aria-expanded="mobileNavOpen ? 'true' : 'false'"
+              aria-controls="mobile-nav"
+              :aria-label="lang === 'ar' ? 'القائمة' : 'Menu'">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <template x-if="!mobileNavOpen"><g><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></g></template>
+          <template x-if="mobileNavOpen"><g><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></g></template>
+        </svg>
+      </button>
+
       <button @click="lang = (lang === 'ar' ? 'en' : 'ar')"
               class="bg-transparent border border-divider rounded-full px-3.5 py-1.5 font-latin-sans text-[12px] text-muted tracking-[0.1em]">
         <span x-text="lang === 'ar' ? 'EN' : 'ع'"></span>
@@ -105,6 +116,22 @@
         </button>
       </template>
     </div>
+
+    <!-- Mobile nav drawer — slides below the header bar; toggled by .nav-hamburger -->
+    <nav id="mobile-nav" x-show="mobileNavOpen" x-cloak
+         x-transition.opacity.duration.150ms
+         @keydown.escape.window="mobileNavOpen = false"
+         class="mobile-nav border-t border-divider"
+         style="background: var(--paper);">
+      <template x-for="l in nav" :key="l.id">
+        <button @click="goto(l.id)"
+                :class="view === l.id ? 'text-ink bg-page-2' : 'text-muted'"
+                class="block w-full text-right bg-transparent border-0 px-8 py-3.5 text-[15px] font-medium"
+                style="border-bottom: 1px solid var(--divider);">
+          <span x-text="lang === 'ar' ? l.ar : l.en"></span>
+        </button>
+      </template>
+    </nav>
   </header>
 
   <!-- ===================== LANDING ===================== -->

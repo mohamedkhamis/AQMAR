@@ -18,6 +18,7 @@ function aqmar() {
     draft: {},
     edits: {},
     adminSearch: '',
+    mobileNavOpen: false,
 
     // ----- data -----
     all: [],
@@ -126,6 +127,7 @@ function aqmar() {
       this.matchFilter = null;
       this.selectedId = null;
       this.editingId = null;
+      this.mobileNavOpen = false;
       window.scrollTo({ top: 0, behavior: 'smooth' });
     },
     openMartyr(id) {
