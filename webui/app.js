@@ -552,13 +552,15 @@ function aqmar() {
       }
       const self = this;
       const currentYear = new Date().getFullYear();
-      const todayIso = new Date().toISOString().slice(0, 10);
+      // No maxDate guard on the BIRTHDAY picker — dayDelta matches martyrs
+      // cyclically by month + day regardless of year, so future calendar
+      // positions are valid coordinates. The year dropdown still caps at
+      // currentYear so users don't accidentally pick 2050 for their birthday.
       this._birthdayPicker = new Litepicker({
         element: el,
         format: 'YYYY-MM-DD',
         singleMode: true,
         autoApply: true,
-        maxDate: todayIso,
         dropdowns: { minYear: 1950, maxYear: currentYear, months: true, years: true },
         setup: (picker) => {
           picker.on('selected', (date) => {
@@ -635,7 +637,10 @@ function aqmar() {
     // ============================================================
     // RENDER HELPERS (returning HTML strings for x-html)
     // ============================================================
-    renderPortrait(m, size, frame) {
+    // size: pixel size for 'fixed' mode (default). When mode='fill' the portrait
+    //   absolutely fills its parent container so callers can size it via
+    //   aspect-ratio CSS instead of fixed pixels — used for the big grid cards.
+    renderPortrait(m, size, frame, mode) {
       if (!m) return '';
       const init = initials(m.name || '');
       const tone = (m.id % 3 === 0) ? 'tone-olive' : '';
@@ -649,15 +654,19 @@ function aqmar() {
       const photoHtml = photo
         ? `<img src="${esc(photo)}" alt="" loading="lazy" decoding="async" onerror="this.style.display='none'">`
         : '';
+      const fill = mode === 'fill';
+      const sizeStyle = fill
+        ? 'position:absolute; inset:0; width:100%; height:100%;'
+        : `width:${size}px; height:${Math.round(size * 1.18)}px;`;
+      const monoSize = fill ? 72 : Math.round(size * 0.42);
       return `
-        <div class="portrait ${tone} ${frame ? '' : 'naked'}"
-             style="width:${size}px; height:${Math.round(size * 1.18)}px;">
+        <div class="portrait ${tone} ${frame ? '' : 'naked'}" style="${sizeStyle}">
           ${photoHtml}
           <svg class="silhouette" viewBox="0 0 100 118">
             <circle cx="50" cy="44" r="18" fill="rgba(255,255,255,0.18)" />
             <path d="M18 118 Q18 80 50 80 Q82 80 82 118 Z" fill="rgba(255,255,255,0.18)" />
           </svg>
-          <div class="monogram" style="font-size:${Math.round(size * 0.42)}px;">${esc(init)}</div>
+          <div class="monogram" style="font-size:${monoSize}px;">${esc(init)}</div>
           <span class="corner tl"></span><span class="corner tr"></span>
           <span class="corner bl"></span><span class="corner br"></span>
         </div>`;
