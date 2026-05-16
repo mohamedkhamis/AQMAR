@@ -21,6 +21,7 @@ function aqmar() {
     adminLimit: 30,           // pagination cap for the admin table — bumped by "Show more"
     mobileNavOpen: false,
     loading: true,            // true until the initial loadData() resolves (or errors out)
+    loadError: null,          // set to an i18n error string when all 3 data sources fail — drives the retry UI
     lastSyncIso: null,        // most recent posted_date across all rows — drives the footer "Last sync"
     dataSource: null,         // 'supabase' | 'local-json' | 'sample-data' | null — drives the banner copy
 
@@ -39,27 +40,47 @@ function aqmar() {
       { id: 'about',  ar: 'عن الموقع', en: 'About' },
     ],
 
-    arMonths: ['كانون الثاني','شباط','آذار','نيسان','أيار','حزيران','تموز','آب','أيلول','تشرين الأول','تشرين الثاني','كانون الأول'],
+    // Modern Standard Arabic month names (Gulf/Egyptian convention: يناير…ديسمبر)
+    // instead of Levantine (كانون الثاني…كانون الأول). User preference 2026-05-16.
+    arMonths: ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'],
     enMonths: ['January','February','March','April','May','June','July','August','September','October','November','December'],
     windowOptions: [
-      { v: 7,   ar: 'أسبوع',       en: '1 wk' },
-      { v: 30,  ar: 'شهر',         en: '1 mo' },
-      { v: 60,  ar: 'شهران',       en: '2 mo' },
-      { v: 365, ar: 'السنة كاملة', en: 'Year' },
+      { v: 7,        ar: 'أسبوع',       en: '1 wk' },
+      { v: 30,       ar: 'شهر',         en: '1 mo' },
+      { v: 60,       ar: 'شهران',       en: '2 mo' },
+      { v: 365,      ar: 'السنة كاملة', en: 'Year' },
+      { v: 'custom', ar: 'مخصص',        en: 'Custom' },
     ],
+    bdayCustomDays: 14,   // value used when bday.window === 'custom' (1..365)
+    // Six sort modes matching the v1 SPA — covers martyrdom/birth/age/name in
+    // both directions. Default is martyrdom_desc (newest martyrs first).
     sortOptions: [
-      { id: 'recent', ar: 'الأحدث استشهاداً', en: 'Most recent' },
-      { id: 'age',    ar: 'الأصغر عُمراً',    en: 'Youngest' },
-      { id: 'name',   ar: 'أبجدياً',          en: 'A→Z' },
+      { id: 'martyrdom_desc', ar: 'الاستشهاد ↓ (الأحدث)', en: 'Martyrdom ↓ (newest)' },
+      { id: 'martyrdom_asc',  ar: 'الاستشهاد ↑ (الأقدم)', en: 'Martyrdom ↑ (oldest)' },
+      { id: 'birth_desc',     ar: 'الميلاد ↓ (الأصغر سناً)', en: 'Birth ↓ (youngest)' },
+      { id: 'birth_asc',      ar: 'الميلاد ↑ (الأكبر سناً)', en: 'Birth ↑ (oldest)' },
+      { id: 'age_asc',        ar: 'الأصغر عُمراً',          en: 'Youngest age' },
+      { id: 'name_asc',       ar: 'الاسم (أ → ي)',           en: 'Name A→Z' },
     ],
 
     // ----- birthday-match -----
-    bday: { day: new Date().getDate(), month: new Date().getMonth() + 1, window: 30 },
+    // year is null until the user picks one via Litepicker — dayDelta only uses
+    // month + day for matching, so an empty year doesn't break filtering.
+    bday: { day: new Date().getDate(), month: new Date().getMonth() + 1, year: null, window: 30 },
+    _birthdayPicker: null,
     matchFilter: null,
 
     // ----- browse filters -----
     filters: { q: '', city: '', rank: '', batt: '', age: '' },
-    sort: 'recent',
+    sort: 'martyrdom_desc',
+    viewMode: 'grid',   // 'grid' (default, multi-column) or 'list' (single-column)
+    // Advanced filters — collapsible panel below the primary filter row
+    showAdvancedFilters: false,
+    martyrdomFrom: '',   // ISO date "YYYY-MM-DD" — filter rows with martyrdom >= this
+    martyrdomTo:   '',   // ISO date "YYYY-MM-DD" — filter rows with martyrdom <= this
+    ageMin: '',          // number or '' — filter rows with age >= this
+    ageMax: '',          // number or '' — filter rows with age <= this
+    _datePickers: {},    // private pool of Litepicker instances keyed by target field name
 
     // ============================================================
     // INIT
@@ -101,11 +122,26 @@ function aqmar() {
         try { localStorage.setItem('aqmar.edits', JSON.stringify(v)); } catch (e) {}
       });
 
-      // Load martyrs. Tries three sources in priority order:
-      //   1. Supabase (the canonical source post-migration)
-      //   2. Local data/martyrs.json (lets you test locally with real 388-row
-      //      dataset before Supabase is configured)
-      //   3. AQMAR_SAMPLE_DATA (36 synthetic rows, last resort)
+      // Load martyrs from the priority chain (Supabase → local JSON → sample).
+      // Extracted into loadMartyrs() so the Retry button can re-invoke it.
+      await this.loadMartyrs();
+
+      // Clamp bday.day whenever the month changes — so picking Feb after day=31
+      // doesn't leave an out-of-range value floating around.
+      this.$watch('bday.month', () => {
+        if (this.bday.day > this.bdayDaysInMonth) this.bday.day = this.bdayDaysInMonth;
+      });
+    },
+
+    // Data-loading helper, callable from init() and retryLoad(). Tries three
+    // sources in priority order:
+    //   1. Supabase (the canonical source post-migration)
+    //   2. Local data/martyrs.json (real 388-row dataset before Supabase is set)
+    //   3. AQMAR_SAMPLE_DATA (36 synthetic rows)
+    // If all three fail, sets loadError so the UI shows the Retry button.
+    async loadMartyrs() {
+      this.loading = true;
+      this.loadError = null;
       let martyrs = null;
       const ingestRows = (rows) => {
         martyrs = rows.map(adaptMartyrToNewSchema).filter(Boolean);
@@ -131,35 +167,34 @@ function aqmar() {
           console.warn('Local JSON also unreachable:', e2.message);
         }
       } finally {
-        // Flip loading off regardless of which path succeeded so the empty-state
-        // message switches from "Loading…" to "No matching names" cleanly.
         this.loading = false;
       }
       if (!martyrs && window.AQMAR_SAMPLE_DATA) {
         martyrs = window.AQMAR_SAMPLE_DATA;
         this.dataSource = 'sample-data';
       }
-      if (!martyrs) martyrs = [];
-      // overrides.json fetch removed — admin edits live in Supabase as of Task 10.
-
-      // Clamp bday.day whenever the month changes — so picking Feb after day=31
-      // doesn't leave an out-of-range value floating around.
-      this.$watch('bday.month', () => {
-        if (this.bday.day > this.bdayDaysInMonth) this.bday.day = this.bdayDaysInMonth;
-      });
-
+      if (!martyrs || martyrs.length === 0) {
+        // All three sources failed → surface the Retry button.
+        martyrs = [];
+        this.loadError = this.lang === 'ar'
+          ? 'تعذّر تحميل السجلّ. تحقّق من الاتصال ثم أعد المحاولة.'
+          : 'Could not load the registry. Check your connection and retry.';
+      }
       // Normalize + compute age
       this.all = martyrs.map(m => ({
         ...m,
         age: m.age != null ? m.age : this.computeAge(m.birth, m.martyrdom),
       }));
-
       // Derive filter universes
       this.cities      = [...new Set(this.all.map(m => m.city).filter(Boolean))].sort();
       this.ranks       = [...new Set(this.all.map(m => m.rank).filter(Boolean))].sort();
       this.weapons     = [...new Set(this.all.map(m => m.weapon).filter(Boolean))].sort();
       this.battalions  = [...new Set(this.all.map(m => m.battalion).filter(Boolean))].sort();
       this.brigades    = [...new Set(this.all.map(m => m.brigade).filter(Boolean))].sort();
+    },
+
+    async retryLoad() {
+      await this.loadMartyrs();
     },
 
     // ============================================================
@@ -225,7 +260,9 @@ function aqmar() {
     // BROWSE — filtered list
     // ============================================================
     runBirthdaySearch() {
-      this.matchFilter = { ...this.bday };
+      // Snapshot bday + custom-days at search time so subsequent home-view
+      // edits don't retroactively change the active browse filter.
+      this.matchFilter = { ...this.bday, customDays: this.bdayCustomDays };
       this.view = 'browse';
       window.scrollTo({ top: 0, behavior: 'smooth' });
     },
@@ -235,10 +272,15 @@ function aqmar() {
     get filtered() {
       let list = this.all.map(m => ({ ...m }));
       if (this.matchFilter) {
-        const { month, day, window: w } = this.matchFilter;
+        const { month, day, window: w, customDays } = this.matchFilter;
+        // Resolve 'custom' to the captured customDays value, with a sensible
+        // clamp to [1, 365] so a malformed input can't filter to nothing.
+        const days = w === 'custom'
+          ? Math.max(1, Math.min(365, Number(customDays) || 14))
+          : w;
         list = list
           .map(m => ({ ...m, delta: dayDelta(m.birth, month, day) }))
-          .filter(m => m.delta <= w);
+          .filter(m => m.delta <= days);
       }
       const f = this.filters;
       if (f.q) {
@@ -255,14 +297,33 @@ function aqmar() {
       if (f.age === '30-40') list = list.filter(m => Number.isFinite(m.age) && m.age >= 30 && m.age < 40);
       if (f.age === 'o40')   list = list.filter(m => Number.isFinite(m.age) && m.age >= 40);
 
+      // Advanced filters (panel below primary filters) — martyrdom date range + age range
+      if (this.martyrdomFrom) list = list.filter(m => m.martyrdom && m.martyrdom >= this.martyrdomFrom);
+      if (this.martyrdomTo)   list = list.filter(m => m.martyrdom && m.martyrdom <= this.martyrdomTo);
+      if (this.ageMin !== '' && this.ageMin != null) {
+        const minN = Number(this.ageMin);
+        if (Number.isFinite(minN)) list = list.filter(m => Number.isFinite(m.age) && m.age >= minN);
+      }
+      if (this.ageMax !== '' && this.ageMax != null) {
+        const maxN = Number(this.ageMax);
+        if (Number.isFinite(maxN)) list = list.filter(m => Number.isFinite(m.age) && m.age <= maxN);
+      }
+
       if (this.matchFilter) {
         list.sort((a, b) => a.delta - b.delta);
-      } else if (this.sort === 'recent') {
-        list.sort((a, b) => (b.martyrdom || '').localeCompare(a.martyrdom || ''));
-      } else if (this.sort === 'age') {
-        list.sort((a, b) => (a.age || 0) - (b.age || 0));
-      } else if (this.sort === 'name') {
-        list.sort((a, b) => (a.name || '').localeCompare(b.name || '', 'ar'));
+      } else {
+        // Six explicit sort modes. Missing values sort to the end via the
+        // U+FFFD sentinel (always greater than real strings) or Infinity for nums.
+        const SENTINEL = '�';
+        const sortFns = {
+          'martyrdom_desc': (a, b) => (b.martyrdom || '').localeCompare(a.martyrdom || ''),
+          'martyrdom_asc':  (a, b) => (a.martyrdom || SENTINEL).localeCompare(b.martyrdom || SENTINEL),
+          'birth_desc':     (a, b) => (b.birth || '').localeCompare(a.birth || ''),
+          'birth_asc':      (a, b) => (a.birth || SENTINEL).localeCompare(b.birth || SENTINEL),
+          'age_asc':        (a, b) => (Number.isFinite(a.age) ? a.age : Infinity) - (Number.isFinite(b.age) ? b.age : Infinity),
+          'name_asc':       (a, b) => (a.name || SENTINEL).localeCompare(b.name || SENTINEL, 'ar'),
+        };
+        list.sort(sortFns[this.sort] || sortFns['martyrdom_desc']);
       }
       return list;
     },
@@ -477,6 +538,89 @@ function aqmar() {
       if ([4, 6, 9, 11].includes(m)) return 30;
       return 31;
     },
+    // Formatted birthday ISO/locale string for display in the Litepicker input.
+    get bdayLabel() {
+      if (!this.bday.year) return '';
+      const iso = `${this.bday.year}-${pad(this.bday.month)}-${pad(this.bday.day)}`;
+      return formatDate(iso, this.lang);
+    },
+    // Initialize the Litepicker on the birthday <input>. Called via x-init.
+    initBirthdayPicker(el) {
+      if (typeof Litepicker === 'undefined') {
+        console.warn('Litepicker not loaded — birthday input will be empty');
+        return;
+      }
+      const self = this;
+      const currentYear = new Date().getFullYear();
+      const todayIso = new Date().toISOString().slice(0, 10);
+      this._birthdayPicker = new Litepicker({
+        element: el,
+        format: 'YYYY-MM-DD',
+        singleMode: true,
+        autoApply: true,
+        maxDate: todayIso,
+        dropdowns: { minYear: 1950, maxYear: currentYear, months: true, years: true },
+        setup: (picker) => {
+          picker.on('selected', (date) => {
+            const d = date.toJSDate();
+            self.bday.year = d.getFullYear();
+            self.bday.month = d.getMonth() + 1;
+            self.bday.day = d.getDate();
+          });
+        },
+      });
+    },
+    clearBirthday() {
+      this.bday.year = null;
+      if (this._birthdayPicker) this._birthdayPicker.clearSelection();
+      const el = this.$refs && this.$refs.birthdate;
+      if (el) el.value = '';
+    },
+
+    // Generic Litepicker wirer for advanced-filter date inputs (martyrdom from/to).
+    // The selected ISO string is assigned to `this[targetField]` reactively.
+    initDatePicker(el, targetField) {
+      if (typeof Litepicker === 'undefined') return;
+      const self = this;
+      const todayIso = new Date().toISOString().slice(0, 10);
+      this._datePickers[targetField] = new Litepicker({
+        element: el,
+        format: 'YYYY-MM-DD',
+        singleMode: true,
+        autoApply: true,
+        maxDate: todayIso,
+        dropdowns: { minYear: 2023, maxYear: new Date().getFullYear(), months: true, years: true },
+        setup: (picker) => {
+          picker.on('selected', (date) => {
+            self[targetField] = date.format('YYYY-MM-DD');
+          });
+        },
+      });
+    },
+    clearDateField(targetField, el) {
+      this[targetField] = '';
+      const p = this._datePickers[targetField];
+      if (p) p.clearSelection();
+      if (el) el.value = '';
+    },
+    clearAdvancedFilters() {
+      this.martyrdomFrom = '';
+      this.martyrdomTo = '';
+      this.ageMin = '';
+      this.ageMax = '';
+      Object.values(this._datePickers).forEach(p => { if (p) p.clearSelection(); });
+      const r = this.$refs || {};
+      if (r.martyrdomFromInput) r.martyrdomFromInput.value = '';
+      if (r.martyrdomToInput)   r.martyrdomToInput.value = '';
+    },
+    advancedFilterCount() {
+      let n = 0;
+      if (this.martyrdomFrom) n++;
+      if (this.martyrdomTo) n++;
+      if (this.ageMin !== '' && this.ageMin != null) n++;
+      if (this.ageMax !== '' && this.ageMax != null) n++;
+      return n;
+    },
     // Formatted "Last sync" timestamp for the footer. Derived from the
     // max posted_date across all rows (set in init).
     get lastSyncLabel() {
@@ -627,7 +771,7 @@ function formatDate(iso, locale = 'ar') {
     const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
     return `${d} ${months[mIdx]} ${y}`;
   }
-  const arMonths = ['كانون الثاني','شباط','آذار','نيسان','أيار','حزيران','تموز','آب','أيلول','تشرين الأول','تشرين الثاني','كانون الأول'];
+  const arMonths = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
   return `${d} ${arMonths[mIdx]} ${y}`;
 }
 

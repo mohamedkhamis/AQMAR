@@ -25,18 +25,37 @@
 }
 
 html[data-theme="dark"] {
-  --bg:        #15110d;
-  --bg-2:      #1c1812;
-  --bg-3:      #25201a;
-  --paper:     #1d1812;
-  --ink:       #ece4d2;
-  --ink-2:     #d8cdb5;
-  --muted:     #a89a82;
-  --faint:     #6a5e4b;
-  --divider:   #3a3024;
-  --forest:    #9bbf94;
-  --forest-2:  #b9d3b1;
-  --olive:     #cba775;
+  /* v1 dark-forest palette: deep green ground, gold brand. The original
+     editorial light tones were earth/paper — this brings back the v1's
+     #0c1f0c bg, #142914 cards, #2d4a2d borders, and uses #fbbf24 as the
+     primary action color (formerly `brand` in v1). */
+  --bg:        #0c1f0c;
+  --bg-2:      #0f2510;
+  --bg-3:      #142914;
+  --paper:     #142914;
+  --ink:       #fbf8f1;
+  --ink-2:     #e7decb;
+  --muted:     #9bbf94;
+  --faint:     #5a7a5a;
+  --divider:   #2d4a2d;
+  /* --forest becomes the gold brand color so badge-forest, btn-primary,
+     section-kickers, etc. all read as the warm v1 accent. */
+  --forest:    #fbbf24;
+  --forest-2:  #d4a020;
+  --olive:     #b8924a;
+  --olive-2:   #d4a865;
+  --gold:      #fbbf24;
+  --crimson:   #ea4444;
+}
+
+/* When dark theme is active, the paper-grain pattern needs lighter dots
+   so the texture stays visible against the near-black ground. */
+html[data-theme="dark"] body::before {
+  background-image:
+    radial-gradient(rgba(155,191,148,0.04) 1px, transparent 1px),
+    radial-gradient(rgba(155,191,148,0.03) 1px, transparent 1px);
+  mix-blend-mode: screen;
+  opacity: 0.5;
 }
 
 * { box-sizing: border-box; }
@@ -264,7 +283,10 @@ html[data-theme="dark"] body::before { mix-blend-mode: screen; opacity: 0.4; }
 /* Responsive */
 @media (max-width: 900px) {
   .nav-links { display: none !important; }
-  .grid-bday { grid-template-columns: 1fr 1fr !important; }
+  /* Birthday-match grid: 3 elements (date picker, window pills, submit) each
+     get their own row at mobile widths. Single-column is the only thing that
+     reads cleanly for these. */
+  .grid-bday { grid-template-columns: 1fr !important; }
   .grid-bday > .grid-bday-window { grid-column: 1 / -1; }
   .grid-bday > .grid-bday-submit { grid-column: 1 / -1; }
   .grid-filters { grid-template-columns: 1fr 1fr !important; }
@@ -296,6 +318,25 @@ html[data-theme="dark"] body::before { mix-blend-mode: screen; opacity: 0.4; }
   font-family: var(--font-body);
 }
 .skip-link:focus { top: 0; }
+
+/* Loading skeleton — shimmer animation used during the initial data fetch */
+.skeleton {
+  display: block;
+  background: linear-gradient(90deg, var(--bg-3) 0%, var(--bg-2) 50%, var(--bg-3) 100%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite linear;
+  border-radius: 4px;
+}
+@keyframes shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* Screen-reader-only utility — visually hidden but readable by AT */
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+}
 
 /* Mobile nav drawer + hamburger — desktop hides hamburger; mobile hides nav-links */
 .nav-hamburger {
