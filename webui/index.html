@@ -26,8 +26,9 @@
 <!-- Tailwind (Play CDN — no build step, matches your existing setup) -->
 <script src="https://cdn.tailwindcss.com"></script>
 
-<!-- Litepicker (kept from your existing UI for the admin date pickers) -->
+<!-- Litepicker — birth-date input with year + month dropdowns -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/litepicker/dist/css/litepicker.css">
+<script src="https://cdn.jsdelivr.net/npm/litepicker/dist/litepicker.js"></script>
 
 <!-- Design tokens + components -->
 <link rel="stylesheet" href="styles.css">
@@ -206,21 +207,25 @@
                x-text="lang === 'ar' ? 'بحث رئيسي' : 'Primary search'"></div>
         </div>
 
-        <div class="grid-bday grid gap-3" style="grid-template-columns: 1fr 1fr 1.2fr auto; align-items: end;">
+        <div class="grid-bday grid gap-3" style="grid-template-columns: 1.4fr 1.2fr auto; align-items: end;">
+          <!-- Litepicker birth-date input — year + month dropdowns always visible.
+               Replaces the previous day + month select pair so users can pick the
+               full date (including year) in one widget. dayDelta only uses
+               month + day for matching, year is captured for display. -->
           <label class="block">
-            <div class="field-label" x-text="lang === 'ar' ? 'اليوم' : 'Day'"></div>
-            <!-- bdayDaysInMonth caps the day range per selected month (28→Feb, 30→Apr/Jun/Sep/Nov, 31 otherwise) -->
-            <select class="select" x-model.number="bday.day">
-              <template x-for="d in bdayDaysInMonth" :key="d"><option :value="d" x-text="d"></option></template>
-            </select>
-          </label>
-          <label class="block">
-            <div class="field-label" x-text="lang === 'ar' ? 'الشهر' : 'Month'"></div>
-            <select class="select" x-model.number="bday.month">
-              <template x-for="(m, i) in (lang === 'ar' ? arMonths : enMonths)" :key="i">
-                <option :value="i+1" x-text="m"></option>
-              </template>
-            </select>
+            <div class="field-label" x-text="lang === 'ar' ? 'تاريخ ميلادك' : 'Your birthday'"></div>
+            <div class="input flex items-center gap-2" style="padding-inline-start: 12px;">
+              <span aria-hidden="true">🎂</span>
+              <input type="text" x-ref="birthdate" readonly
+                     x-init="initBirthdayPicker($refs.birthdate)"
+                     :placeholder="lang === 'ar' ? 'انقر لاختيار تاريخ ميلادك' : 'Click to pick your birthday'"
+                     class="bg-transparent flex-1 ltr focus:outline-none cursor-pointer"
+                     style="border: 0; padding: 0; min-width: 0;">
+              <button x-show="bday.year" @click="clearBirthday()" type="button"
+                      :title="lang === 'ar' ? 'مسح' : 'Clear'"
+                      class="text-muted hover:text-crimson text-lg"
+                      style="background: transparent; border: 0; padding: 0 4px;">✕</button>
+            </div>
           </label>
           <div class="grid-bday-window">
             <div class="field-label" x-text="lang === 'ar' ? 'نطاق البحث' : 'Window'"></div>
@@ -382,20 +387,44 @@
       </div>
     </div>
 
-    <!-- Sort row -->
-    <div class="flex items-center justify-between mb-4 px-1">
+    <!-- Sort + view-mode row. Sort hidden when birthday-match is active (always sorts by closeness). -->
+    <div class="flex items-center justify-between mb-4 px-1 gap-3 flex-wrap">
       <div class="text-[13px] text-muted" aria-live="polite" aria-atomic="true">
         <span x-text="filtered.length"></span>
         <span x-text="lang === 'ar' ? `من ${all.length} اسماً` : `of ${all.length} names`"></span>
       </div>
-      <div class="flex gap-1" x-show="!matchFilter">
-        <template x-for="opt in sortOptions" :key="opt.id">
-          <button @click="sort = opt.id"
-                  :class="sort === opt.id ? 'bg-page-3 text-ink' : 'text-muted'"
-                  class="bg-transparent border-0 rounded-full px-3.5 py-1.5 font-body text-[13px] font-medium">
-            <span x-text="lang === 'ar' ? opt.ar : opt.en"></span>
+
+      <div class="flex items-center gap-3 flex-wrap">
+        <!-- Sort dropdown — 6 modes (martyrdom/birth ↑↓, age ↑, name A→Z) -->
+        <label class="flex items-center gap-2" x-show="!matchFilter">
+          <span class="text-[12px] text-muted" x-text="lang === 'ar' ? 'الترتيب' : 'Sort'"></span>
+          <select class="select" style="padding: 6px 32px 6px 12px; font-size: 13px; min-width: 200px;" x-model="sort">
+            <template x-for="opt in sortOptions" :key="opt.id">
+              <option :value="opt.id" x-text="lang === 'ar' ? opt.ar : opt.en"></option>
+            </template>
+          </select>
+        </label>
+
+        <!-- View-mode toggle (grid ↔ list) -->
+        <div role="group" :aria-label="lang === 'ar' ? 'نمط العرض' : 'View mode'"
+             class="inline-flex bg-page-2 border border-divider rounded-full p-0.5">
+          <button @click="viewMode = 'grid'"
+                  :aria-pressed="viewMode === 'grid' ? 'true' : 'false'"
+                  :class="viewMode === 'grid' ? 'bg-ink text-paper' : 'text-muted'"
+                  class="rounded-full px-3 py-1.5 text-[12px] font-body flex items-center gap-1.5 border-0"
+                  :title="lang === 'ar' ? 'عرض شبكي' : 'Grid view'">
+            <span aria-hidden="true">▦</span>
+            <span x-text="lang === 'ar' ? 'شبكة' : 'Grid'"></span>
           </button>
-        </template>
+          <button @click="viewMode = 'list'"
+                  :aria-pressed="viewMode === 'list' ? 'true' : 'false'"
+                  :class="viewMode === 'list' ? 'bg-ink text-paper' : 'text-muted'"
+                  class="rounded-full px-3 py-1.5 text-[12px] font-body flex items-center gap-1.5 border-0"
+                  :title="lang === 'ar' ? 'عرض قائمة' : 'List view'">
+            <span aria-hidden="true">≡</span>
+            <span x-text="lang === 'ar' ? 'قائمة' : 'List'"></span>
+          </button>
+        </div>
       </div>
     </div>
 
@@ -429,8 +458,11 @@
            : 'Try widening the window or removing filters. The registry keeps growing.'"></p>
     </div>
 
-    <!-- Grid -->
-    <div class="grid gap-4" style="grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));">
+    <!-- Cards grid. List mode is just a single-column layout — same card markup. -->
+    <div class="grid gap-4"
+         :style="viewMode === 'list'
+           ? 'grid-template-columns: 1fr;'
+           : 'grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));'">
       <template x-for="m in filtered" :key="m.id">
         <button @click="openMartyr(m.id)" class="card card-hover p-4.5 text-right flex flex-col gap-3.5 cursor-pointer relative"
                 style="padding: 18px;">

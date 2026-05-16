@@ -39,7 +39,9 @@ function aqmar() {
       { id: 'about',  ar: 'عن الموقع', en: 'About' },
     ],
 
-    arMonths: ['كانون الثاني','شباط','آذار','نيسان','أيار','حزيران','تموز','آب','أيلول','تشرين الأول','تشرين الثاني','كانون الأول'],
+    // Modern Standard Arabic month names (Gulf/Egyptian convention: يناير…ديسمبر)
+    // instead of Levantine (كانون الثاني…كانون الأول). User preference 2026-05-16.
+    arMonths: ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'],
     enMonths: ['January','February','March','April','May','June','July','August','September','October','November','December'],
     windowOptions: [
       { v: 7,   ar: 'أسبوع',       en: '1 wk' },
@@ -47,19 +49,28 @@ function aqmar() {
       { v: 60,  ar: 'شهران',       en: '2 mo' },
       { v: 365, ar: 'السنة كاملة', en: 'Year' },
     ],
+    // Six sort modes matching the v1 SPA — covers martyrdom/birth/age/name in
+    // both directions. Default is martyrdom_desc (newest martyrs first).
     sortOptions: [
-      { id: 'recent', ar: 'الأحدث استشهاداً', en: 'Most recent' },
-      { id: 'age',    ar: 'الأصغر عُمراً',    en: 'Youngest' },
-      { id: 'name',   ar: 'أبجدياً',          en: 'A→Z' },
+      { id: 'martyrdom_desc', ar: 'الاستشهاد ↓ (الأحدث)', en: 'Martyrdom ↓ (newest)' },
+      { id: 'martyrdom_asc',  ar: 'الاستشهاد ↑ (الأقدم)', en: 'Martyrdom ↑ (oldest)' },
+      { id: 'birth_desc',     ar: 'الميلاد ↓ (الأصغر سناً)', en: 'Birth ↓ (youngest)' },
+      { id: 'birth_asc',      ar: 'الميلاد ↑ (الأكبر سناً)', en: 'Birth ↑ (oldest)' },
+      { id: 'age_asc',        ar: 'الأصغر عُمراً',          en: 'Youngest age' },
+      { id: 'name_asc',       ar: 'الاسم (أ → ي)',           en: 'Name A→Z' },
     ],
 
     // ----- birthday-match -----
-    bday: { day: new Date().getDate(), month: new Date().getMonth() + 1, window: 30 },
+    // year is null until the user picks one via Litepicker — dayDelta only uses
+    // month + day for matching, so an empty year doesn't break filtering.
+    bday: { day: new Date().getDate(), month: new Date().getMonth() + 1, year: null, window: 30 },
+    _birthdayPicker: null,
     matchFilter: null,
 
     // ----- browse filters -----
     filters: { q: '', city: '', rank: '', batt: '', age: '' },
-    sort: 'recent',
+    sort: 'martyrdom_desc',
+    viewMode: 'grid',   // 'grid' (default, multi-column) or 'list' (single-column)
 
     // ============================================================
     // INIT
@@ -257,12 +268,19 @@ function aqmar() {
 
       if (this.matchFilter) {
         list.sort((a, b) => a.delta - b.delta);
-      } else if (this.sort === 'recent') {
-        list.sort((a, b) => (b.martyrdom || '').localeCompare(a.martyrdom || ''));
-      } else if (this.sort === 'age') {
-        list.sort((a, b) => (a.age || 0) - (b.age || 0));
-      } else if (this.sort === 'name') {
-        list.sort((a, b) => (a.name || '').localeCompare(b.name || '', 'ar'));
+      } else {
+        // Six explicit sort modes. Missing values sort to the end via the
+        // U+FFFD sentinel (always greater than real strings) or Infinity for nums.
+        const SENTINEL = '�';
+        const sortFns = {
+          'martyrdom_desc': (a, b) => (b.martyrdom || '').localeCompare(a.martyrdom || ''),
+          'martyrdom_asc':  (a, b) => (a.martyrdom || SENTINEL).localeCompare(b.martyrdom || SENTINEL),
+          'birth_desc':     (a, b) => (b.birth || '').localeCompare(a.birth || ''),
+          'birth_asc':      (a, b) => (a.birth || SENTINEL).localeCompare(b.birth || SENTINEL),
+          'age_asc':        (a, b) => (Number.isFinite(a.age) ? a.age : Infinity) - (Number.isFinite(b.age) ? b.age : Infinity),
+          'name_asc':       (a, b) => (a.name || SENTINEL).localeCompare(b.name || SENTINEL, 'ar'),
+        };
+        list.sort(sortFns[this.sort] || sortFns['martyrdom_desc']);
       }
       return list;
     },
@@ -477,6 +495,44 @@ function aqmar() {
       if ([4, 6, 9, 11].includes(m)) return 30;
       return 31;
     },
+    // Formatted birthday ISO/locale string for display in the Litepicker input.
+    get bdayLabel() {
+      if (!this.bday.year) return '';
+      const iso = `${this.bday.year}-${pad(this.bday.month)}-${pad(this.bday.day)}`;
+      return formatDate(iso, this.lang);
+    },
+    // Initialize the Litepicker on the birthday <input>. Called via x-init.
+    initBirthdayPicker(el) {
+      if (typeof Litepicker === 'undefined') {
+        console.warn('Litepicker not loaded — birthday input will be empty');
+        return;
+      }
+      const self = this;
+      const currentYear = new Date().getFullYear();
+      const todayIso = new Date().toISOString().slice(0, 10);
+      this._birthdayPicker = new Litepicker({
+        element: el,
+        format: 'YYYY-MM-DD',
+        singleMode: true,
+        autoApply: true,
+        maxDate: todayIso,
+        dropdowns: { minYear: 1950, maxYear: currentYear, months: true, years: true },
+        setup: (picker) => {
+          picker.on('selected', (date) => {
+            const d = date.toJSDate();
+            self.bday.year = d.getFullYear();
+            self.bday.month = d.getMonth() + 1;
+            self.bday.day = d.getDate();
+          });
+        },
+      });
+    },
+    clearBirthday() {
+      this.bday.year = null;
+      if (this._birthdayPicker) this._birthdayPicker.clearSelection();
+      const el = this.$refs && this.$refs.birthdate;
+      if (el) el.value = '';
+    },
     // Formatted "Last sync" timestamp for the footer. Derived from the
     // max posted_date across all rows (set in init).
     get lastSyncLabel() {
@@ -627,7 +683,7 @@ function formatDate(iso, locale = 'ar') {
     const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
     return `${d} ${months[mIdx]} ${y}`;
   }
-  const arMonths = ['كانون الثاني','شباط','آذار','نيسان','أيار','حزيران','تموز','آب','أيلول','تشرين الأول','تشرين الثاني','كانون الأول'];
+  const arMonths = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
   return `${d} ${arMonths[mIdx]} ${y}`;
 }
 

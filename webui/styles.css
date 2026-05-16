@@ -264,7 +264,10 @@ html[data-theme="dark"] body::before { mix-blend-mode: screen; opacity: 0.4; }
 /* Responsive */
 @media (max-width: 900px) {
   .nav-links { display: none !important; }
-  .grid-bday { grid-template-columns: 1fr 1fr !important; }
+  /* Birthday-match grid: 3 elements (date picker, window pills, submit) each
+     get their own row at mobile widths. Single-column is the only thing that
+     reads cleanly for these. */
+  .grid-bday { grid-template-columns: 1fr !important; }
   .grid-bday > .grid-bday-window { grid-column: 1 / -1; }
   .grid-bday > .grid-bday-submit { grid-column: 1 / -1; }
   .grid-filters { grid-template-columns: 1fr 1fr !important; }
