@@ -14,6 +14,7 @@ from src.sqlserver_client import (
     mark_verified,
     mark_rejected,
     get_by_status,
+    get_by_msg_id,
     get_all,
     next_publish_version,
     insert_publish_version,
@@ -202,6 +203,28 @@ def test_get_all_returns_every_row_regardless_of_status():
     assert len(rows) == 3
     sql = mock_cur.execute.call_args.args[0]
     assert "WHERE" not in sql.upper()    # no filter
+
+
+def test_get_by_msg_id_returns_single_row():
+    mock_cur = MagicMock()
+    mock_cur.description = [("msg_id",), ("name",)]
+    mock_cur.fetchall.return_value = [(20, "Foo")]
+    mock_conn = MagicMock(cursor=MagicMock(return_value=mock_cur))
+
+    row = get_by_msg_id(mock_conn, 20)
+
+    assert row == {"msg_id": 20, "name": "Foo"}
+    sql = mock_cur.execute.call_args.args[0]
+    assert "WHERE msg_id = ?" in sql
+
+
+def test_get_by_msg_id_returns_none_when_not_found():
+    mock_cur = MagicMock()
+    mock_cur.description = [("msg_id",), ("name",)]
+    mock_cur.fetchall.return_value = []
+    mock_conn = MagicMock(cursor=MagicMock(return_value=mock_cur))
+
+    assert get_by_msg_id(mock_conn, 999) is None
 
 
 # =============================================================================
