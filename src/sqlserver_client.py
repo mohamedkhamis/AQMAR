@@ -202,6 +202,15 @@ def get_verified_for_export(conn) -> list:
     return get_by_status(conn, "verified")
 
 
+def get_by_msg_id(conn, msg_id: int) -> dict:
+    """Single row by primary key. Returns None if not found.
+    Used by the admin API to serve GET /api/martyrs/{msg_id}."""
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM dbo.martyrs WHERE msg_id = ?", msg_id)
+    rows = _rows_to_dicts(cur)
+    return rows[0] if rows else None
+
+
 # =============================================================================
 # Publish versions log
 # =============================================================================

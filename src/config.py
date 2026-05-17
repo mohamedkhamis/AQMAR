@@ -23,6 +23,10 @@ class Config:
     #   DRIVER={ODBC Driver 17 for SQL Server};SERVER=localhost;DATABASE=aqmar;
     #   Trusted_Connection=yes;TrustServerCertificate=yes
     sqlserver_conn_str: str
+    # Admin API shared secret. The admin SPA sends this as `X-Admin-Token`
+    # on write endpoints. Generate a long random string (e.g. via
+    # `python -c "import secrets; print(secrets.token_urlsafe(32))"`).
+    admin_token: str
 
 def load_config(env_path: str = ".env") -> Config:
     raw = dotenv_values(env_path)
@@ -39,4 +43,5 @@ def load_config(env_path: str = ".env") -> Config:
         supabase_service_role_key=raw.get("SUPABASE_SERVICE_ROLE_KEY", ""),
         supabase_storage_bucket=raw.get("SUPABASE_STORAGE_BUCKET", "aqmar-photos"),
         sqlserver_conn_str=raw.get("SQLSERVER_CONN_STR", ""),
+        admin_token=raw.get("ADMIN_TOKEN", ""),
     )
