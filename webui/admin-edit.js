@@ -1,5 +1,5 @@
 // webui/admin-edit.js
-// Admin edit logic: diff computation, override accumulation, export.
+// Admin edit + verify + reject logic, backed by the local FastAPI server.
 
 (function (global) {
   "use strict";
@@ -14,10 +14,10 @@
     return diff;
   }
 
-  // SPA-side field names → Supabase `martyrs` column names.
-  // The 10 settable fields are listed here so unmapped UI-only state
-  // (e.g. draft.age which is computed, draft.bio which has no column)
-  // can be silently filtered out before the .update() call.
+  // SPA-side field names → SQL Server `dbo.martyrs` column names. Only the
+  // editable columns (no msg_id / verification_status / audit timestamps
+  // / ocr_* fields). UI-only fields (draft.age computed in app.js init,
+  // draft.bio with no DB column) are silently filtered out.
   const FIELD_REVERSE_MAP = {
     name:      "name",
     birth:     "birth_date",
@@ -34,71 +34,32 @@
   function translateToDbSchema(diffInNewSchema) {
     const out = {};
     for (const k of Object.keys(diffInNewSchema)) {
-      if (k === "id") continue;            // id maps to msg_id (WHERE filter), not a settable column
+      if (k === "id") continue;            // id maps to msg_id (URL path), not body
       const dbKey = FIELD_REVERSE_MAP[k];
-      if (!dbKey) continue;                // silently drop SPA-only fields (age, bio, _meta, etc.)
+      if (!dbKey) continue;                // drop SPA-only fields (age, bio, _meta)
       out[dbKey] = diffInNewSchema[k];
     }
     return out;
   }
 
-  // Writes an edit-diff to Supabase. Returns the updated row on success,
-  // throws on failure. Caller handles the UI optimistic update.
-  async function saveEditToSupabase(msgId, diffInNewSchema) {
-    if (!global.AQMAR_SB) throw new Error("Supabase client not initialized.");
+  // Apply admin edits + mark row 'verified' in one round-trip to the
+  // local API. PUT /api/martyrs/{msgId}. Throws on auth / 404 / 5xx.
+  async function saveEditViaApi(msgId, diffInNewSchema) {
+    if (!global.AQMAR_API) throw new Error("API client not initialized.");
     const dbDiff = translateToDbSchema(diffInNewSchema);
-    if (Object.keys(dbDiff).length === 0) return null;
-    const payload = {
-      ...dbDiff,
-      manual_edited_at: new Date().toISOString(),
-      manual_edited_by: "admin",
-    };
-    const { data, error } = await global.AQMAR_SB
-      .from("martyrs")
-      .update(payload)
-      .eq("msg_id", msgId)
-      .select()
-      .single();
-    if (error) throw new Error(`Supabase update: ${error.message}`);
-    return data;
+    // Even with empty diff, we still want to allow "verify-only" via the
+    // PUT call (so admin can mark a row OK without editing anything).
+    return await global.AQMAR_API.put(`/martyrs/${msgId}`, dbDiff);
   }
 
-  function addEdit(existingOverrides, msgId, diff, timestampIso, editor) {
-    if (Object.keys(diff).length === 0) return existingOverrides;
-    const key = String(msgId);
-    const prior = existingOverrides[key] || {};
-    return {
-      ...existingOverrides,
-      [key]: {
-        ...prior,
-        ...diff,
-        _manual_edit_at: timestampIso,
-        _editor: editor || "admin",
-      },
-    };
-  }
-
-  function buildExportPayload(overridesEdits) {
-    return { version: 1, edits: overridesEdits };
-  }
-
-  function downloadOverridesJson(overridesEdits) {
-    const payload = buildExportPayload(overridesEdits);
-    const text = JSON.stringify(payload, null, 2);
-    const blob = new Blob([text], { type: "application/json;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "overrides.json";
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+  // Mark a row 'rejected' so it won't be published.
+  async function rejectViaApi(msgId) {
+    if (!global.AQMAR_API) throw new Error("API client not initialized.");
+    return await global.AQMAR_API.post(`/martyrs/${msgId}/reject`);
   }
 
   global.buildEditDiff = buildEditDiff;
-  global.addEdit = addEdit;
-  global.buildExportPayload = buildExportPayload;
-  global.downloadOverridesJson = downloadOverridesJson;
-  global.saveEditToSupabase = saveEditToSupabase;
+  global.translateToDbSchema = translateToDbSchema;
+  global.saveEditViaApi = saveEditViaApi;
+  global.rejectViaApi = rejectViaApi;
 })(window);

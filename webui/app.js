@@ -23,7 +23,8 @@ function aqmar() {
     loading: true,            // true until the initial loadData() resolves (or errors out)
     loadError: null,          // set to an i18n error string when all 3 data sources fail — drives the retry UI
     lastSyncIso: null,        // most recent posted_date across all rows — drives the footer "Last sync"
-    dataSource: null,         // 'supabase' | 'local-json' | 'sample-data' | null — drives the banner copy
+    dataSource: null,         // 'api' | 'static-json' | 'sample-data' | null — drives the banner copy
+    publishedVersion: null,   // version number from data/martyrs.json if loaded from snapshot
 
     // ----- data -----
     all: [],
@@ -133,12 +134,12 @@ function aqmar() {
       });
     },
 
-    // Data-loading helper, callable from init() and retryLoad(). Tries three
-    // sources in priority order:
-    //   1. Supabase (the canonical source post-migration)
-    //   2. Local data/martyrs.json (real 388-row dataset before Supabase is set)
-    //   3. AQMAR_SAMPLE_DATA (36 synthetic rows)
-    // If all three fail, sets loadError so the UI shows the Retry button.
+    // Data-loading helper, callable from init() and retryLoad(). Now delegates
+    // to data-loader.js's loadData() which tries:
+    //   1. /api/martyrs (local FastAPI admin server with live SQL Server data)
+    //   2. ../data/martyrs.json (published snapshot from export_to_json.py)
+    // Sample data only loads when ?demo is in the URL (set by config.js).
+    // If all sources fail, sets loadError so the UI shows the Retry button.
     async loadMartyrs() {
       this.loading = true;
       this.loadError = null;
@@ -151,21 +152,11 @@ function aqmar() {
       try {
         const data = await loadData();
         ingestRows(data.martyrs || []);
-        this.dataSource = 'supabase';
+        // loadData reports which source actually succeeded
+        this.dataSource = data.source || 'api';
+        if (data.version) this.publishedVersion = data.version;
       } catch (e) {
-        console.warn('Supabase load failed, trying local data/martyrs.json:', e.message);
-        try {
-          const res = await fetch('../data/martyrs.json', { cache: 'no-cache' });
-          if (res.ok) {
-            const raw = await res.json();
-            const rows = Array.isArray(raw) ? raw : (raw.martyrs || []);
-            ingestRows(rows);
-            this.dataSource = 'local-json';
-            console.info(`Loaded ${rows.length} rows from local data/martyrs.json`);
-          }
-        } catch (e2) {
-          console.warn('Local JSON also unreachable:', e2.message);
-        }
+        console.warn('All data sources failed:', e.message);
       } finally {
         this.loading = false;
       }
@@ -360,33 +351,48 @@ function aqmar() {
     // ============================================================
     // ADMIN — login / edit / export
     // ============================================================
+    // Restore the admin session from sessionStorage (if a token is stashed
+    // there from a previous login on this tab). Probes a write-protected
+    // endpoint to confirm the token is still valid against the running API.
     async checkSession() {
-      if (!window.AQMAR_SB || window.AQMAR_SUPABASE_PLACEHOLDER) return;
+      if (!window.AQMAR_API || !window.AQMAR_API.hasToken()) return;
       try {
-        const { data: { session } } = await window.AQMAR_SB.auth.getSession();
-        this.isAdmin = !!session;
+        await window.AQMAR_API.get('/martyrs/unverified');
+        this.isAdmin = true;
       } catch (e) {
-        // Network error or bad URL — leave isAdmin=false silently.
+        // Token rejected (403) or server unreachable — clear it silently.
+        window.AQMAR_API.clearToken();
       }
     },
+    // The "password" is the ADMIN_TOKEN from .env. The API call below either
+    // succeeds (token valid) or 403s (token wrong). No server-side login
+    // endpoint needed — auth is stateless via the X-Admin-Token header.
     async doLogin() {
       this.loginError = '';
-      // Placeholder Supabase URL ("https://YOURPROJECT.supabase.co") would
-      // produce a DNS error on signInWithPassword — surface a clearer message
-      // and skip the network call entirely so the user understands they need
-      // to configure webui/config.js first.
-      if (!window.AQMAR_SB || window.AQMAR_SUPABASE_PLACEHOLDER) {
+      if (!window.AQMAR_API) {
         this.loginError = this.lang === 'ar'
-          ? 'الواجهة في وضع المعاينة — حدّث webui/config.js بمفاتيح Supabase لتفعيل الإدارة'
-          : 'Preview mode — set real Supabase keys in webui/config.js to enable admin';
+          ? 'لم تتم تهيئة عميل الـ API'
+          : 'API client not initialized';
         return;
       }
-      const { error } = await window.AQMAR_SB.auth.signInWithPassword({
-        email: this.loginUser,
-        password: this.loginPass,
-      });
-      if (error) {
-        this.loginError = this.lang === 'ar' ? 'بيانات الدخول غير صحيحة' : 'Invalid credentials';
+      const token = (this.loginPass || '').trim();
+      if (!token) {
+        this.loginError = this.lang === 'ar' ? 'أدخل رمز الإدارة' : 'Enter the admin token';
+        return;
+      }
+      window.AQMAR_API.setToken(token);
+      try {
+        // Verify by calling a write-protected endpoint
+        await window.AQMAR_API.get('/martyrs/unverified');
+      } catch (e) {
+        window.AQMAR_API.clearToken();
+        if (e.status === 403) {
+          this.loginError = this.lang === 'ar' ? 'رمز الإدارة غير صحيح' : 'Invalid admin token';
+        } else {
+          this.loginError = this.lang === 'ar'
+            ? 'تعذّر الاتصال بخادم الإدارة — هل هو يعمل؟'
+            : 'Could not reach the admin server — is it running?';
+        }
         return;
       }
       this.isAdmin = true;
@@ -394,8 +400,8 @@ function aqmar() {
       this.loginPass = '';
       this.view = 'admin';
     },
-    async logout() {
-      if (window.AQMAR_SB) await window.AQMAR_SB.auth.signOut();
+    logout() {
+      if (window.AQMAR_API) window.AQMAR_API.clearToken();
       this.isAdmin = false;
       this.editingId = null;
       this.view = 'home';
@@ -448,30 +454,75 @@ function aqmar() {
       this.editingId = null;
       this.draft = {};
     },
-    // Saves an admin edit. Asynchronous because it round-trips to Supabase.
-    // On success: optimistically patches this.all[idx] so the UI updates
-    // instantly. this.edits is also updated as a session-scoped dirty-marker
-    // cache (no longer exported — Supabase is canonical).
+    // Saves an admin edit. Async because it round-trips to the local API,
+    // which writes to SQL Server + flips verification_status to 'verified'
+    // in one statement. Then optimistically patches this.all so the UI
+    // updates instantly. this.edits is also updated as a session-scoped
+    // dirty-marker cache.
     async saveEdit() {
       const m = this.editingMartyr();
       if (!m) return;
       const diff = buildEditDiff(m, this.draft);
-      if (Object.keys(diff).length === 0) {
-        this.editingId = null;
-        this.draft = {};
+      // Note: empty diff is still a valid "verify only" gesture — the API
+      // accepts an empty body and just flips verification_status to 'verified'.
+      try {
+        await saveEditViaApi(m.id, diff);
+      } catch (e) {
+        alert((this.lang === 'ar' ? 'تعذّر حفظ التعديل:\n' : 'Save failed:\n') + e.message);
+        return;
+      }
+      // Merge the diff into the in-memory state + mark verified locally.
+      this.edits = { ...this.edits, [m.id]: { ...(this.edits[m.id] || {}), ...diff } };
+      const idx = this.all.findIndex(x => x.id === m.id);
+      if (idx >= 0) {
+        this.all[idx] = {
+          ...this.all[idx], ...diff,
+          verification: 'verified',
+        };
+      }
+      this.editingId = null;
+      this.draft = {};
+    },
+    // Trigger a publish from the admin header. Confirms first, then POSTs to
+    // /api/publish which writes data/martyrs.json + records publish_versions.
+    // Does NOT git-push — admin uses scripts/publish.ps1 for that.
+    async publishNow() {
+      if (!window.AQMAR_API) return;
+      const note = window.prompt(
+        this.lang === 'ar'
+          ? 'وصفٌ موجزٌ لهذا النشر (اختياري — اضغط Enter للتخطّي):'
+          : 'Optional one-line note for this publish (press Enter to skip):',
+        ''
+      );
+      if (note === null) return;    // user cancelled
+      try {
+        const result = await window.AQMAR_API.post('/publish', { note: note || null });
+        const msg = this.lang === 'ar'
+          ? `تم النشر! النسخة ${result.version} (${result.row_count} سجلاً).\n\nالخطوة التالية: git add data/martyrs.json && git commit && git push`
+          : `Published! Version ${result.version} (${result.row_count} rows).\n\nNext: git add data/martyrs.json && git commit && git push`;
+        alert(msg);
+      } catch (e) {
+        alert((this.lang === 'ar' ? 'فشل النشر:\n' : 'Publish failed:\n') + e.message);
+      }
+    },
+
+    // Mark a row 'rejected' (won't be included in published JSON).
+    async rejectEdit() {
+      const m = this.editingMartyr();
+      if (!m) return;
+      if (!confirm(this.lang === 'ar'
+            ? `هل تريد رفض السجل #${m.id}؟ لن يَظهر في النشر القادم.`
+            : `Reject row #${m.id}? It won't appear in the next publish.`)) {
         return;
       }
       try {
-        await saveEditToSupabase(m.id, diff);
+        await rejectViaApi(m.id);
       } catch (e) {
-        alert("تعذّر حفظ التعديل في Supabase:\n" + e.message);
+        alert((this.lang === 'ar' ? 'تعذّر الرفض:\n' : 'Reject failed:\n') + e.message);
         return;
       }
-      // Merge the new diff into the existing per-id override.
-      this.edits = { ...this.edits, [m.id]: { ...(this.edits[m.id] || {}), ...diff } };
-      // Reflect immediately so the UI updates without reload.
       const idx = this.all.findIndex(x => x.id === m.id);
-      if (idx >= 0) this.all[idx] = { ...this.all[idx], ...diff };
+      if (idx >= 0) this.all[idx] = { ...this.all[idx], verification: 'rejected' };
       this.editingId = null;
       this.draft = {};
     },
