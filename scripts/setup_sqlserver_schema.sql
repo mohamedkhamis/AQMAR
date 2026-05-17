@@ -55,9 +55,13 @@ BEGIN
 
         -- Original OCR output preserved even after admin edits (audit trail).
         -- Lets you compare "what OCR said" vs "what admin corrected to".
+        -- 255 chars on the date fields too: OCR catastrophes sometimes bleed
+        -- entire caption sentences into the date field (e.g. msg 282/295 in
+        -- the May 2026 migration), and we want to preserve enough text for
+        -- the admin to understand what went wrong.
         ocr_name            NVARCHAR(255)   NULL,
-        ocr_birth_date      NVARCHAR(50)    NULL,
-        ocr_martyrdom_date  NVARCHAR(50)    NULL,
+        ocr_birth_date      NVARCHAR(255)   NULL,
+        ocr_martyrdom_date  NVARCHAR(255)   NULL,
 
         -- Standard audit timestamps
         created_at          DATETIME2       NOT NULL DEFAULT SYSUTCDATETIME(),
