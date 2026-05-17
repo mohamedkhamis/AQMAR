@@ -100,6 +100,8 @@ async def main():
         if cap["name"] and cap["name"] in seen_names:
             print(f"  Skipping intra-batch duplicate: msg {tg.msg_id} ({cap['name']})")
             state.mark_processed(tg.msg_id, "duplicate_in_batch")
+            # Persist the duplicate-marker so a crash doesn't lose the skip record.
+            state.save(STATE_PATH)
             continue
         seen_names.add(cap["name"])
         paired = name_to_photo.get(cap["name"])
@@ -124,12 +126,24 @@ async def main():
                 except Exception as e:
                     logging.warning(f"Supabase write failed for msg {tg.msg_id}: {e}")
 
+            # Incremental persistence — write Excel + state after EVERY processed
+            # message so a crash mid-loop loses at most this one message's work
+            # rather than the entire run. ExcelWriter.save() rewrites the whole
+            # workbook each call (~1-2 MB, sub-second), so the cost is negligible
+            # compared to OCR/video time per message.
+            writer.save()
+            state.save(STATE_PATH)
+
             print(f"  msg {tg.msg_id}: {row.extraction_status} | "
                   f"birth={row.birth_date} | mart={row.martyrdom_date}")
         except Exception as e:
             logging.exception(f"Failed msg {tg.msg_id}: {e}")
             state.mark_processed(tg.msg_id, "failed")
+            # Also persist the failure marker so the next run doesn't retry it.
+            state.save(STATE_PATH)
 
+    # Final save is now redundant in the happy path (every iteration persists),
+    # but kept as a defensive fallback for any state mutated outside the loop.
     writer.save()
     state.save(STATE_PATH)
     await fetcher.disconnect()
