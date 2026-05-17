@@ -1,76 +1,51 @@
 # scripts/reprocess.py
 """Re-process a single message and print what the pipeline would extract.
 
-Useful for manually verifying a specific row in the Excel against the
-actual frames + photo, or for debugging when one row looks wrong.
+Useful for:
+  - Manually verifying a specific row against the source frames + photo
+  - Recovering a row that failed during a daily run (e.g. cp1252 codec
+    error, network drop, OCR catastrophe)
+  - Debugging when one row looks wrong in the SPA / SQL Server
 
-Does NOT overwrite the Excel row by default — only prints. Pass
---update to also write the new extraction back into the existing Excel
-row (replaces, doesn't append).
+Does NOT write to SQL Server by default — only prints the extracted
+fields. Pass --update to upsert into SQL Server with the new extraction.
 
 Usage:
-  python scripts\reprocess.py --msg-id 808
-  python scripts\reprocess.py --msg-id 808 --update
+  python scripts\reprocess.py --msg-id 874
+  python scripts\reprocess.py --msg-id 874 --update
 """
 import argparse
 import asyncio
 import sys
-import os
 from pathlib import Path
 
-# Force UTF-8 on stdout/stderr — Arabic characters in row.name (printed on
-# every reprocess) crash Windows console default cp1252 ('charmap codec'
-# error). Same fix as scripts/phase3_daily.py.
-if hasattr(sys.stdout, 'reconfigure'):
-    sys.stdout.reconfigure(encoding='utf-8', errors='replace')
-    sys.stderr.reconfigure(encoding='utf-8', errors='replace')
+# Force UTF-8 on stdout — Arabic chars in row.name crash Windows cp1252.
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
+
 from src.config import load_config
 from src.telegram_client import TelegramFetcher
 from src.pipeline import process_message
 from src.parser_caption import parse_caption
-from src.excel_writer import ExcelWriter
 from src.state import State
-from openpyxl import load_workbook
+from src.sqlserver_client import make_conn, martyr_row_to_db_dict, upsert_martyr
 
 STATE_PATH = "data/state.json"
-
-EXCEL_PATH = "data/martyrs.xlsx"
 PHOTOS_DIR = "data/photos"
 FRAMES_DIR = "data/frames"
 MISSING_BIRTH_LOG = "logs/missing_birthdates.log"
 
-EXCEL_COLS = {
-    "msg_id": 1, "name": 2, "name_normalized": 3, "birth_date": 4,
-    "martyrdom_date": 5, "city": 6, "military_rank": 7, "weapon": 8,
-    "battalion": 9, "brigade": 10, "photo_path": 11, "frame_paths": 12,
-    "posted_date": 13, "message_link": 14, "extraction_status": 15,
-    "duplicate_status": 16,
-}
-
-
-def update_excel_row(msg_id: int, row) -> bool:
-    if not os.path.exists(EXCEL_PATH):
-        return False
-    wb = load_workbook(EXCEL_PATH)
-    ws = wb["الشهداء"]
-    target = None
-    for r in range(3, ws.max_row + 1):
-        if ws.cell(row=r, column=1).value == msg_id:
-            target = r
-            break
-    if target is None:
-        wb.close()
-        return False
-    for field, col in EXCEL_COLS.items():
-        ws.cell(row=target, column=col, value=getattr(row, field))
-    wb.save(EXCEL_PATH)
-    return True
-
 
 async def main(msg_id: int, update: bool):
     cfg = load_config()
+
+    if update and not cfg.sqlserver_conn_str:
+        print("ERROR: --update requires SQLSERVER_CONN_STR in .env")
+        sys.exit(1)
+
     fetcher = TelegramFetcher(
         cfg.api_id, cfg.api_hash, cfg.phone, cfg.two_fa_password,
         cfg.session_path, cfg.channel_username,
@@ -121,26 +96,20 @@ async def main(msg_id: int, update: bool):
     print(f"  message:     {row.message_link}")
 
     if update:
-        ok = update_excel_row(msg_id, row)
-        if ok:
-            print(f"\nExcel row for msg {msg_id} updated in {EXCEL_PATH}.")
-        else:
-            # No existing row → append it via ExcelWriter (handles the workbook
-            # init / RTL setup / bold birth+martyrdom styling). Also mark the
-            # msg as processed in state.json so the next phase3_daily run skips
-            # it. This is the recovery path for messages the daily run failed
-            # to append (e.g. msg 874 — cp1252 charmap codec error before fix).
-            writer = ExcelWriter(EXCEL_PATH)
-            writer.ensure_initialized()
-            appended = writer.append_row(row)
-            if appended:
-                writer.save()
-                state = State.load(STATE_PATH)
-                state.mark_processed(msg_id, row.extraction_status)
-                state.save(STATE_PATH)
-                print(f"\nNo existing row; appended msg {msg_id} to {EXCEL_PATH} + marked processed in state.json.")
-            else:
-                print(f"\nNo existing row, but ExcelWriter.append_row also refused (duplicate msg_id?).")
+        # Upsert into SQL Server (INSERT-or-UPDATE on msg_id). Verification
+        # status defaults to 'unverified' on INSERT and is preserved on
+        # UPDATE — so reprocessing won't clobber admin's verify decision.
+        db = make_conn(cfg)
+        payload = martyr_row_to_db_dict(row)
+        upsert_martyr(db, payload)
+        db.close()
+
+        # Mark processed in state.json so the next phase3_daily run skips it
+        state = State.load(STATE_PATH)
+        state.mark_processed(msg_id, row.extraction_status)
+        state.save(STATE_PATH)
+
+        print(f"\nUpserted msg {msg_id} into dbo.martyrs + marked processed in state.json.")
 
     await fetcher.disconnect()
 
@@ -149,6 +118,6 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--msg-id", type=int, required=True)
     parser.add_argument("--update", action="store_true",
-                        help="Write the new extraction back to the Excel row.")
+                        help="Also UPSERT the new extraction into SQL Server.")
     args = parser.parse_args()
     asyncio.run(main(args.msg_id, args.update))

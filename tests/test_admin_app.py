@@ -20,8 +20,6 @@ from src.config import Config
 _test_cfg = Config(
     api_id=0, api_hash="", phone="", two_fa_password="",
     channel_username="", session_path="", daily_run_hour=9,
-    supabase_url="", supabase_anon_key="",
-    supabase_service_role_key="", supabase_storage_bucket="",
     sqlserver_conn_str="DRIVER={ODBC Driver 17 for SQL Server};SERVER=localhost;DATABASE=aqmar;Trusted_Connection=yes",
     admin_token="t3st-t0k3n",
 )

@@ -2,8 +2,9 @@
 
 A fully-local, free pipeline that scrapes the public Telegram channel
 [`@AqmarTofan`](https://t.me/AqmarTofan) — a memorial channel for شهداء كتائب القسام
-in معركة طوفان الأقصى — and turns each post into a structured Excel row, then
-serves the dataset through a bilingual web UI.
+in معركة طوفان الأقصى — extracts each post's details via OCR, stores them in
+a local SQL Server database for human verification, and publishes verified
+records to a static bilingual web UI.
 
 > **Mandatory fields:** name + birth date + martyrdom date.
 > **Optional fields:** city, military rank, weapon, battalion, brigade.
@@ -16,143 +17,190 @@ serves the dataset through a bilingual web UI.
 @AqmarTofan (public channel)
         │
         ▼
-┌───────────────────────────────────────────────────────────┐
-│  Python pipeline                                          │
-│   1. Telethon  → fetch all messages (MTProto, free)       │
-│   2. Caption parser → name, battalion, brigade            │
-│   3. Dedup by name → keep the HD copy                     │
-│   4. ffmpeg    → extract 6 frames per video               │
-│   5. EasyOCR   → birth date · martyrdom date · city ·     │
-│                  weapon · rank   (Arabic + English)       │
-│   6. openpyxl  → append to data/martyrs.xlsx              │
-└───────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│  Python pipeline (scripts/phase3_daily.py)                  │
+│   1. Telethon → fetch new messages (MTProto, free)          │
+│   2. Caption parser → name, battalion, brigade              │
+│   3. ffmpeg + EasyOCR → birth + martyrdom dates from frames │
+│   4. UPSERT into SQL Server  (verification_status='unverified') │
+└─────────────────────────────────────────────────────────────┘
         │
         ▼
-data/martyrs.xlsx · data/photos/ · data/state.json
-        │
+   Local SQL Server (`aqmar` database)
+        │   (admin reviews unverified rows in the SPA, edits
+        │    OCR mistakes, clicks "Save & verify" or "Reject")
         ▼
-   scripts/migrate_to_supabase.py  (one-shot)
-   scripts/phase3_daily.py         (incremental, every day)
+   FastAPI admin server  ─►  Alpine.js + Tailwind SPA
+   (scripts/admin_server.py — runs on localhost:8000)
         │
+        ▼ click "📤 Publish" (or run scripts/publish.ps1)
         ▼
-   Supabase Postgres + Storage  ─►  Web UI (Alpine + Tailwind SPA)
+   data/martyrs.json  (versioned snapshot: {version, generated_at, ...})
+        │
+        ▼  git commit + push
+        ▼
+   GitHub Pages — public read-only view of the SPA
 ```
 
-- **Idempotent** — re-running on the same messages yields the same Excel.
-- **Resumable** — `state.json` lets a crashed run pick up where it stopped.
-- **Birth date is sacred** — special-cased retry logic on extra frames + photo OCR.
-- **Daily auto-run** — Windows Task Scheduler appends new posts only.
+- **Local-first** — all data lives on your machine. Internet only needed
+  for the Telegram scrape and the publish-to-GitHub-Pages step.
+- **Verification workflow** — every scraped row starts `unverified`. The
+  admin reviews OCR output side-by-side with the raw text (preserved in
+  `ocr_*` columns) and corrects mistakes before publishing.
+- **Versioned snapshots** — every publish bumps a version number and
+  appends to `dbo.publish_versions` for audit. The git history of
+  `data/martyrs.json` is effectively the publish history.
+- **Idempotent + resumable** — `state.json` tracks every processed
+  msg_id. SQL Server `MERGE`/upsert means re-running is safe. Incremental
+  save after every successful message — a crash costs at most one
+  message of OCR work.
+- **Daily auto-run** — Windows Task Scheduler runs `phase3_daily.py`
+  every morning (see `scripts/setup_daily_trigger.ps1`).
 
 ---
 
 ## Tech stack
 
-| Layer | Library |
+| Layer | Tool |
 |---|---|
 | Telegram client | [Telethon](https://docs.telethon.dev/) (MTProto) |
 | Video frames | `ffmpeg` + `ffmpeg-python` |
 | OCR | [EasyOCR](https://github.com/JaidedAI/EasyOCR) (Arabic + English) |
-| Excel I/O | [openpyxl](https://openpyxl.readthedocs.io/) |
+| Data store | **SQL Server** (default instance, Windows Authentication) |
+| DB driver | `pyodbc` + ODBC Driver 17 for SQL Server |
+| Admin API | **FastAPI** + uvicorn |
+| Web UI | Alpine.js + Tailwind CSS + Litepicker |
 | Image preprocessing | Pillow |
 | Config | python-dotenv |
 | Scheduling | Windows Task Scheduler |
-| Web UI | Alpine.js + Tailwind CSS + Litepicker |
-| Data layer | Supabase (Postgres + Storage + Auth) |
-| Tests | pytest, pytest-asyncio |
+| Tests | pytest, pytest-asyncio, FastAPI TestClient |
 
 ---
 
-## Quick start
+## One-time setup (after `git clone`)
 
 ```powershell
+# 1. Python venv + dependencies
 python -m venv .venv
 .venv\Scripts\activate
 pip install -r requirements.txt
 
-# Fill in .env (copy from .env.example).
-# Get TELEGRAM_API_ID + TELEGRAM_API_HASH from https://my.telegram.org
+# 2. Telegram credentials — get TELEGRAM_API_ID + TELEGRAM_API_HASH from
+#    https://my.telegram.org, paste into .env (copy from .env.example).
 Copy-Item .env.example .env
 notepad .env
 
-# Run phases:
-python scripts\phase0_sample.py     # download 5 sample frames
-python scripts\phase1_test.py       # test pipeline on 5 samples
-python scripts\phase2_backfill.py   # full historical backfill
-.\scripts\setup_daily_trigger.ps1   # register Windows daily task
+# 3. SQL Server — install SQL Server Express or use an existing instance.
+#    Default config assumes localhost + Windows Auth.
+.venv\Scripts\python.exe -c "import pyodbc; pyodbc.connect('DRIVER={ODBC Driver 17 for SQL Server};SERVER=localhost;Trusted_Connection=yes;TrustServerCertificate=yes', autocommit=True).execute(`"IF DB_ID('aqmar') IS NULL CREATE DATABASE aqmar`")"
+
+# 4. Run the schema script (paste into SSMS, OR via Python):
+#    Tables: dbo.martyrs (with verification workflow), dbo.publish_versions
+sqlcmd -S localhost -d aqmar -E -i scripts\setup_sqlserver_schema.sql
+
+# 5. Generate an ADMIN_TOKEN and append to .env
+$tok = (.venv\Scripts\python.exe -c "import secrets; print(secrets.token_urlsafe(32))").Trim()
+Add-Content -Path '.env' -Value "ADMIN_TOKEN=$tok"
+
+# 6. (Optional, if you have an old data/martyrs.xlsx to bring in)
+python scripts\migrate_excel_to_sqlserver.py
 ```
 
 ### Project layout
 
 ```
 AQMAR/
-├── src/                  # pipeline modules (one responsibility each)
-│   ├── telegram_client.py  · pipeline.py · dedup.py
-│   ├── frame_extractor.py  · ocr_engine.py
-│   ├── parser_caption.py   · parser_ocr.py · name_normalizer.py
-│   ├── excel_writer.py     · state.py · config.py
-├── scripts/              # entry points (phase0 / phase1 / phase2 / phase3)
-├── tests/                # pytest suite for parsers, dedup, state, excel
-├── webui/                # static Alpine + Tailwind SPA
-├── data/                 # local pipeline outputs (xlsx + photos + state)
-├── docs/superpowers/     # design docs + plans
-└── .env.example          # template for Telegram credentials
+├── src/
+│   ├── telegram_client.py · pipeline.py · parser_caption.py · parser_ocr.py
+│   ├── frame_extractor.py · ocr_engine.py · name_normalizer.py
+│   ├── sqlserver_client.py    · data layer (pyodbc wrapper)
+│   ├── admin_app.py           · FastAPI admin API
+│   ├── exporter.py            · SQL Server → versioned JSON
+│   ├── excel_writer.py · state.py · config.py
+├── scripts/
+│   ├── phase3_daily.py        · daily scrape (Telegram → SQL Server)
+│   ├── admin_server.py        · `python scripts/admin_server.py` → :8000
+│   ├── export_to_json.py      · publish: SQL → data/martyrs.json
+│   ├── publish.ps1            · one-command export + git push
+│   ├── migrate_excel_to_sqlserver.py · one-shot Excel → SQL Server
+│   ├── reprocess.py           · re-run one msg through OCR + upsert
+│   ├── setup_sqlserver_schema.sql · DDL for the aqmar database
+│   ├── setup_daily_trigger.ps1     · register Windows Task Scheduler
+├── tests/                · pytest suite (103+ tests)
+├── webui/                · static SPA (Alpine + Tailwind)
+├── data/                 · martyrs.xlsx (legacy snapshot), martyrs.json, photos/
+└── .env.example          · template for credentials + DB conn string
 ```
 
-### Daily workflow
+---
+
+## Daily workflow
 
 ```powershell
 .venv\Scripts\activate
-python scripts\phase3_daily.py     # fetch new posts; writes to Supabase
-# Reload http://localhost:8000/webui/ — new rows appear (no JSON rebuild step).
+python scripts\phase3_daily.py   # fetches new posts → SQL Server (unverified)
+
+# Then in another shell (or after the scrape):
+python scripts\admin_server.py   # → http://localhost:8000/
 ```
+
+Open http://localhost:8000/ in a browser, click **"Editor login"**, paste
+the `ADMIN_TOKEN` from your `.env`. Review the unverified queue, edit any
+OCR mistakes, click **"Save & verify"** on each row.
+
+When you're ready to publish a batch of newly-verified rows:
+
+```powershell
+# Option A — one command:
+.\scripts\publish.ps1 -Note "weekly verification batch"
+
+# Option B — manual:
+python scripts\export_to_json.py --note "weekly verification batch"
+git add data/martyrs.json
+git commit -m "publish vN: weekly verification batch"
+git push
+```
+
+The published `data/martyrs.json` is what GitHub Pages serves to public
+visitors via the same SPA in read-only mode.
 
 ---
 
 ## Web UI
 
-A static Alpine.js + Tailwind SPA backed by Supabase Postgres + Storage:
+A single bilingual (Arabic / English) SPA with three modes:
 
-- **Public view:** filter martyrs by birthdate proximity, martyrdom date,
-  age, free-text search; sort by various fields; click any card to open
-  a photo modal with full details.
-- **Admin view** (Supabase Auth login required): same grid, plus an
-  "✏️ تحرير" button on each card to fix any field. Edits go live
-  instantly for all visitors (no more JSON export step).
+- **Public view** (no login): Home page with verse + birthday-match
+  card + on-this-day strip + stats. Registry page with Litepicker
+  birthdate input, sort + filter dropdowns, advanced filters panel,
+  grid/list toggle. Detail page with portrait + timeline + source link.
+- **Admin view** (token login): Same registry view + verification queue
+  with **Save & verify** and **Reject** buttons. **📤 Publish** button
+  in the header writes a new versioned snapshot.
+- **About**: project description and architecture.
 
-### One-time setup (after `git clone`)
-
-1. Sign up at supabase.com and create a project ("AqmarTofan" or similar).
-2. Authentication → Users → Add user → your email + password.
-3. Storage → New bucket → `aqmar-photos` → Public.
-4. SQL Editor → paste `scripts/setup_supabase_schema.sql` → Run.
-5. Project Settings → API → copy URL + anon key + service_role key into
-   `.env` (see `.env.example`).
-6. Paste URL + anon key into `webui/config.js` (the public values).
-7. Run the migration: `python scripts/migrate_to_supabase.py`.
-
-### Run locally
+### Running locally (full admin mode)
 
 ```powershell
-.\scripts\serve.ps1     # starts http://localhost:8000/webui/
+python scripts\admin_server.py
+# → http://localhost:8000/  (the SPA + live data via the API)
 ```
 
-### Daily flow
+### Running locally (read-only preview)
+
+If you don't need admin and just want to preview the SPA against the
+published snapshot:
 
 ```powershell
-.venv\Scripts\activate
-python scripts\phase3_daily.py     # fetches new posts, writes to Supabase
-# (or run via Windows Task Scheduler — scripts/setup_daily_trigger.ps1)
+.\scripts\serve.ps1
+# → http://localhost:8000/webui/  (reads data/martyrs.json directly)
 ```
-
-### Tests
-
-Open `http://localhost:8000/webui/tests.html` — Litepicker / Alpine /
-filter logic / merge logic tests all run on page load.
 
 ### Hosting (GitHub Pages)
 
-Push only `webui/` to a `gh-pages` branch — that's it. No data directory
-needed; the SPA reads from Supabase, not from disk.
+Push only `webui/` + `data/martyrs.json` + `data/photos/` to your
+`gh-pages` branch (or use the default branch + `/docs` source). The
+SPA gracefully falls back to the static JSON when no API is reachable.
 
 ---
 
@@ -161,6 +209,7 @@ needed; the SPA reads from Supabase, not from disk.
 `.env` (copied from `.env.example`):
 
 ```ini
+# Telegram (from https://my.telegram.org)
 TELEGRAM_API_ID=
 TELEGRAM_API_HASH=
 TELEGRAM_PHONE=
@@ -168,17 +217,18 @@ TELEGRAM_2FA_PASSWORD=
 CHANNEL_USERNAME=AqmarTofan
 SESSION_PATH=session/aqmar
 DAILY_RUN_HOUR=9
-SUPABASE_URL=
-SUPABASE_ANON_KEY=
-SUPABASE_SERVICE_ROLE_KEY=
-SUPABASE_STORAGE_BUCKET=aqmar-photos
+
+# SQL Server (local) — default instance + Windows Auth:
+SQLSERVER_CONN_STR=DRIVER={ODBC Driver 17 for SQL Server};SERVER=localhost;DATABASE=aqmar;Trusted_Connection=yes;TrustServerCertificate=yes
+
+# Admin shared secret — generate with:
+#   python -c "import secrets; print(secrets.token_urlsafe(32))"
+ADMIN_TOKEN=
 ```
 
-Telegram credentials are obtained from <https://my.telegram.org>; Supabase
-values come from Project Settings → API in your Supabase dashboard. The
-`.env` file and Telethon session are gitignored — never commit them. The
-`SUPABASE_SERVICE_ROLE_KEY` is server-only — only the URL + anon key go
-into the public `webui/config.js`.
+`.env` is gitignored — never commit credentials. `ADMIN_TOKEN` lives on
+your machine only; you paste it into the SPA login modal once per
+browser session.
 
 ---
 
@@ -186,10 +236,11 @@ into the public `webui/config.js`.
 
 ```powershell
 .venv\Scripts\activate
-pytest                              # Python pipeline tests
-# Then in the browser:
-start http://localhost:8000/webui/tests.html   # JS / UI tests
+pytest                        # Python suite (103+ tests)
 ```
+
+Browser-side tests are in `webui/tests.html` — open in any browser to run
+in-page tests for filter logic, search predicate, schema adapters, etc.
 
 ---
 
@@ -205,5 +256,5 @@ start http://localhost:8000/webui/tests.html   # JS / UI tests
 ## License
 
 Private project. All Telegram channel content is property of
-[`@AqmarTofan`](https://t.me/AqmarTofan); this repository contains only the
-extraction pipeline and viewing UI.
+[`@AqmarTofan`](https://t.me/AqmarTofan); this repository contains only
+the extraction pipeline + verification workflow + viewing UI.
