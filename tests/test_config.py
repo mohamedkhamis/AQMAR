@@ -61,3 +61,36 @@ def test_load_config_supabase_fields_default_to_empty(tmp_path):
     assert cfg.supabase_anon_key == ""
     assert cfg.supabase_service_role_key == ""
     assert cfg.supabase_storage_bucket == "aqmar-photos"  # has a sane default
+
+
+def test_load_config_reads_sqlserver_conn_str(tmp_path):
+    env_file = tmp_path / ".env"
+    env_file.write_text(
+        "TELEGRAM_API_ID=12345\n"
+        "TELEGRAM_API_HASH=abc\n"
+        "TELEGRAM_PHONE=+20111\n"
+        "TELEGRAM_2FA_PASSWORD=pw\n"
+        "CHANNEL_USERNAME=TestCh\n"
+        "SESSION_PATH=sess/foo\n"
+        "DAILY_RUN_HOUR=7\n"
+        "SQLSERVER_CONN_STR=DRIVER={ODBC Driver 17 for SQL Server};SERVER=localhost;DATABASE=aqmar;Trusted_Connection=yes\n"
+    )
+    cfg = load_config(env_path=str(env_file))
+    assert "ODBC Driver 17" in cfg.sqlserver_conn_str
+    assert "DATABASE=aqmar" in cfg.sqlserver_conn_str
+
+
+def test_load_config_sqlserver_conn_str_defaults_to_empty(tmp_path):
+    """Backwards compatible: missing SQLSERVER_CONN_STR shouldn't break setups."""
+    env_file = tmp_path / ".env"
+    env_file.write_text(
+        "TELEGRAM_API_ID=12345\n"
+        "TELEGRAM_API_HASH=abc\n"
+        "TELEGRAM_PHONE=+20111\n"
+        "TELEGRAM_2FA_PASSWORD=pw\n"
+        "CHANNEL_USERNAME=TestCh\n"
+        "SESSION_PATH=sess/foo\n"
+        "DAILY_RUN_HOUR=7\n"
+    )
+    cfg = load_config(env_path=str(env_file))
+    assert cfg.sqlserver_conn_str == ""
