@@ -18,12 +18,23 @@ import sys
 import os
 from pathlib import Path
 
+# Force UTF-8 on stdout/stderr — Arabic characters in row.name (printed on
+# every reprocess) crash Windows console default cp1252 ('charmap codec'
+# error). Same fix as scripts/phase3_daily.py.
+if hasattr(sys.stdout, 'reconfigure'):
+    sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+    sys.stderr.reconfigure(encoding='utf-8', errors='replace')
+
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from src.config import load_config
 from src.telegram_client import TelegramFetcher
 from src.pipeline import process_message
 from src.parser_caption import parse_caption
+from src.excel_writer import ExcelWriter
+from src.state import State
 from openpyxl import load_workbook
+
+STATE_PATH = "data/state.json"
 
 EXCEL_PATH = "data/martyrs.xlsx"
 PHOTOS_DIR = "data/photos"
@@ -114,7 +125,22 @@ async def main(msg_id: int, update: bool):
         if ok:
             print(f"\nExcel row for msg {msg_id} updated in {EXCEL_PATH}.")
         else:
-            print(f"\nNo existing row for msg {msg_id} in {EXCEL_PATH}; not written.")
+            # No existing row → append it via ExcelWriter (handles the workbook
+            # init / RTL setup / bold birth+martyrdom styling). Also mark the
+            # msg as processed in state.json so the next phase3_daily run skips
+            # it. This is the recovery path for messages the daily run failed
+            # to append (e.g. msg 874 — cp1252 charmap codec error before fix).
+            writer = ExcelWriter(EXCEL_PATH)
+            writer.ensure_initialized()
+            appended = writer.append_row(row)
+            if appended:
+                writer.save()
+                state = State.load(STATE_PATH)
+                state.mark_processed(msg_id, row.extraction_status)
+                state.save(STATE_PATH)
+                print(f"\nNo existing row; appended msg {msg_id} to {EXCEL_PATH} + marked processed in state.json.")
+            else:
+                print(f"\nNo existing row, but ExcelWriter.append_row also refused (duplicate msg_id?).")
 
     await fetcher.disconnect()
 

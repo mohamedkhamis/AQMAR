@@ -19,6 +19,17 @@ import logging
 from pathlib import Path
 from datetime import datetime
 
+# Force UTF-8 on stdout/stderr so Arabic OCR output, log paths with non-Latin
+# chars, and exception messages don't crash on Windows console default cp1252
+# ("'charmap' codec can't encode characters in position N" — empirically hit
+# on msg 874 during the 2026-05-16 run, losing that message's Excel row).
+# Python 3.7+ provides reconfigure(). Scheduled-task runs already get UTF-8
+# via setup_daily_trigger.ps1's $env:PYTHONIOENCODING=utf-8; this protects
+# manual `python scripts\phase3_daily.py` invocations from a PowerShell shell.
+if hasattr(sys.stdout, 'reconfigure'):
+    sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+    sys.stderr.reconfigure(encoding='utf-8', errors='replace')
+
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from src.config import load_config
 from src.telegram_client import TelegramFetcher
