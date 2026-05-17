@@ -1,16 +1,25 @@
 # scripts/phase3_daily.py
-"""Daily incremental run. Picks up where Phase 2 left off and processes
-any new messages posted to the channel since the last run.
+"""Daily incremental run. Picks up where the last run left off and processes
+any new messages posted to the channel.
 
-Designed to run unattended via Windows Task Scheduler. Auth session and
-all credentials come from .env. Logs go to logs/daily.log.
+Designed to run unattended via Windows Task Scheduler. Auth + credentials
+come from .env. Logs go to logs/daily.log.
+
+Backend (post-2026-05-17 migration to SQL Server):
+  - Writes go to SQL Server `dbo.martyrs` via src.sqlserver_client.upsert_martyr
+  - Every new row lands with verification_status='unverified' (default)
+  - Admin reviews + corrects in the SPA, marks verified
+  - Publishes happen via scripts/export_to_json.py (Batch 6)
 
 Idempotent:
-  - state.json tracks every msg_id ever processed → never reprocesses.
-  - The Excel writer's append_row also skips duplicate msg_ids defensively.
-  - Within a single batch, also skips intra-batch duplicates by name
-    (without doing the full HD-resolution dedup — the chronological
-    order means we keep the first of two same-name posts in this batch).
+  - state.json tracks every msg_id ever processed — never reprocesses
+  - SQL Server upsert is also idempotent by msg_id (defensive belt-and-braces)
+  - Intra-batch duplicate names are skipped by name (chronological order
+    preserved — first of two same-name posts in a batch wins)
+
+Crash resilience:
+  - state.save() and upsert_martyr both commit per-message, so a crash
+    at message N only loses the in-flight message's work
 """
 import asyncio
 import os
@@ -22,10 +31,9 @@ from datetime import datetime
 # Force UTF-8 on stdout/stderr so Arabic OCR output, log paths with non-Latin
 # chars, and exception messages don't crash on Windows console default cp1252
 # ("'charmap' codec can't encode characters in position N" — empirically hit
-# on msg 874 during the 2026-05-16 run, losing that message's Excel row).
-# Python 3.7+ provides reconfigure(). Scheduled-task runs already get UTF-8
-# via setup_daily_trigger.ps1's $env:PYTHONIOENCODING=utf-8; this protects
-# manual `python scripts\phase3_daily.py` invocations from a PowerShell shell.
+# on msg 874 during the 2026-05-16 run). Python 3.7+ provides reconfigure().
+# Scheduled-task runs already get UTF-8 via setup_daily_trigger.ps1's
+# $env:PYTHONIOENCODING=utf-8; this protects manual invocations from a shell.
 if hasattr(sys.stdout, 'reconfigure'):
     sys.stdout.reconfigure(encoding='utf-8', errors='replace')
     sys.stderr.reconfigure(encoding='utf-8', errors='replace')
@@ -34,9 +42,9 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from src.config import load_config
 from src.telegram_client import TelegramFetcher
 from src.pipeline import process_message
-from src.excel_writer import ExcelWriter
 from src.state import State
 from src.parser_caption import parse_caption
+from src.sqlserver_client import make_conn, martyr_row_to_db_dict, upsert_martyr
 
 logging.basicConfig(
     level=logging.INFO,
@@ -47,7 +55,6 @@ logging.basicConfig(
     ],
 )
 
-EXCEL_PATH = "data/martyrs.xlsx"
 STATE_PATH = "data/state.json"
 PHOTOS_DIR = "data/photos"
 FRAMES_DIR = "data/frames"
@@ -59,15 +66,10 @@ async def main():
     state = State.load(STATE_PATH)
     min_id = (state.last_processed_msg_id or 0) + 1
 
-    # Supabase sync is optional — only built if .env is configured.
-    from src.supabase_client import make_sync_from_config
-    supabase_sync = None
-    if cfg.supabase_url and cfg.supabase_service_role_key:
-        try:
-            supabase_sync = make_sync_from_config(cfg)
-            print(f"Supabase: writing to {cfg.supabase_url}")
-        except Exception as e:
-            logging.warning(f"Supabase init failed (writes will be skipped): {e}")
+    # SQL Server connection — required (no Excel/Supabase fallback anymore).
+    # Fail fast with a clear message if the conn string is missing.
+    db = make_conn(cfg)
+    print(f"SQL Server connected → dbo.martyrs (verification_status defaults to 'unverified')")
 
     fetcher = TelegramFetcher(
         cfg.api_id, cfg.api_hash, cfg.phone, cfg.two_fa_password,
@@ -82,6 +84,7 @@ async def main():
 
     if not new_videos:
         await fetcher.disconnect()
+        db.close()
         return
 
     # Build a photo index over the entire new batch (covers cross-day pairs too)
@@ -100,10 +103,9 @@ async def main():
         if nm and nm not in name_to_photo:
             name_to_photo[nm] = p
 
-    writer = ExcelWriter(EXCEL_PATH)
-    writer.ensure_initialized()
-
     seen_names = set()
+    upserted = 0
+    failed = 0
     for tg in new_videos:
         if state.is_processed(tg.msg_id):
             continue
@@ -122,28 +124,17 @@ async def main():
                 PHOTOS_DIR, FRAMES_DIR, MISSING_BIRTH_LOG,
                 paired_photo_msg=paired,
             )
-            writer.append_row(row)
+
+            # Convert MartyrRow → dict (handles empty-string → None coercion +
+            # ocr_* mirror population) and upsert into SQL Server. The upsert
+            # commits per-call (incremental persistence), so a crash at message
+            # N only loses the in-flight message's work.
+            payload = martyr_row_to_db_dict(row)
+            upsert_martyr(db, payload)
+
             state.mark_processed(tg.msg_id, row.extraction_status)
-
-            # NEW: push to Supabase (if configured). Errors don't abort the run —
-            # Excel is still the local backup.
-            if supabase_sync:
-                try:
-                    photo_url = ""
-                    if row.photo_path and os.path.exists(row.photo_path):
-                        supabase_sync.upload_photo(row.msg_id, row.photo_path)
-                        photo_url = supabase_sync.public_photo_url(row.msg_id)
-                    supabase_sync.upsert_martyr_row(row, photo_url=photo_url)
-                except Exception as e:
-                    logging.warning(f"Supabase write failed for msg {tg.msg_id}: {e}")
-
-            # Incremental persistence — write Excel + state after EVERY processed
-            # message so a crash mid-loop loses at most this one message's work
-            # rather than the entire run. ExcelWriter.save() rewrites the whole
-            # workbook each call (~1-2 MB, sub-second), so the cost is negligible
-            # compared to OCR/video time per message.
-            writer.save()
             state.save(STATE_PATH)
+            upserted += 1
 
             print(f"  msg {tg.msg_id}: {row.extraction_status} | "
                   f"birth={row.birth_date} | mart={row.martyrdom_date}")
@@ -152,13 +143,14 @@ async def main():
             state.mark_processed(tg.msg_id, "failed")
             # Also persist the failure marker so the next run doesn't retry it.
             state.save(STATE_PATH)
+            failed += 1
 
-    # Final save is now redundant in the happy path (every iteration persists),
-    # but kept as a defensive fallback for any state mutated outside the loop.
-    writer.save()
     state.save(STATE_PATH)
     await fetcher.disconnect()
-    print(f"Daily run complete. Processed {len(new_videos)} new videos.")
+    db.close()
+    print(f"Daily run complete. Upserted {upserted} rows to SQL Server "
+          f"({failed} failures). All new rows start as 'unverified' — review "
+          f"via the admin SPA.")
 
 
 if __name__ == "__main__":
