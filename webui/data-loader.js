@@ -1,13 +1,18 @@
 // webui/data-loader.js
-// Loads martyrs from Supabase. Replaces the old fetch-from-JSON path.
+// Loads martyrs from the local AQMAR admin API.
+//
+// Falls back to the on-disk data/martyrs.json file when the API is
+// unreachable (e.g. running the SPA from GitHub Pages where the API
+// server isn't available, or before `python scripts/admin_server.py`
+// is started locally).
 
 (function (global) {
   "use strict";
 
   function mergeOverrides(baseMartyrs, overridesEdits) {
     // Kept for backward compat with any leftover overrides.json files.
-    // In the Supabase world, baseMartyrs are already the canonical merged rows,
-    // so callers typically pass overridesEdits={} and this is a near-no-op.
+    // In the SQL Server world, baseMartyrs are already the canonical merged
+    // rows, so callers typically pass overridesEdits={} and this is a near-no-op.
     const norm = {};
     for (const k of Object.keys(overridesEdits || {})) norm[String(k)] = overridesEdits[k];
     return baseMartyrs.map(row => {
@@ -20,36 +25,52 @@
     });
   }
 
-  // Mark rows whose manual_edited_at column is non-null with
-  // _overridden_fields: ["manual_edit"]. Currently consumed only via the
-  // `allRows` key in loadData()'s return; Task 10 (admin-edit) will wire
-  // this into the Alpine state so the ✏️ badge surfaces edits made through
-  // the new Supabase admin flow (the legacy badge reads localStorage
-  // edits[m.id] instead — see index.html).
-  function annotateManualEdits(rows) {
-    return rows.map(r => ({
-      ...r,
-      _overridden_fields: r.manual_edited_at ? ["manual_edit"] : [],
-    }));
+  // Annotate each row with a `_verification` shorthand the templates can
+  // check ('unverified' | 'verified' | 'rejected'). _overridden_fields is
+  // kept for the older ✏️ badge logic in case anything still consumes it.
+  function annotateVerification(rows) {
+    return rows.map(r => {
+      const status = r.verification_status || "unverified";
+      return {
+        ...r,
+        _verification: status,
+        _overridden_fields: status === "verified" ? ["verified"] : [],
+      };
+    });
   }
 
+  // Try the local admin API first; fall back to the on-disk JSON snapshot.
   async function loadData() {
-    if (!global.AQMAR_SB) {
-      throw new Error("Supabase client not initialized. Check webui/config.js " +
-        "for valid supabaseUrl + supabaseAnonKey.");
+    if (global.AQMAR_API) {
+      try {
+        const rows = await global.AQMAR_API.get("/martyrs");
+        const annotated = annotateVerification(rows);
+        return {
+          generated_at: new Date().toISOString(),
+          channel: "AqmarTofan",
+          source: "api",
+          martyrs: rows,
+          overrides: {},
+          allRows: annotated,
+        };
+      } catch (e) {
+        console.warn("API load failed, falling back to data/martyrs.json:", e.message);
+      }
     }
-    const { data, error } = await global.AQMAR_SB
-      .from("martyrs")
-      .select("*")
-      .order("posted_date", { ascending: false });
-    if (error) throw new Error(`Supabase: ${error.message}`);
-    const rows = annotateManualEdits(data || []);
+    // Fallback: the static JSON snapshot last published by export_to_json.py
+    const res = await fetch("../data/martyrs.json", { cache: "no-cache" });
+    if (!res.ok) throw new Error(`Cannot load data/martyrs.json: ${res.status}`);
+    const raw = await res.json();
+    const rows = Array.isArray(raw) ? raw : (raw.martyrs || []);
+    const annotated = annotateVerification(rows);
     return {
-      generated_at: new Date().toISOString(),
-      channel: "AqmarTofan",
-      martyrs: data || [],
-      overrides: {},      // no longer used; kept for compat with callers
-      allRows: rows,
+      generated_at: raw.generated_at || new Date().toISOString(),
+      channel: raw.channel || "AqmarTofan",
+      source: "static-json",
+      version: raw.version,
+      martyrs: rows,
+      overrides: {},
+      allRows: annotated,
     };
   }
 
@@ -67,6 +88,7 @@
       brigade:   row.brigade || "",
       photo:     row.photo_path || "",
       source:    row.message_link || "",
+      verification: row.verification_status || "unverified",
     };
   }
 

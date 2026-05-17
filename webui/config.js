@@ -4,17 +4,16 @@
 /* ============================================================== */
 
 window.AQMAR_CONFIG = {
-  // Set to true once data/photos/N.jpg files exist on disk (or once Supabase
-  // Storage URLs are populated on each row). When false, every portrait
-  // renders as a calligraphic monogram.
+  // Set to true once data/photos/N.jpg files exist on disk. When false,
+  // every portrait renders as a calligraphic monogram.
   usePhotos: true,
 
-  // Public Supabase config. The anon key is PUBLIC by design — RLS on the
-  // Postgres tables enforces who-can-do-what server-side. Admin login uses
-  // Supabase Auth (see Authentication → Users in the Dashboard); credentials
-  // are NOT stored in this file.
-  supabaseUrl:     "https://YOURPROJECT.supabase.co",
-  supabaseAnonKey: "PASTE_YOUR_ANON_KEY_HERE",
+  // Where the admin API lives. Defaults to the same origin (so the SPA
+  // served from `python scripts/admin_server.py` on localhost:8000 just
+  // works). Override if you proxy or run the API on a different host.
+  // The admin ADMIN_TOKEN is captured by the login flow + stashed in
+  // sessionStorage — never embedded here (which is public-by-design).
+  apiBase: "",      // empty = same origin; api-client.js prepends /api itself
 };
 
 // ============================================================
@@ -61,15 +60,12 @@ window.AQMAR_CONFIG = {
     };
   });
 
-  // Expose sample data when:
-  //  - ?demo is in the URL (manual preview)
-  //  - the Supabase URL is still the placeholder (developer hasn't configured
-  //    real credentials yet — better to show 36 sample rows than a blank page)
-  const cfg = window.AQMAR_CONFIG || {};
-  const placeholder = !cfg.supabaseUrl || cfg.supabaseUrl.includes('YOURPROJECT');
+  // Expose sample data only when ?demo is in the URL (manual preview). The
+  // SPA's loadData() prefers the API → static JSON fallback → sample data,
+  // so ?demo is the only way to force sample mode now that the Supabase
+  // placeholder check is gone.
   const demoFlag = new URLSearchParams(location.search).has('demo');
-  if (demoFlag || placeholder) {
+  if (demoFlag) {
     window.AQMAR_SAMPLE_DATA = data;
-    window.AQMAR_SUPABASE_PLACEHOLDER = placeholder;
   }
 })();

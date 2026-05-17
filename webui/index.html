@@ -35,12 +35,10 @@
 <!-- Design tokens + components -->
 <link rel="stylesheet" href="styles.css">
 
-<!-- Supabase JS SDK (must load BEFORE config.js + supabase-client.js) -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
-<!-- Site config (admin password hash etc.) -->
+<!-- Site config -->
 <script src="config.js"></script>
-<script src="supabase-client.js"></script>
+<!-- Local admin API client (fetch wrapper with sessionStorage admin token). -->
+<script src="api-client.js"></script>
 
 <!-- Preserved helpers from v1: schema adapter, search predicate, admin diff logic.
      Load BEFORE Alpine + app.js so their globals are available at init time. -->
@@ -58,30 +56,30 @@
   <!-- Skip link points to the CURRENTLY ACTIVE main, not the hidden home view. -->
   <a :href="'#main-content' + (view === 'home' ? '' : '-' + view)" class="skip-link" x-text="lang === 'ar' ? 'تخطي إلى المحتوى' : 'Skip to content'"></a>
 
-  <!-- Configuration banner — renders when Supabase is still placeholder, with
-       copy that reflects which fallback path the SPA actually used:
-         · 'local-json' → green/info tone (real 388-row data from disk)
-         · 'sample-data' → amber/warning tone (36 synthetic rows). -->
-  <template x-if="window.AQMAR_SUPABASE_PLACEHOLDER">
+  <!-- Configuration banner — three distinct tones based on where data loaded from:
+         · 'api' → green/info: live SQL Server data via admin server
+         · 'static-json' → amber/warning: published snapshot (admin server not running)
+         · 'sample-data' → red/warning: ?demo mode, synthetic rows only -->
+  <template x-if="dataSource && dataSource !== 'api'">
     <div role="status"
          class="px-4 py-2.5 text-center text-[13px]"
-         :style="dataSource === 'local-json'
-           ? 'background:#dcfce7; color:#14532d; border-bottom:1px solid #4ade80;'
-           : 'background:#fef3c7; color:#78350f; border-bottom:1px solid #fbbf24;'">
+         :style="dataSource === 'static-json'
+           ? 'background:#fef3c7; color:#78350f; border-bottom:1px solid #fbbf24;'
+           : 'background:#fee2e2; color:#7f1d1d; border-bottom:1px solid #f87171;'">
       <span x-show="lang === 'ar'">
-        <span x-show="dataSource === 'local-json'">
-          📂 يتم تحميل البيانات من <code class="font-latin-sans">data/martyrs.json</code> محلياً — اضبط <code class="font-latin-sans">supabaseUrl</code> و <code class="font-latin-sans">supabaseAnonKey</code> في <code class="font-latin-sans">webui/config.js</code> للنشر.
+        <span x-show="dataSource === 'static-json'">
+          📂 يتم تحميل البيانات من اللقطة المنشورة (<code class="font-latin-sans">data/martyrs.json</code>) — شغّل <code class="font-latin-sans">python scripts\admin_server.py</code> للوصول إلى الواجهة الإدارية مع البيانات الحيّة.
         </span>
-        <span x-show="dataSource === 'sample-data' || dataSource === null">
-          ⚠️ بيانات العرض التجريبية مفعّلة — حدّد <code class="font-latin-sans">supabaseUrl</code> و <code class="font-latin-sans">supabaseAnonKey</code> في <code class="font-latin-sans">webui/config.js</code> لرؤية البيانات الفعلية.
+        <span x-show="dataSource === 'sample-data'">
+          ⚠️ وضع العرض التجريبي مفعّل — أزِل <code class="font-latin-sans">?demo</code> من العنوان لرؤية البيانات الفعلية.
         </span>
       </span>
       <span x-show="lang === 'en'">
-        <span x-show="dataSource === 'local-json'">
-          📂 Loading from local <code class="font-latin-sans">data/martyrs.json</code> — set <code class="font-latin-sans">supabaseUrl</code> and <code class="font-latin-sans">supabaseAnonKey</code> in <code class="font-latin-sans">webui/config.js</code> to deploy.
+        <span x-show="dataSource === 'static-json'">
+          📂 Loading from published snapshot (<code class="font-latin-sans">data/martyrs.json</code>) — run <code class="font-latin-sans">python scripts\admin_server.py</code> for the live admin UI.
         </span>
-        <span x-show="dataSource === 'sample-data' || dataSource === null">
-          ⚠️ Demo data active — set <code class="font-latin-sans">supabaseUrl</code> and <code class="font-latin-sans">supabaseAnonKey</code> in <code class="font-latin-sans">webui/config.js</code> to see real data.
+        <span x-show="dataSource === 'sample-data'">
+          ⚠️ Demo mode active — remove <code class="font-latin-sans">?demo</code> from the URL to see real data.
         </span>
       </span>
     </div>
@@ -930,12 +928,20 @@
           </label>
         </div>
 
-        <div class="flex gap-2.5 justify-end mt-3.5 pt-5.5" style="border-top: 1px solid var(--divider);">
+        <div class="flex gap-2.5 justify-end mt-3.5 pt-5.5 flex-wrap" style="border-top: 1px solid var(--divider);">
+          <!-- Reject: marks row 'rejected' so it won't appear in published JSON.
+               Visually de-emphasized (ghost + crimson text) to discourage accidental clicks. -->
+          <button @click="rejectEdit()" class="btn btn-ghost mr-auto"
+                  :style="'color: var(--crimson);'"
+                  :title="lang === 'ar' ? 'استبعاد من النشر القادم' : 'Exclude from next publish'">
+            ✕ <span x-text="lang === 'ar' ? 'رفض' : 'Reject'"></span>
+          </button>
           <button @click="cancelEdit()" class="btn btn-ghost"
                   x-text="lang === 'ar' ? 'إلغاء' : 'Cancel'"></button>
-          <button @click="saveEdit()" class="btn btn-primary"
-                  :style="draftDirty() ? '' : 'opacity:.5'">
-            💾 <span x-text="lang === 'ar' ? 'حفظ التعديل' : 'Save changes'"></span>
+          <!-- Save: applies edits + flips status to 'verified' in one API call.
+               Even with no changes, clicking Save = "verify as-is" (a valid action). -->
+          <button @click="saveEdit()" class="btn btn-primary">
+            ✓ <span x-text="lang === 'ar' ? 'حفظ والتحقق' : 'Save & verify'"></span>
           </button>
         </div>
       </div>
@@ -1019,7 +1025,7 @@
   <div x-show="showLogin" @click.self="showLogin = false; loginError = ''"
        @keydown.escape.window="showLogin = false; loginError = ''"
        x-trap.inert.noscroll="showLogin"
-       x-effect="if (showLogin) $nextTick(() => $el.querySelector('input[type=email]')?.focus())"
+       x-effect="if (showLogin) $nextTick(() => $el.querySelector('input[type=password]')?.focus())"
        role="dialog" aria-modal="true" aria-labelledby="login-modal-title"
        class="fixed inset-0 z-[100] flex items-center justify-center" style="background: rgba(20,15,10,0.55); backdrop-filter: blur(4px);">
     <div class="bg-paper w-[420px] rounded-lg p-8 border border-divider" style="box-shadow: 0 40px 80px -30px rgba(0,0,0,0.4);">
@@ -1035,14 +1041,12 @@
       <h3 id="login-modal-title" class="font-display text-[22px] font-medium m-0 mb-1 text-center"
           x-text="lang === 'ar' ? 'دخول المحرّر' : 'Editor login'"></h3>
       <p class="text-center text-muted text-[13px] mt-0 mb-6"
-         x-text="lang === 'ar' ? 'استخدم بريد المحرّر الذي أنشأته في Supabase' : 'Sign in with your Supabase editor email'"></p>
+         x-text="lang === 'ar' ? 'استخدم رمز الإدارة من ملف .env' : 'Use the ADMIN_TOKEN from your .env file'"></p>
       <label class="block mb-4">
-        <div class="field-label" x-text="lang === 'ar' ? 'البريد الإلكتروني' : 'Email'"></div>
-        <input type="email" class="input" x-model="loginUser" autocomplete="email" :placeholder="lang === 'ar' ? 'admin@example.com' : 'admin@example.com'">
-      </label>
-      <label class="block mb-4">
-        <div class="field-label" x-text="lang === 'ar' ? 'كلمة المرور' : 'Password'"></div>
-        <input type="password" class="input" x-model="loginPass" @keyup.enter="doLogin()" autocomplete="current-password">
+        <div class="field-label" x-text="lang === 'ar' ? 'رمز الإدارة' : 'Admin token'"></div>
+        <input type="password" class="input" x-model="loginPass" @keyup.enter="doLogin()"
+               autocomplete="current-password"
+               :placeholder="lang === 'ar' ? 'الصق الرمز هنا…' : 'Paste token here…'">
       </label>
       <div x-show="loginError" class="text-[13px] mt-[-8px] mb-3" style="color: var(--crimson);" x-text="loginError"></div>
       <div class="flex gap-2.5 mt-3.5">
