@@ -37,6 +37,7 @@ from src.sqlserver_client import (
     mark_verified,
     mark_rejected,
 )
+from src.exporter import export_to_json, DEFAULT_JSON_PATH
 
 cfg = load_config()
 
@@ -170,16 +171,27 @@ def reject_martyr(
 
 
 @app.post("/api/publish")
-def publish(_: None = Depends(require_admin)):
-    """Triggers export_to_json.py to write a new versioned snapshot.
-    Stubbed for now — wired up in Batch 6."""
-    return JSONResponse(
-        status_code=501,
-        content={
-            "error": "Publish endpoint not implemented yet",
-            "next_batch": "Batch 6 will add scripts/export_to_json.py + wire it here",
-        },
-    )
+def publish(
+    body: dict = Body(default={}),
+    db=Depends(get_db),
+    _: None = Depends(require_admin),
+):
+    """Reads verified rows from SQL Server, writes a new versioned
+    data/martyrs.json, records the publish in publish_versions. Returns
+    a summary; the SPA shows it in a confirmation message.
+
+    Body shape: {"note": "optional one-liner for audit trail"}
+    Returns: {"ok": true, "version": int, "row_count": int, "path": str}
+
+    NOTE: this writes the JSON locally but does NOT git-push. Use
+    scripts/publish.ps1 for the one-command publish-and-deploy flow.
+    """
+    note = (body or {}).get("note") or None
+    try:
+        result = export_to_json(db, json_path=DEFAULT_JSON_PATH, note=note)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Publish failed: {e}")
+    return {"ok": True, **result}
 
 
 # =============================================================================

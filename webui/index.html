@@ -827,11 +827,18 @@
       <div class="flex items-center gap-3.5">
         <div class="text-center">
           <div class="font-naskh text-[26px] font-bold" x-text="Object.keys(edits).length"></div>
-          <!-- Post-Supabase, edits write through immediately — this counter shows how
-               many records the admin touched in *this session*, not pending exports. -->
+          <!-- Edits write through to SQL Server immediately. This counter shows
+               how many records the admin touched in *this session*. -->
           <div class="text-[11px] opacity-75 tracking-wide"
                x-text="lang === 'ar' ? 'تعديلٌ في هذه الجلسة' : 'edits this session'"></div>
         </div>
+        <!-- Publish: writes a new versioned snapshot to data/martyrs.json from
+             verified rows. Confirms via window.confirm because it bumps the
+             version number whether or not there's anything new. -->
+        <button @click="publishNow()" class="btn btn-text" style="color: rgba(255,255,255,0.9); border: 1px solid rgba(255,255,255,0.25);"
+                :title="lang === 'ar' ? 'نشر اللقطة المُحقَّقة كملف JSON جديد' : 'Publish a new versioned snapshot of verified rows'">
+          📤 <span x-text="lang === 'ar' ? 'نشر' : 'Publish'"></span>
+        </button>
         <button @click="logout()" class="btn btn-text" style="color: rgba(255,255,255,0.75);"
                 x-text="lang === 'ar' ? 'خروج' : 'Sign out'"></button>
       </div>

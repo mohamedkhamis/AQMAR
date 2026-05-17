@@ -483,6 +483,29 @@ function aqmar() {
       this.editingId = null;
       this.draft = {};
     },
+    // Trigger a publish from the admin header. Confirms first, then POSTs to
+    // /api/publish which writes data/martyrs.json + records publish_versions.
+    // Does NOT git-push — admin uses scripts/publish.ps1 for that.
+    async publishNow() {
+      if (!window.AQMAR_API) return;
+      const note = window.prompt(
+        this.lang === 'ar'
+          ? 'وصفٌ موجزٌ لهذا النشر (اختياري — اضغط Enter للتخطّي):'
+          : 'Optional one-line note for this publish (press Enter to skip):',
+        ''
+      );
+      if (note === null) return;    // user cancelled
+      try {
+        const result = await window.AQMAR_API.post('/publish', { note: note || null });
+        const msg = this.lang === 'ar'
+          ? `تم النشر! النسخة ${result.version} (${result.row_count} سجلاً).\n\nالخطوة التالية: git add data/martyrs.json && git commit && git push`
+          : `Published! Version ${result.version} (${result.row_count} rows).\n\nNext: git add data/martyrs.json && git commit && git push`;
+        alert(msg);
+      } catch (e) {
+        alert((this.lang === 'ar' ? 'فشل النشر:\n' : 'Publish failed:\n') + e.message);
+      }
+    },
+
     // Mark a row 'rejected' (won't be included in published JSON).
     async rejectEdit() {
       const m = this.editingMartyr();

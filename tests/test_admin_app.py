@@ -195,10 +195,53 @@ def test_reject_404_when_missing(client, mock_db, monkeypatch):
 # Publish stub
 # =============================================================================
 
-def test_publish_returns_501_until_batch_6(client):
+def test_publish_calls_export_to_json_and_returns_summary(client, mock_db, monkeypatch):
+    """POST /api/publish should call exporter.export_to_json and surface its
+    {version, row_count, path} return as part of the response."""
+    monkeypatch.setattr(admin_app, "export_to_json",
+                        lambda conn, json_path, note: {
+                            "version": 7,
+                            "row_count": 312,
+                            "path": "/tmp/martyrs.json",
+                        })
+
+    r = client.post("/api/publish",
+                    json={"note": "weekly snapshot"},
+                    headers=VALID_TOKEN_HEADER)
+    assert r.status_code == 200
+    body = r.json()
+    assert body == {
+        "ok": True,
+        "version": 7,
+        "row_count": 312,
+        "path": "/tmp/martyrs.json",
+    }
+
+
+def test_publish_works_with_no_body(client, mock_db, monkeypatch):
+    """Empty body should be accepted; note defaults to None."""
+    notes_seen = []
+    monkeypatch.setattr(admin_app, "export_to_json",
+                        lambda conn, json_path, note: (notes_seen.append(note), {
+                            "version": 1, "row_count": 0, "path": "/tmp/x.json",
+                        })[1])
     r = client.post("/api/publish", headers=VALID_TOKEN_HEADER)
-    assert r.status_code == 501
-    assert "not implemented" in r.json()["error"].lower()
+    assert r.status_code == 200
+    assert notes_seen == [None]
+
+
+def test_publish_500_when_exporter_raises(client, mock_db, monkeypatch):
+    def boom(conn, json_path, note):
+        raise RuntimeError("db connection lost mid-publish")
+    monkeypatch.setattr(admin_app, "export_to_json", boom)
+    r = client.post("/api/publish", headers=VALID_TOKEN_HEADER)
+    assert r.status_code == 500
+    assert "db connection lost mid-publish" in r.json()["detail"]
+
+
+def test_publish_requires_admin_token(client):
+    r = client.post("/api/publish")
+    assert r.status_code == 403
 
 
 # =============================================================================
