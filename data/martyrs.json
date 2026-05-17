@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-05-17T10:46:54",
+  "generated_at": "2026-05-17T12:15:18",
   "channel": "AqmarTofan",
   "martyrs": [
     {
@@ -6785,6 +6785,38 @@
       "posted_date": "2026-05-16 18:27",
       "message_link": "https://t.me/AqmarTofan/915",
       "extraction_status": "partial_birth"
+    },
+    {
+      "msg_id": 922,
+      "name": "بلال محمد جودة",
+      "name_normalized": "بلال محمد جوده",
+      "birth_date": "1987-02-15",
+      "martyrdom_date": "2024-11-05",
+      "city": "",
+      "military_rank": "قائد سرية",
+      "weapon": "",
+      "battalion": "كتيبة الشهيد عبد الرؤوف نبهان",
+      "brigade": "لواء الشمال",
+      "photo_path": "../data/photos/922.jpg",
+      "posted_date": "2026-05-16 20:01",
+      "message_link": "https://t.me/AqmarTofan/922",
+      "extraction_status": "complete"
+    },
+    {
+      "msg_id": 924,
+      "name": "خالد علي عبد الرحمن",
+      "name_normalized": "خالد علي عبد الرحمن",
+      "birth_date": "1962-01-08",
+      "martyrdom_date": "2023-11-29",
+      "city": "",
+      "military_rank": "قائد فصيل",
+      "weapon": "",
+      "battalion": "كتيبة حطين",
+      "brigade": "لواء الوسطى",
+      "photo_path": "../data/photos/924.jpg",
+      "posted_date": "2026-05-17 07:03",
+      "message_link": "https://t.me/AqmarTofan/924",
+      "extraction_status": "complete"
     }
   ]
 }
