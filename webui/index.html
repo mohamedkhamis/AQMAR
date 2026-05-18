@@ -956,29 +956,84 @@
 
     <!-- Edit list -->
     <div x-show="!editingId">
-      <div class="bg-paper border border-divider rounded-md p-4 mb-4 flex gap-3.5 items-center">
-        <input class="input flex-1" x-model="adminSearch"
-               :placeholder="lang === 'ar' ? 'ابحث عن سجلٍ لتحريره…' : 'Find a record to edit…'">
-        <div class="text-[13px] text-muted">
-          <span x-text="adminList().length"></span>
-          <span x-text="lang === 'ar' ? 'سجلًّا' : 'records'"></span>
+      <!-- ===== Filter bar: global search + STATUS pills + counts + clear ===== -->
+      <div class="bg-paper border border-divider rounded-md p-4 mb-4">
+        <!-- Row 1: global search + total count + clear-filters button -->
+        <div class="flex gap-3 items-center mb-3">
+          <input class="input flex-1" x-model="adminSearch"
+                 :placeholder="lang === 'ar' ? 'ابحث في كل الأعمدة…' : 'Search all columns…'">
+          <div class="text-[13px] text-muted whitespace-nowrap">
+            <span class="font-medium text-ink" x-text="adminList().length"></span>
+            <span class="opacity-60"> / </span>
+            <span x-text="all.length"></span>
+            <span x-text="lang === 'ar' ? ' سجلًّا' : ' rows'"></span>
+          </div>
+          <button @click="adminClearFilters()" class="btn btn-ghost"
+                  x-show="adminSearch || adminStatusFilter !== 'all' || Object.values(adminColFilters).some(v => v)"
+                  x-text="lang === 'ar' ? 'مسح الفلاتر' : 'Clear filters'"></button>
+        </div>
+
+        <!-- Row 2: STATUS pills (the headline filter for the verification workflow) -->
+        <div class="flex flex-wrap gap-2 items-center">
+          <span class="text-[12px] text-muted font-medium uppercase tracking-[0.1em]"
+                x-text="lang === 'ar' ? 'الحالة:' : 'Status:'"></span>
+          <template x-for="opt in adminStatusOptions" :key="opt.v">
+            <button @click="adminStatusFilter = opt.v" type="button"
+                    :aria-pressed="adminStatusFilter === opt.v ? 'true' : 'false'"
+                    class="rounded-full px-3 py-1 text-[12px] font-body inline-flex items-center gap-2 border"
+                    :style="adminStatusFilter === opt.v
+                      ? `background: ${opt.color}; color: var(--paper); border-color: ${opt.color};`
+                      : `background: transparent; color: ${opt.color}; border-color: var(--divider);`">
+              <span x-text="opt.label"></span>
+              <span class="opacity-70 font-latin-sans tabular-nums"
+                    x-text="adminCountByStatus(opt.v)"></span>
+            </button>
+          </template>
         </div>
       </div>
 
+      <!-- ===== Table: sortable headers + per-column filter row ===== -->
       <table class="w-full bg-paper border border-divider rounded-md overflow-hidden text-[14px]" style="border-collapse: collapse;">
         <thead>
+          <!-- Sortable column headers -->
           <tr class="bg-page-2" style="border-bottom: 1px solid var(--divider);">
-            <template x-for="h in adminHeaders" :key="h">
-              <th class="p-3.5 text-start font-body text-[11px] font-medium text-muted uppercase tracking-[0.12em]" x-text="h"></th>
+            <template x-for="col in adminCols" :key="col.id">
+              <th class="p-3.5 text-start" :style="`width: ${col.width};`">
+                <button @click="adminSetSort(col.id)" type="button"
+                        class="bg-transparent border-0 p-0 cursor-pointer text-start font-body text-[11px] font-medium uppercase tracking-[0.12em] inline-flex items-center gap-1"
+                        :style="adminSortBy === col.id ? 'color: var(--ink);' : 'color: var(--muted);'"
+                        :title="lang === 'ar' ? 'انقر للترتيب' : 'Click to sort'">
+                  <span x-text="col.label"></span>
+                  <span class="font-latin-sans" x-text="adminSortIndicator(col.id)"></span>
+                </button>
+              </th>
             </template>
-            <th></th>
+            <th style="width: 90px;"></th><!-- Edit button column, no sort -->
+          </tr>
+          <!-- Per-column filter inputs (skipped for id + status which are filtered elsewhere).
+               Uses :value + @input instead of x-model because x-model can't take a dynamic
+               key expression (col.id) — Alpine treats x-model as a literal directive. -->
+          <tr class="bg-page-2" style="border-bottom: 1px solid var(--divider);">
+            <template x-for="col in adminCols" :key="'filter-'+col.id">
+              <td class="px-2 pb-2">
+                <input x-show="col.filterable"
+                       :value="adminColFilters[col.id]"
+                       @input="adminColFilters[col.id] = $event.target.value"
+                       class="input w-full"
+                       style="padding: 4px 8px; font-size: 12px; font-weight: normal;"
+                       :placeholder="lang === 'ar' ? 'تصفية…' : 'filter…'">
+              </td>
+            </template>
+            <td></td>
           </tr>
         </thead>
         <tbody>
           <template x-for="m in adminList().slice(0, adminLimit)" :key="m.id">
             <tr style="border-bottom: 1px solid var(--divider);"
                 :style="edits[m.id] ? 'background: rgba(184,146,74,0.06);' : ''">
+              <!-- # -->
               <td class="p-3.5 text-muted font-latin-sans tabular-nums" x-text="String(m.id).padStart(3,'0')"></td>
+              <!-- Name + portrait + age -->
               <td class="p-3.5">
                 <div class="flex items-center gap-2.5">
                   <div x-html="renderPortrait(m, 36, false)"></div>
@@ -988,30 +1043,63 @@
                   </div>
                 </div>
               </td>
-              <td class="p-3.5 tabular-nums text-ink-2" x-text="m.birth"></td>
-              <td class="p-3.5 tabular-nums text-ink-2" x-text="m.martyrdom"></td>
-              <td class="p-3.5" x-text="m.city"></td>
-              <td class="p-3.5 text-[13px] text-muted" x-text="m.battalion"></td>
+              <!-- Born -->
+              <td class="p-3.5 tabular-nums text-ink-2" x-text="m.birth || '—'"></td>
+              <!-- Martyrdom -->
+              <td class="p-3.5 tabular-nums text-ink-2" x-text="m.martyrdom || '—'"></td>
+              <!-- City -->
+              <td class="p-3.5" x-text="m.city || '—'"></td>
+              <!-- Battalion -->
+              <td class="p-3.5 text-[13px] text-muted" x-text="m.battalion || '—'"></td>
+              <!-- STATUS (verification_status with color coding, plus session-edit marker) -->
               <td class="p-3.5">
-                <span x-show="edits[m.id]" class="badge badge-olive" x-text="lang === 'ar' ? 'مُعَدَّل' : 'edited'"></span>
-                <span x-show="!edits[m.id]" class="inline-flex items-center gap-1.5 text-muted text-[12px]">
-                  <span class="w-1.5 h-1.5 rounded-full bg-forest"></span>
-                  <span x-text="lang === 'ar' ? 'مكتمل' : 'complete'"></span>
-                </span>
+                <div class="flex flex-col gap-1.5">
+                  <!-- unverified -->
+                  <span x-show="(m.verification || 'unverified') === 'unverified'"
+                        class="inline-flex items-center gap-1.5 text-[12px]"
+                        style="color: var(--olive);">
+                    <span class="w-1.5 h-1.5 rounded-full" style="background: var(--olive);"></span>
+                    <span x-text="lang === 'ar' ? 'غير محقق' : 'Unverified'"></span>
+                  </span>
+                  <!-- verified -->
+                  <span x-show="m.verification === 'verified'"
+                        class="inline-flex items-center gap-1.5 text-[12px] font-medium"
+                        style="color: var(--forest);">
+                    <span style="font-size: 13px;">✓</span>
+                    <span x-text="lang === 'ar' ? 'محقق' : 'Verified'"></span>
+                  </span>
+                  <!-- rejected -->
+                  <span x-show="m.verification === 'rejected'"
+                        class="inline-flex items-center gap-1.5 text-[12px] font-medium"
+                        style="color: var(--crimson);">
+                    <span style="font-size: 13px;">✕</span>
+                    <span x-text="lang === 'ar' ? 'مرفوض' : 'Rejected'"></span>
+                  </span>
+                  <!-- Session-edit marker (secondary; means "you touched this in this browser tab") -->
+                  <span x-show="edits[m.id]" class="badge badge-olive" style="padding: 1px 6px; font-size: 10px;"
+                        x-text="lang === 'ar' ? 'مُعَدَّل في هذه الجلسة' : 'edited this session'"></span>
+                </div>
               </td>
+              <!-- Edit button -->
               <td class="p-3.5">
-                <button @click="editMartyr(m.id)" class="bg-transparent border border-divider rounded-full px-3 py-1 text-[12px] text-ink-2 font-body">
+                <button @click="editMartyr(m.id)" class="bg-transparent border border-divider rounded-full px-3 py-1 text-[12px] text-ink-2 font-body whitespace-nowrap">
                   ✎ <span x-text="lang === 'ar' ? 'تحرير' : 'Edit'"></span>
                 </button>
               </td>
             </tr>
           </template>
+          <!-- Empty state when filters yield nothing -->
+          <tr x-show="adminList().length === 0">
+            <td colspan="8" class="p-8 text-center text-muted">
+              <div x-text="lang === 'ar' ? 'لا توجد سجلات مطابقة' : 'No matching records'"></div>
+              <button @click="adminClearFilters()" class="btn btn-text mt-2"
+                      x-text="lang === 'ar' ? 'مسح الفلاتر' : 'Clear filters'"></button>
+            </td>
+          </tr>
         </tbody>
       </table>
 
-      <!-- Pagination — visible only when more rows exist beyond the current limit.
-           Previously the admin table was hard-capped at 30, hiding ~92% of the
-           dataset. Search still narrows down faster than paging through. -->
+      <!-- Pagination — visible only when more rows exist beyond the current limit. -->
       <div x-show="adminList().length > adminLimit" class="flex flex-wrap items-center justify-center gap-3 mt-5 pt-4" style="border-top: 1px dashed var(--divider);">
         <button @click="adminLimit += 30" class="btn btn-ghost"
                 x-text="lang === 'ar'

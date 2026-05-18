@@ -18,6 +18,15 @@ function aqmar() {
     draft: {},
     edits: {},
     adminSearch: '',
+    // Admin table filters + sort. Status filter is the headline control (the
+    // verification workflow's whole point), so it gets prominent pill buttons
+    // above the table. Per-column filters live in a row below the headers.
+    adminStatusFilter: 'all',   // 'all' | 'unverified' | 'verified' | 'rejected'
+    adminColFilters: {
+      name: '', born: '', martyrdom: '', city: '', battalion: '',
+    },
+    adminSortBy: 'verification', // any of adminCols[].id — default to status so unverified rows bubble to top
+    adminSortDir: 'asc',         // 'asc' | 'desc'
     adminLimit: 30,           // pagination cap for the admin table — bumped by "Show more"
     mobileNavOpen: false,
     loading: true,            // true until the initial loadData() resolves (or errors out)
@@ -421,13 +430,104 @@ function aqmar() {
         ar ? 'الحالة' : 'Status',
       ];
     },
+    // Columns for the admin table. Drives both the header rendering AND
+    // which fields are sortable / filterable. Status column is required
+    // for the verification workflow — kept rightmost as the visual anchor.
+    get adminCols() {
+      const ar = this.lang === 'ar';
+      return [
+        { id: 'id',           label: '#',                          width: '80px',  sortable: true,  filterable: false },
+        { id: 'name',         label: ar ? 'الاسم' : 'Name',         width: 'auto',  sortable: true,  filterable: true  },
+        { id: 'born',         label: ar ? 'الميلاد' : 'Born',       width: '130px', sortable: true,  filterable: true  },
+        { id: 'martyrdom',    label: ar ? 'الاستشهاد' : 'Martyrdom', width: '130px', sortable: true,  filterable: true  },
+        { id: 'city',         label: ar ? 'المدينة' : 'City',       width: '120px', sortable: true,  filterable: true  },
+        { id: 'battalion',    label: ar ? 'الكتيبة' : 'Battalion',  width: '180px', sortable: true,  filterable: true  },
+        { id: 'verification', label: ar ? 'الحالة' : 'Status',     width: '140px', sortable: true,  filterable: false },
+      ];
+    },
+    // Status pills above the table — drives the headline filter.
+    get adminStatusOptions() {
+      const ar = this.lang === 'ar';
+      return [
+        { v: 'all',        label: ar ? 'الكل'      : 'All',        color: 'var(--ink)'     },
+        { v: 'unverified', label: ar ? 'غير محقق' : 'Unverified', color: 'var(--olive)'  },
+        { v: 'verified',   label: ar ? 'محقق'     : 'Verified',    color: 'var(--forest)' },
+        { v: 'rejected',   label: ar ? 'مرفوض'    : 'Rejected',    color: 'var(--crimson)' },
+      ];
+    },
+    adminCountByStatus(status) {
+      if (status === 'all') return this.all.length;
+      return this.all.filter(m => (m.verification || 'unverified') === status).length;
+    },
+    // Filter + sort applied in one pass. Order matters: status filter first
+    // (most selective in the verification workflow), then global search,
+    // then per-column filters, then sort.
     adminList() {
-      // Delegate to the same Arabic-aware searchPredicate the browse view uses
-      // (handles diacritics, alef forms, ta-marbouta vs. ha-marbouta, lam-alef
-      // ligatures) instead of plain ASCII lowercase + substring.
+      let list = this.all;
+
+      // 1) Status filter (the headline pill bar)
+      if (this.adminStatusFilter !== 'all') {
+        list = list.filter(m => (m.verification || 'unverified') === this.adminStatusFilter);
+      }
+
+      // 2) Global search (Arabic-aware via searchPredicate)
       const q = this.adminSearch.trim();
-      if (!q) return this.all;
-      return this.all.filter(m => searchPredicate(m, q));
+      if (q) list = list.filter(m => searchPredicate(m, q));
+
+      // 3) Per-column filters (substring match, case-insensitive)
+      const f = this.adminColFilters;
+      const norm = (s) => (s || '').toString().toLowerCase();
+      if (f.name)      list = list.filter(m => norm(m.name).includes(norm(f.name)));
+      if (f.born)      list = list.filter(m => norm(m.birth).includes(norm(f.born)));
+      if (f.martyrdom) list = list.filter(m => norm(m.martyrdom).includes(norm(f.martyrdom)));
+      if (f.city)      list = list.filter(m => norm(m.city).includes(norm(f.city)));
+      if (f.battalion) list = list.filter(m => norm(m.battalion).includes(norm(f.battalion)));
+
+      // 4) Sort (copy first so we don't mutate this.all)
+      const key = this.adminSortBy;
+      const dir = this.adminSortDir === 'desc' ? -1 : 1;
+      const SENT = '�';   // sentinel — sorts after all real strings
+      // Map status to a numeric priority so default sort puts unverified first
+      // (the work that needs doing), then verified, then rejected.
+      const STATUS_ORDER = { unverified: 0, verified: 1, rejected: 2 };
+      const sorted = [...list].sort((a, b) => {
+        let va, vb;
+        if (key === 'verification') {
+          va = STATUS_ORDER[a.verification || 'unverified'];
+          vb = STATUS_ORDER[b.verification || 'unverified'];
+        } else if (key === 'id') {
+          va = a.id; vb = b.id;
+        } else if (key === 'born') {
+          va = a.birth || SENT; vb = b.birth || SENT;
+        } else if (key === 'martyrdom') {
+          va = a.martyrdom || SENT; vb = b.martyrdom || SENT;
+        } else {
+          va = (a[key] || SENT).toString(); vb = (b[key] || SENT).toString();
+        }
+        if (va < vb) return -1 * dir;
+        if (va > vb) return  1 * dir;
+        return 0;
+      });
+      return sorted;
+    },
+    // Click a column header to toggle sort. Same key clicked twice flips
+    // direction; different key resets direction to ascending.
+    adminSetSort(key) {
+      if (this.adminSortBy === key) {
+        this.adminSortDir = this.adminSortDir === 'asc' ? 'desc' : 'asc';
+      } else {
+        this.adminSortBy = key;
+        this.adminSortDir = 'asc';
+      }
+    },
+    adminSortIndicator(key) {
+      if (this.adminSortBy !== key) return '';
+      return this.adminSortDir === 'asc' ? ' ▲' : ' ▼';
+    },
+    adminClearFilters() {
+      this.adminSearch = '';
+      this.adminColFilters = { name: '', born: '', martyrdom: '', city: '', battalion: '' };
+      this.adminStatusFilter = 'all';
     },
 
     editMartyr(id) {
