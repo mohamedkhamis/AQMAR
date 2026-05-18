@@ -791,15 +791,14 @@ function aqmar() {
     // size: pixel size for 'fixed' mode (default). When mode='fill' the portrait
     //   absolutely fills its parent container so callers can size it via
     //   aspect-ratio CSS instead of fixed pixels — used for the big grid cards.
+    //
+    // No-photo fallback: shows only the calligraphic silhouette + frame corners.
+    // The Latin-style first-initial monogram (e.g. "AB") was removed 2026-05-18
+    // because it reads oddly in Arabic — connecting letters change shape when
+    // standalone, and double-initial conventions aren't a thing in Arabic names.
     renderPortrait(m, size, frame, mode) {
       if (!m) return '';
-      const init = initials(m.name || '');
       const tone = (m.id % 3 === 0) ? 'tone-olive' : '';
-      // Only try photo if config opts-in (silences 404 spam in dev previews).
-      // Photo URLs come from Supabase Storage (post-migration) or are absent;
-      // rows without a photo render the silhouette below cleanly. No fallback
-      // to ../data/photos/ — that path 404s on GitHub Pages where only webui/
-      // is deployed.
       const usePhotos = (window.AQMAR_CONFIG && window.AQMAR_CONFIG.usePhotos);
       const photo = usePhotos ? (m.photo || null) : null;
       const photoHtml = photo
@@ -809,7 +808,6 @@ function aqmar() {
       const sizeStyle = fill
         ? 'position:absolute; inset:0; width:100%; height:100%;'
         : `width:${size}px; height:${Math.round(size * 1.18)}px;`;
-      const monoSize = fill ? 72 : Math.round(size * 0.42);
       return `
         <div class="portrait ${tone} ${frame ? '' : 'naked'}" style="${sizeStyle}">
           ${photoHtml}
@@ -817,7 +815,6 @@ function aqmar() {
             <circle cx="50" cy="44" r="18" fill="rgba(255,255,255,0.18)" />
             <path d="M18 118 Q18 80 50 80 Q82 80 82 118 Z" fill="rgba(255,255,255,0.18)" />
           </svg>
-          <div class="monogram" style="font-size:${monoSize}px;">${esc(init)}</div>
           <span class="corner tl"></span><span class="corner tr"></span>
           <span class="corner bl"></span><span class="corner br"></span>
         </div>`;
