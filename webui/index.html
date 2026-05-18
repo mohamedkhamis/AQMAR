@@ -848,16 +848,42 @@
     <div x-show="editingId" class="grid-detail grid gap-7" style="grid-template-columns: 260px 1fr;">
       <div>
         <div x-html="renderPortrait(editingMartyr(), 220, true)"></div>
-        <!-- Photo upload not yet implemented (would need Supabase Storage write path
+
+        <!-- Source video link — opens the original Telegram post in a new tab so
+             the admin can re-watch the video / read the caption to fill in any
+             field the OCR pipeline missed. This is the ONLY way to recover data
+             OCR couldn't extract, so the button is visually loud (forest gradient
+             matching the admin banner, large play icon, two-line label, ↗ tail). -->
+        <a x-show="editingMartyr()?.source"
+           :href="editingMartyr()?.source"
+           target="_blank"
+           rel="noopener noreferrer"
+           class="mt-4 block bg-forest-grad text-paper rounded-lg overflow-hidden hover:shadow-lg transition-all"
+           style="text-decoration: none; box-shadow: 0 6px 18px -8px rgba(31,61,43,0.5);">
+          <div class="px-5 py-4 flex items-center gap-3.5">
+            <div class="flex-shrink-0 w-11 h-11 rounded-full flex items-center justify-center text-[20px]"
+                 style="background: rgba(255,255,255,0.15); backdrop-filter: blur(4px);">▶</div>
+            <div class="flex-1 min-w-0">
+              <div class="font-naskh text-[15px] font-bold leading-tight"
+                   x-text="lang === 'ar' ? 'مشاهدة الفيديو الأصلي' : 'Watch source video'"></div>
+              <div class="font-body text-[11px] mt-1" style="opacity: 0.8;"
+                   x-text="lang === 'ar' ? 'افتح المنشور في تيليجرام لاستكمال البيانات الناقصة' : 'Open Telegram post to fill in missed data'"></div>
+            </div>
+            <div class="flex-shrink-0 text-[14px]" style="opacity: 0.7;">↗</div>
+          </div>
+        </a>
+
+        <!-- Photo upload not yet implemented (would need a Storage write path
              plus image cropping/resizing). Disabled until the feature lands. -->
-        <button class="mt-3.5 w-full py-2.5 text-[13px] text-faint bg-transparent rounded font-body cursor-not-allowed"
+        <button class="mt-3 w-full py-2.5 text-[13px] text-faint bg-transparent rounded font-body cursor-not-allowed"
                 style="border: 1px dashed var(--divider);"
                 disabled
                 :title="lang === 'ar' ? 'سيُتاح لاحقاً' : 'Coming soon'"
                 x-text="lang === 'ar' ? '⬆ رفعُ صورةٍ جديدة (قريباً)' : '⬆ Upload new photo (soon)'"></button>
+
         <div class="mt-4 p-4 bg-page-2 rounded-md text-[12px] text-muted leading-[1.7]" style="border: 1px solid var(--divider);">
-          <span x-show="lang === 'ar'">التعديلاتُ تُحفظ مباشرةً في <code class="px-1 py-0.5 rounded bg-page-3">Supabase</code>، وتَظهر فوراً لجميع الزوار.</span>
-          <span x-show="lang === 'en'">Edits save directly to <code class="px-1 py-0.5 rounded bg-page-3">Supabase</code> and appear instantly for all visitors.</span>
+          <span x-show="lang === 'ar'">التعديلاتُ تُحفظ مباشرةً في <code class="px-1 py-0.5 rounded bg-page-3">SQL Server</code> المحلي، ثم تَظهر علناً عند النشر التالي.</span>
+          <span x-show="lang === 'en'">Edits save directly to local <code class="px-1 py-0.5 rounded bg-page-3">SQL Server</code> and become public on the next Publish.</span>
         </div>
       </div>
 
