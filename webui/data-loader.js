@@ -92,6 +92,15 @@
     return "../" + p;
   }
 
+  // Splits the semicolon-separated frame_paths string into an array of
+  // browser-resolvable URLs. Same backslash→forward normalization +
+  // "../" prefix as photo paths (frames live at /data/frames/ which IIS
+  // mounts alongside /data/photos/).
+  function normalizeFramePaths(s) {
+    if (!s) return [];
+    return s.split(/;\s*/).filter(Boolean).map(normalizePhotoPath);
+  }
+
   function adaptMartyrToNewSchema(row) {
     if (!row || row.msg_id === undefined || row.msg_id === null) return null;
     return {
@@ -105,6 +114,10 @@
       battalion: row.battalion || "",
       brigade:   row.brigade || "",
       photo:     normalizePhotoPath(row.photo_path || ""),
+      // OCR source frames — shown in the admin edit form so the admin can
+      // see what OCR actually extracted from the video before accepting
+      // or correcting the structured fields.
+      frames:    normalizeFramePaths(row.frame_paths),
       source:    row.message_link || "",
       verification: row.verification_status || "unverified",
     };

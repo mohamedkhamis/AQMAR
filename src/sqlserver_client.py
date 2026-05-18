@@ -31,6 +31,7 @@ COLUMNS = [
     "battalion",
     "brigade",
     "photo_path",
+    "frame_paths",
     "posted_date",
     "message_link",
     "extraction_status",
@@ -61,19 +62,19 @@ def martyr_row_to_db_dict(row) -> dict:
     in the UPDATE branch by listing only the post-OCR fields).
     """
     d = asdict(row)
-    # Local-only artifact, not in the DB
-    d.pop("frame_paths", None)
     # Capture OCR-side snapshot from the same values (first scrape only — on
     # re-scrape the upsert UPDATE branch refreshes these, which matches our
     # intent: rescrape = re-OCR, so newer ocr_* is the latest extraction).
     d["ocr_name"] = d.get("name")
     d["ocr_birth_date"] = d.get("birth_date")
     d["ocr_martyrdom_date"] = d.get("martyrdom_date")
-    # Coerce empties on every nullable text/date column
+    # Coerce empties on every nullable text/date column. frame_paths is also
+    # coerced (empty string → NULL) — the admin SPA tolerates either but
+    # NULL is cleaner.
     for k in (
         "name", "name_normalized", "birth_date", "martyrdom_date",
         "city", "military_rank", "weapon", "battalion", "brigade",
-        "photo_path", "posted_date", "message_link",
+        "photo_path", "frame_paths", "posted_date", "message_link",
         "extraction_status", "duplicate_status",
         "ocr_name", "ocr_birth_date", "ocr_martyrdom_date",
     ):

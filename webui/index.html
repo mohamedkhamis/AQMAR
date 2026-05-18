@@ -873,6 +873,77 @@
           </div>
         </a>
 
+        <!-- OCR source frames — clickable thumbnails. Birth date and martyrdom
+             date are usually visible in one of these frames (the pipeline samples
+             at video seconds 25/28/30/32/35). Click a thumbnail → expanded view
+             with prev/next + close. Helps the admin verify what OCR saw before
+             accepting / correcting the structured fields. -->
+        <div x-show="editingMartyr()?.frames && editingMartyr().frames.length > 0"
+             class="mt-4"
+             x-data="{ frameExpanded: null }">
+          <div class="flex items-baseline justify-between mb-2">
+            <div class="font-display text-[11px] text-olive tracking-[0.2em] uppercase"
+                 x-text="lang === 'ar' ? 'إطارات المصدر — OCR' : 'OCR source frames'"></div>
+            <div class="text-[10px] text-faint"
+                 x-show="frameExpanded === null"
+                 x-text="(editingMartyr()?.frames?.length || 0) + (lang === 'ar' ? ' إطار' : ' frames')"></div>
+          </div>
+
+          <!-- Strip: 3-column grid of small thumbnails -->
+          <div x-show="frameExpanded === null"
+               class="grid gap-1.5"
+               style="grid-template-columns: repeat(3, 1fr);">
+            <template x-for="(f, i) in editingMartyr().frames" :key="i">
+              <button @click="frameExpanded = i" type="button"
+                      class="bg-transparent p-0 cursor-pointer overflow-hidden rounded relative group"
+                      style="aspect-ratio: 16/9; border: 1px solid var(--divider);"
+                      :title="lang === 'ar' ? 'اضغط للتكبير' : 'Click to enlarge'">
+                <img :src="f" loading="lazy"
+                     class="w-full h-full object-cover transition-opacity"
+                     style="display: block;">
+                <!-- Frame number badge (bottom-right, semi-transparent) -->
+                <span class="absolute bottom-0.5 end-0.5 px-1.5 py-0.5 rounded font-latin-sans tabular-nums"
+                      style="background: rgba(0,0,0,0.55); color: rgba(255,255,255,0.9); font-size: 9px;"
+                      x-text="`${i + 1}/${editingMartyr().frames.length}`"></span>
+              </button>
+            </template>
+          </div>
+
+          <!-- Expanded view: one big frame + prev/next/close controls -->
+          <div x-show="frameExpanded !== null" x-cloak>
+            <img :src="editingMartyr()?.frames?.[frameExpanded]"
+                 class="w-full rounded"
+                 style="border: 1px solid var(--divider); display: block;"
+                 :alt="lang === 'ar' ? 'إطار من فيديو المصدر' : 'Frame from source video'">
+            <div class="flex items-center gap-2 mt-2">
+              <button @click="frameExpanded = (frameExpanded - 1 + editingMartyr().frames.length) % editingMartyr().frames.length"
+                      x-show="editingMartyr()?.frames?.length > 1"
+                      type="button"
+                      class="btn btn-ghost flex-1 justify-center"
+                      style="padding: 6px 8px; font-size: 12px;">
+                <span x-text="lang === 'ar' ? '→ السابق' : '← Prev'"></span>
+              </button>
+              <button @click="frameExpanded = null" type="button"
+                      class="btn btn-ghost"
+                      style="padding: 6px 12px; font-size: 12px;">
+                ✕ <span x-text="lang === 'ar' ? 'إغلاق' : 'Close'"></span>
+              </button>
+              <button @click="frameExpanded = (frameExpanded + 1) % editingMartyr().frames.length"
+                      x-show="editingMartyr()?.frames?.length > 1"
+                      type="button"
+                      class="btn btn-ghost flex-1 justify-center"
+                      style="padding: 6px 8px; font-size: 12px;">
+                <span x-text="lang === 'ar' ? 'التالي ←' : 'Next →'"></span>
+              </button>
+            </div>
+            <div class="text-[10px] text-faint mt-1.5 text-center font-latin-sans tabular-nums"
+                 x-text="`${frameExpanded + 1} / ${editingMartyr()?.frames?.length}`"></div>
+          </div>
+
+          <div x-show="frameExpanded === null" class="text-[10px] text-faint mt-1.5 leading-snug"
+               x-text="lang === 'ar' ? 'تاريخ الميلاد يَظهر عادةً في الثانية ٢٨–٣٢ من الفيديو' : 'Birth date is usually visible at video second 28–32'"></div>
+        </div>
+
         <!-- Photo upload not yet implemented (would need a Storage write path
              plus image cropping/resizing). Disabled until the feature lands. -->
         <button class="mt-3 w-full py-2.5 text-[13px] text-faint bg-transparent rounded font-body cursor-not-allowed"
