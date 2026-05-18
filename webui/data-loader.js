@@ -74,6 +74,24 @@
     };
   }
 
+  // Photo paths in the DB are stored as "data/photos/N.jpg" — and on Windows
+  // pyodbc occasionally returns them with backslashes ("data/photos\N.jpg")
+  // because that's how os.path.join concatenated them in phase3_daily.py.
+  // Two normalizations:
+  //   1. Convert \ → / so URLs are valid (browsers URL-encode \ to %5C
+  //      which StaticFiles doesn't resolve)
+  //   2. Prepend "../" if the path is relative. The SPA is served from /webui/
+  //      so a bare relative path resolves to /webui/data/photos/N.jpg — wrong.
+  //      Prepending "../" makes the browser resolve up to /data/photos/N.jpg
+  //      which is where IIS / GitHub Pages actually serve photos from.
+  // Absolute URLs and already-prefixed paths pass through unchanged.
+  function normalizePhotoPath(p) {
+    if (!p) return p;
+    p = p.replace(/\\/g, "/");
+    if (p.startsWith("http") || p.startsWith("/") || p.startsWith("../")) return p;
+    return "../" + p;
+  }
+
   function adaptMartyrToNewSchema(row) {
     if (!row || row.msg_id === undefined || row.msg_id === null) return null;
     return {
@@ -86,7 +104,7 @@
       weapon:    row.weapon || "",
       battalion: row.battalion || "",
       brigade:   row.brigade || "",
-      photo:     row.photo_path || "",
+      photo:     normalizePhotoPath(row.photo_path || ""),
       source:    row.message_link || "",
       verification: row.verification_status || "unverified",
     };
