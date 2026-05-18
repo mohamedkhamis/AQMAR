@@ -201,11 +201,17 @@ def publish(
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent
 _WEBUI_DIR = _PROJECT_ROOT / "webui"
 _PHOTOS_DIR = _PROJECT_ROOT / "data" / "photos"
+_FRAMES_DIR = _PROJECT_ROOT / "data" / "frames"
 
 if _WEBUI_DIR.exists():
     app.mount("/webui", StaticFiles(directory=_WEBUI_DIR, html=True), name="webui")
 if _PHOTOS_DIR.exists():
     app.mount("/data/photos", StaticFiles(directory=_PHOTOS_DIR), name="photos")
+# Frames are the OCR source extracts (5-6 stills per video). Shown to the
+# admin in the edit form so they can verify what OCR actually saw before
+# accepting / correcting the structured fields.
+if _FRAMES_DIR.exists():
+    app.mount("/data/frames", StaticFiles(directory=_FRAMES_DIR), name="frames")
 
 
 @app.get("/")

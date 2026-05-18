@@ -46,8 +46,9 @@ def test_martyr_row_to_db_dict_maps_all_fields():
     assert payload["martyrdom_date"] == "2024-05-17"
     assert payload["photo_path"] == "data/photos/20.jpg"
     assert payload["extraction_status"] == "complete"
-    # frame_paths is NOT pushed (local-only artifact)
-    assert "frame_paths" not in payload
+    # frame_paths is now preserved (was dropped pre-2026-05-18 — re-introduced
+    # so the admin SPA can display OCR source frames in the verification UI).
+    assert payload["frame_paths"] == "data/frames/20_28.jpg;data/frames/20_30.jpg"
     # OCR fields preserve the original (pre-edit) OCR output
     assert payload["ocr_name"] == "فلان"
     assert payload["ocr_birth_date"] == "1980-02-12"

@@ -42,6 +42,11 @@ BEGIN
         battalion           NVARCHAR(100)   NULL,
         brigade             NVARCHAR(100)   NULL,
         photo_path          NVARCHAR(500)   NULL,
+        -- Semicolon-separated list of OCR source frames extracted from the
+        -- Telegram video (e.g. "data/frames/922_28.jpg;data/frames/922_30.jpg").
+        -- Shown to the admin in the edit form so they can compare what OCR
+        -- saw vs what landed in the structured columns.
+        frame_paths         NVARCHAR(MAX)   NULL,
         posted_date         DATETIME2       NULL,
         message_link        NVARCHAR(500)   NULL,
         extraction_status   NVARCHAR(50)    NULL,    -- 'complete', 'partial_birth', etc.

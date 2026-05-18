@@ -76,7 +76,7 @@ FIELDS = [
     ("battalion",         9,  str),
     ("brigade",          10,  str),
     ("photo_path",       11,  str),
-    # column 12 = frame_paths — skipped (local-only artifact)
+    ("frame_paths",      12,  str),    # semicolon-separated OCR source frames
     ("posted_date",      13,  str),
     ("message_link",     14,  str),
     ("extraction_status",15,  str),
