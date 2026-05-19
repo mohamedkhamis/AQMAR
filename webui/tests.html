@@ -315,6 +315,7 @@
         photo_path: "../data/photos/20.jpg",
         message_link: "https://t.me/AqmarTofan/20",
         posted_date: "2024-01-01", status: "complete",
+        verification_status: "verified",
       };
       const out = adaptMartyrToNewSchema(row);
       assertEq(out, {
@@ -323,7 +324,10 @@
         city: "غزة", rank: "رقيب", weapon: "RPG",
         battalion: "كتيبة الشجاعية", brigade: "لواء غزة",
         photo: "../data/photos/20.jpg",
+        frames: [],
         source: "https://t.me/AqmarTofan/20",
+        verification: "verified",
+        isVerified: true,
       });
     });
 
@@ -336,6 +340,21 @@
       assertEq(out.martyrdom, "2024-06-01");
       assertEq(out.city, "");
       assertEq(out.rank, "");
+      // Verification defaults: no verification_status on the input row → falls
+      // back to 'unverified' / isVerified=false. New rows from the scraper land
+      // here, which is exactly the state we want for the admin queue.
+      assertEq(out.verification, "unverified");
+      assertEq(out.isVerified, false);
+    });
+
+    test("adaptMartyrToNewSchema sets isVerified=false for rejected rows", () => {
+      // Rejected rows are *not* verified — they share isVerified=false with
+      // unverified, so they bubble up to the admin's attention along with
+      // unverified rows when the grid sorts by the boolean flag.
+      const row = { msg_id: 7, name: "X", verification_status: "rejected" };
+      const out = adaptMartyrToNewSchema(row);
+      assertEq(out.verification, "rejected");
+      assertEq(out.isVerified, false);
     });
 
     test("adaptMartyrToNewSchema returns null for rows without msg_id", () => {

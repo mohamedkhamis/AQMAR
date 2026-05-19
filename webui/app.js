@@ -25,7 +25,7 @@ function aqmar() {
     adminColFilters: {
       name: '', born: '', martyrdom: '', city: '', battalion: '',
     },
-    adminSortBy: 'verification', // any of adminCols[].id — default to status so unverified rows bubble to top
+    adminSortBy: 'isVerified', // any of adminCols[].id — default to the isVerified boolean so unverified (false) bubbles to top of the queue
     adminSortDir: 'asc',         // 'asc' | 'desc'
     adminLimit: 30,           // pagination cap for the admin table — bumped by "Show more"
     mobileNavOpen: false,
@@ -442,7 +442,11 @@ function aqmar() {
         { id: 'martyrdom',    label: ar ? 'الاستشهاد' : 'Martyrdom', width: '130px', sortable: true,  filterable: true  },
         { id: 'city',         label: ar ? 'المدينة' : 'City',       width: '120px', sortable: true,  filterable: true  },
         { id: 'battalion',    label: ar ? 'الكتيبة' : 'Battalion',  width: '180px', sortable: true,  filterable: true  },
-        { id: 'verification', label: ar ? 'الحالة' : 'Status',     width: '140px', sortable: true,  filterable: false },
+        // Status column header sorts by the `isVerified` boolean (false first
+        // by default, so unverified + rejected rows bubble to the top of the
+        // verification queue). The pill itself still displays the full 3-state
+        // verification_status (unverified / verified / rejected).
+        { id: 'isVerified',   label: ar ? 'الحالة' : 'Status',     width: '140px', sortable: true,  filterable: false },
       ];
     },
     // Status pills above the table — drives the headline filter.
@@ -492,7 +496,15 @@ function aqmar() {
       const STATUS_ORDER = { unverified: 0, verified: 1, rejected: 2 };
       const sorted = [...list].sort((a, b) => {
         let va, vb;
-        if (key === 'verification') {
+        if (key === 'isVerified') {
+          // Primary: isVerified=false first (ascending). Secondary: within the
+          // false bucket, unverified comes before rejected (more urgent triage).
+          // Encoding: unverified=0, rejected=1, verified=10 — gap between
+          // false-group (0–1) and true (10) preserves boolean ordering.
+          const score = (m) => (m.isVerified ? 10 : 0) +
+                               (m.verification === 'rejected' ? 1 : 0);
+          va = score(a); vb = score(b);
+        } else if (key === 'verification') {
           va = STATUS_ORDER[a.verification || 'unverified'];
           vb = STATUS_ORDER[b.verification || 'unverified'];
         } else if (key === 'id') {
@@ -537,6 +549,14 @@ function aqmar() {
       this.draft = { ...m, ...e };
       this.view = 'admin';
       window.scrollTo({ top: 0, behavior: 'smooth' });
+      // Push the freshly-loaded draft dates into the Litepicker instances so the
+      // calendars open to the right month/year. nextTick waits for Alpine to
+      // finish rendering — important on the very first edit (before that, the
+      // pickers are still being mounted via x-init).
+      this.$nextTick(() => {
+        this.syncDraftPicker('birth');
+        this.syncDraftPicker('martyrdom');
+      });
     },
     editingMartyr() {
       return this.editingId ? this.all.find(m => m.id === this.editingId) : null;
@@ -572,12 +592,16 @@ function aqmar() {
         return;
       }
       // Merge the diff into the in-memory state + mark verified locally.
+      // isVerified must stay in sync with verification — the admin grid's
+      // default sort is keyed on isVerified, so leaving it stale would leave
+      // a row at the top of the queue even after the admin verified it.
       this.edits = { ...this.edits, [m.id]: { ...(this.edits[m.id] || {}), ...diff } };
       const idx = this.all.findIndex(x => x.id === m.id);
       if (idx >= 0) {
         this.all[idx] = {
           ...this.all[idx], ...diff,
           verification: 'verified',
+          isVerified: true,
         };
       }
       this.editingId = null;
@@ -621,8 +645,11 @@ function aqmar() {
         alert((this.lang === 'ar' ? 'تعذّر الرفض:\n' : 'Reject failed:\n') + e.message);
         return;
       }
+      // Rejected rows are not isVerified — they bubble back to the top of
+      // the admin queue alongside unverified rows for the boolean-flag sort,
+      // even though the colored pill still shows the distinct 'rejected' state.
       const idx = this.all.findIndex(x => x.id === m.id);
-      if (idx >= 0) this.all[idx] = { ...this.all[idx], verification: 'rejected' };
+      if (idx >= 0) this.all[idx] = { ...this.all[idx], verification: 'rejected', isVerified: false };
       this.editingId = null;
       this.draft = {};
     },
@@ -755,6 +782,64 @@ function aqmar() {
       const p = this._datePickers[targetField];
       if (p) p.clearSelection();
       if (el) el.value = '';
+    },
+
+    // Litepicker wirer for admin-edit date inputs (draft.birth / draft.martyrdom).
+    // Writes the selected ISO string to `this.draft[draftField]` so the existing
+    // x-model + save flow picks it up unchanged. Keyed under '_draft_<field>' in
+    // the same _datePickers pool the advanced-filter pickers use.
+    //
+    // minYear differs per field: birth can be as far back as 1900 (some martyrs
+    // were elderly), martyrdom is clamped to the war window (2023+) since the
+    // AqmarTofan channel only covers post-Oct-2023 casualties.
+    initDraftDatePicker(el, draftField) {
+      if (typeof Litepicker === 'undefined') return;
+      const self = this;
+      const currentYear = new Date().getFullYear();
+      const todayIso = new Date().toISOString().slice(0, 10);
+      const minYear = draftField === 'birth' ? 1900 : 2023;
+      const key = `_draft_${draftField}`;
+      this._datePickers[key] = new Litepicker({
+        element: el,
+        format: 'YYYY-MM-DD',
+        singleMode: true,
+        autoApply: true,
+        maxDate: todayIso,
+        dropdowns: { minYear, maxYear: currentYear, months: true, years: true },
+        setup: (picker) => {
+          picker.on('selected', (date) => {
+            self.draft[draftField] = date.format('YYYY-MM-DD');
+          });
+        },
+      });
+      // Seed the picker with whatever's already in the draft (admin opened
+      // the form before the picker had a chance to mount — common on first edit).
+      this.syncDraftPicker(draftField);
+    },
+
+    // Push the current draft date into the Litepicker so the calendar opens to
+    // the right month/year. Called from editMartyr() after this.draft is rebuilt.
+    // Tolerant of malformed OCR dates ("1985-06", "فبرايسر") — those just leave
+    // the picker uninitialized so the admin can pick a fresh date.
+    syncDraftPicker(draftField) {
+      const picker = this._datePickers[`_draft_${draftField}`];
+      if (!picker) return;
+      const v = this.draft && this.draft[draftField];
+      if (v && /^\d{4}-\d{2}-\d{2}$/.test(v)) {
+        try { picker.setDate(v); } catch (e) { /* malformed date, leave picker alone */ }
+      } else {
+        try { picker.clearSelection(); } catch (e) {}
+      }
+    },
+
+    // Clear a draft date field — used by the ✕ button next to each picker.
+    // Blanks both the draft (x-model bound) and the Litepicker's internal state.
+    clearDraftDate(draftField) {
+      if (this.draft) this.draft[draftField] = '';
+      const picker = this._datePickers[`_draft_${draftField}`];
+      if (picker) {
+        try { picker.clearSelection(); } catch (e) {}
+      }
     },
     clearAdvancedFilters() {
       this.martyrdomFrom = '';

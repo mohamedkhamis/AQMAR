@@ -28,12 +28,19 @@
   // Annotate each row with a `_verification` shorthand the templates can
   // check ('unverified' | 'verified' | 'rejected'). _overridden_fields is
   // kept for the older ✏️ badge logic in case anything still consumes it.
+  //
+  // `isVerified` is the boolean shorthand the admin grid sorts by. It's
+  // derived from verification_status so there's one source of truth —
+  // new rows arrive with verification_status='unverified' (SQL DEFAULT),
+  // which yields isVerified=false, and rejected rows are also false so
+  // the admin sees them alongside unverified at the top of the grid.
   function annotateVerification(rows) {
     return rows.map(r => {
       const status = r.verification_status || "unverified";
       return {
         ...r,
         _verification: status,
+        isVerified: status === "verified",
         _overridden_fields: status === "verified" ? ["verified"] : [],
       };
     });
@@ -120,6 +127,17 @@
       frames:    normalizeFramePaths(row.frame_paths),
       source:    row.message_link || "",
       verification: row.verification_status || "unverified",
+      // Boolean shorthand the admin grid sorts by. Default false for any
+      // row that isn't explicitly 'verified' (including unverified +
+      // rejected), so new rows from the scraper land at the top of the
+      // verification queue automatically.
+      //
+      // Note: rows loaded from the static data/martyrs.json fallback (used
+      // by the public site / GitHub Pages) won't carry verification_status —
+      // the exporter strips it. Those rows will all have isVerified=false,
+      // but the public browse grid doesn't sort or display the flag, so
+      // this is invisible to visitors. Only the admin grid reads it.
+      isVerified: (row.verification_status || "unverified") === "verified",
     };
   }
 
