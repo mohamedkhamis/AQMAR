@@ -984,13 +984,50 @@
             <div class="field-label" x-text="lang === 'ar' ? 'العمر عند الاستشهاد' : 'Age at martyrdom'"></div>
             <input class="input" x-model="draft.age">
           </label>
+          <!-- Birth date — Litepicker (year + month dropdowns, max=today, min=1900).
+               readonly forces all entries through the picker so admin can't type
+               malformed strings like the OCR output we're trying to clean up.
+               ✕ button blanks the field for cases where OCR was so wrong the
+               admin can't even guess at the right date. -->
           <label class="block mb-4">
             <div class="field-label" x-text="lang === 'ar' ? 'تاريخ الميلاد' : 'Birth date'"></div>
-            <input class="input" x-model="draft.birth" placeholder="YYYY-MM-DD">
+            <div class="input flex items-center gap-2" style="padding-right: 8px;">
+              <span aria-hidden="true">📅</span>
+              <input type="text" readonly
+                     x-ref="draftBirthInput"
+                     x-init="initDraftDatePicker($el, 'birth')"
+                     x-model="draft.birth"
+                     :placeholder="lang === 'ar' ? 'انقر لاختيار تاريخ الميلاد' : 'Click to pick birth date'"
+                     class="bg-transparent flex-1 ltr focus:outline-none cursor-pointer"
+                     style="border: 0; padding: 0;">
+              <button type="button"
+                      x-show="draft.birth"
+                      @click.prevent="clearDraftDate('birth')"
+                      :title="lang === 'ar' ? 'مسح التاريخ' : 'Clear date'"
+                      class="bg-transparent border-0 text-muted hover:text-ink cursor-pointer"
+                      style="padding: 2px 6px; font-size: 14px; line-height: 1;">✕</button>
+            </div>
           </label>
+          <!-- Martyrdom date — same picker, but min year clamped to 2023 (when
+               AqmarTofan started covering casualties). Future dates blocked. -->
           <label class="block mb-4">
             <div class="field-label" x-text="lang === 'ar' ? 'تاريخ الاستشهاد' : 'Martyrdom date'"></div>
-            <input class="input" x-model="draft.martyrdom" placeholder="YYYY-MM-DD">
+            <div class="input flex items-center gap-2" style="padding-right: 8px;">
+              <span aria-hidden="true">📅</span>
+              <input type="text" readonly
+                     x-ref="draftMartyrdomInput"
+                     x-init="initDraftDatePicker($el, 'martyrdom')"
+                     x-model="draft.martyrdom"
+                     :placeholder="lang === 'ar' ? 'انقر لاختيار تاريخ الاستشهاد' : 'Click to pick martyrdom date'"
+                     class="bg-transparent flex-1 ltr focus:outline-none cursor-pointer"
+                     style="border: 0; padding: 0;">
+              <button type="button"
+                      x-show="draft.martyrdom"
+                      @click.prevent="clearDraftDate('martyrdom')"
+                      :title="lang === 'ar' ? 'مسح التاريخ' : 'Clear date'"
+                      class="bg-transparent border-0 text-muted hover:text-ink cursor-pointer"
+                      style="padding: 2px 6px; font-size: 14px; line-height: 1;">✕</button>
+            </div>
           </label>
 
           <div class="col-span-2 mt-3">
