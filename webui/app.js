@@ -23,7 +23,7 @@ function aqmar() {
     // above the table. Per-column filters live in a row below the headers.
     adminStatusFilter: 'all',   // 'all' | 'unverified' | 'verified' | 'rejected'
     adminColFilters: {
-      name: '', born: '', martyrdom: '', city: '', battalion: '',
+      name: '', born: '', martyrdom: '', city: '', battalion: '', brigade: '',
     },
     adminSortBy: 'isVerified', // any of adminCols[].id — default to the isVerified boolean so unverified (false) bubbles to top of the queue
     adminSortDir: 'asc',         // 'asc' | 'desc'
@@ -441,7 +441,11 @@ function aqmar() {
         { id: 'born',         label: ar ? 'الميلاد' : 'Born',       width: '130px', sortable: true,  filterable: true  },
         { id: 'martyrdom',    label: ar ? 'الاستشهاد' : 'Martyrdom', width: '130px', sortable: true,  filterable: true  },
         { id: 'city',         label: ar ? 'المدينة' : 'City',       width: '120px', sortable: true,  filterable: true  },
-        { id: 'battalion',    label: ar ? 'الكتيبة' : 'Battalion',  width: '180px', sortable: true,  filterable: true  },
+        { id: 'battalion',    label: ar ? 'الكتيبة' : 'Battalion',  width: '160px', sortable: true,  filterable: true  },
+        // Brigade (اللواء) — military unit above the battalion. Optional in
+        // OCR output (sometimes the video frame doesn't show it, sometimes
+        // the caption omits it). Admin can fill it in from the source video.
+        { id: 'brigade',      label: ar ? 'اللواء' : 'Brigade',     width: '150px', sortable: true,  filterable: true  },
         // Status column header sorts by the `isVerified` boolean (false first
         // by default, so unverified + rejected rows bubble to the top of the
         // verification queue). The pill itself still displays the full 3-state
@@ -486,6 +490,7 @@ function aqmar() {
       if (f.martyrdom) list = list.filter(m => norm(m.martyrdom).includes(norm(f.martyrdom)));
       if (f.city)      list = list.filter(m => norm(m.city).includes(norm(f.city)));
       if (f.battalion) list = list.filter(m => norm(m.battalion).includes(norm(f.battalion)));
+      if (f.brigade)   list = list.filter(m => norm(m.brigade).includes(norm(f.brigade)));
 
       // 4) Sort (copy first so we don't mutate this.all)
       const key = this.adminSortBy;
@@ -538,7 +543,7 @@ function aqmar() {
     },
     adminClearFilters() {
       this.adminSearch = '';
-      this.adminColFilters = { name: '', born: '', martyrdom: '', city: '', battalion: '' };
+      this.adminColFilters = { name: '', born: '', martyrdom: '', city: '', battalion: '', brigade: '' };
       this.adminStatusFilter = 'all';
     },
 
