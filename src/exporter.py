@@ -57,7 +57,7 @@ def serialize_row(row: dict) -> dict:
     return out
 
 
-def build_payload(rows: list, version: int, note: str = None) -> dict:
+def build_payload(rows: list, version: int, note: str | None = None) -> dict:
     """Wrap a list of serialized rows in the publish envelope."""
     return {
         "version": version,
@@ -68,7 +68,7 @@ def build_payload(rows: list, version: int, note: str = None) -> dict:
     }
 
 
-def export_to_json(conn, json_path: str = DEFAULT_JSON_PATH, note: str = None) -> dict:
+def export_to_json(conn, json_path: str = DEFAULT_JSON_PATH, note: str | None = None) -> dict:
     """Read verified rows + compute next version + write JSON + record
     the publish in publish_versions. Returns a summary dict for the caller
     to log / show in the UI.

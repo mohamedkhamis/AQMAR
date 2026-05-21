@@ -15,14 +15,9 @@ param([int]$Port = 8000)
 $projectRoot = (Resolve-Path "$PSScriptRoot\..").Path
 Set-Location $projectRoot
 
-# Regenerate JSON in case the Excel has changed
+# data/martyrs.json is produced by the publish step (scripts/export_to_json.py
+# or the admin "publish" button) — this script only serves the SPA.
 $venvPython = Join-Path $projectRoot ".venv\Scripts\python.exe"
-if (Test-Path $venvPython) {
-    & $venvPython "scripts\excel_to_json.py"
-} else {
-    Write-Warning "Venv python not found at $venvPython. Skipping JSON regeneration."
-    Write-Warning "Make sure data/martyrs.json exists, or run: python scripts\excel_to_json.py"
-}
 
 Write-Host ""
 Write-Host "=== AqmarTofan SPA ===" -ForegroundColor Yellow

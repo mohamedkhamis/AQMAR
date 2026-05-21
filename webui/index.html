@@ -1062,6 +1062,15 @@
               <template x-for="b in battalions" :key="b"><option :value="b" x-text="b"></option></template>
             </select>
           </label>
+          <!-- Brigade (اللواء) — same select pattern as battalion. Optional;
+               leave on '—' if the source video / caption doesn't show it. -->
+          <label class="block mb-4">
+            <div class="field-label" x-text="lang === 'ar' ? 'اللواء' : 'Brigade'"></div>
+            <select class="select" x-model="draft.brigade">
+              <option value="">—</option>
+              <template x-for="b in brigades" :key="b"><option :value="b" x-text="b"></option></template>
+            </select>
+          </label>
           <label class="block mb-4 col-span-2">
             <div class="field-label" x-text="lang === 'ar' ? 'نبذة (اختياري)' : 'Profile note (optional)'"></div>
             <textarea class="input font-naskh text-[16px]" rows="3" style="resize: vertical;" x-model="draft.bio"
@@ -1185,6 +1194,9 @@
               <td class="p-3.5" x-text="m.city || '—'"></td>
               <!-- Battalion -->
               <td class="p-3.5 text-[13px] text-muted" x-text="m.battalion || '—'"></td>
+              <!-- Brigade — '—' when missing (≈3% of rows lack it because OCR
+                   didn't capture it from the video frame / caption) -->
+              <td class="p-3.5 text-[13px] text-muted" x-text="m.brigade || '—'"></td>
               <!-- STATUS (verification_status with color coding, plus session-edit marker) -->
               <td class="p-3.5">
                 <div class="flex flex-col gap-1.5">

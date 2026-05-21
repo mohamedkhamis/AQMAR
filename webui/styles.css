@@ -1,34 +1,10 @@
 /* ===== AQMAR — design tokens + helpers (lift to webui/styles.css) ===== */
 
 :root {
-  --bg:        #f5f1ea;
-  --bg-2:      #efe9dc;
-  --bg-3:      #e7decb;
-  --paper:     #fbf8f1;
-  --ink:       #1f1812;
-  --ink-2:     #3a2a1f;
-  --muted:     #6b5b46;
-  --faint:     #b8a888;
-  --divider:   #d9cdb3;
-  --forest:    #1f3d2b;
-  --forest-2:  #2d5238;
-  --olive:     #8a6d3b;
-  --olive-2:   #a88751;
-  --gold:      #b8924a;
-  --crimson:   #7a2a2a;
-
-  --font-display: "Reem Kufi", "Tajawal", serif;
-  --font-naskh:   "Amiri", "Reem Kufi", serif;
-  --font-body:    "Tajawal", system-ui, sans-serif;
-  --font-latin-sans: "Inter Tight", system-ui, sans-serif;
-  --font-latin-serif: "Crimson Pro", "Amiri", serif;
-}
-
-html[data-theme="dark"] {
-  /* v1 dark-forest palette: deep green ground, gold brand. The original
-     editorial light tones were earth/paper — this brings back the v1's
-     #0c1f0c bg, #142914 cards, #2d4a2d borders, and uses #fbbf24 as the
-     primary action color (formerly `brand` in v1). */
+  /* Dark-forest palette: deep green ground, gold brand. The SPA ships in
+     dark mode only — index.html hardcodes data-theme="dark" and there is no
+     theme toggle, so these are the single source of truth. (The earlier
+     light/earth palette was removed 2026-05-20 — it never rendered.) */
   --bg:        #0c1f0c;
   --bg-2:      #0f2510;
   --bg-3:      #142914;
@@ -38,14 +14,20 @@ html[data-theme="dark"] {
   --muted:     #9bbf94;
   --faint:     #5a7a5a;
   --divider:   #2d4a2d;
-  /* --forest becomes the gold brand color so badge-forest, btn-primary,
-     section-kickers, etc. all read as the warm v1 accent. */
+  /* --forest is the gold brand color so badge-forest, btn-primary,
+     section-kickers, etc. all read as the warm accent. */
   --forest:    #fbbf24;
   --forest-2:  #d4a020;
   --olive:     #b8924a;
   --olive-2:   #d4a865;
   --gold:      #fbbf24;
   --crimson:   #ea4444;
+
+  --font-display: "Reem Kufi", "Tajawal", serif;
+  --font-naskh:   "Amiri", "Reem Kufi", serif;
+  --font-body:    "Tajawal", system-ui, sans-serif;
+  --font-latin-sans: "Inter Tight", system-ui, sans-serif;
+  --font-latin-serif: "Crimson Pro", "Amiri", serif;
 }
 
 /* When dark theme is active, the paper-grain pattern needs lighter dots
@@ -100,7 +82,6 @@ html[data-theme="dark"] body::before { mix-blend-mode: screen; opacity: 0.4; }
 
 /* Color utilities */
 .bg-paper     { background: var(--paper); }
-.bg-page      { background: var(--bg); }
 .bg-page-2    { background: var(--bg-2); }
 .bg-page-3    { background: var(--bg-3); }
 .bg-forest    { background: var(--forest); }
@@ -199,7 +180,6 @@ html[data-theme="dark"] body::before { mix-blend-mode: screen; opacity: 0.4; }
 }
 .badge-forest  { background: rgba(31,61,43,0.10);   color: var(--forest); }
 .badge-olive   { background: rgba(138,109,59,0.13); color: var(--olive); }
-.badge-crimson { background: rgba(122,42,42,0.10);  color: var(--crimson); }
 
 /* Cards */
 .card {
@@ -237,14 +217,6 @@ html[data-theme="dark"] body::before { mix-blend-mode: screen; opacity: 0.4; }
 .portrait img {
   width: 100%; height: 100%; object-fit: cover;
   display: block;
-}
-.portrait .monogram {
-  position: absolute; inset: 0;
-  display: flex; align-items: center; justify-content: center;
-  font-family: var(--font-naskh);
-  font-weight: 700;
-  color: var(--paper);
-  text-shadow: 0 2px 12px rgba(0,0,0,0.3);
 }
 .portrait .silhouette { position: absolute; inset: 0; opacity: .18; }
 .portrait .corner { position: absolute; width: 8px; height: 8px; }

@@ -9,56 +9,17 @@
 (function (global) {
   "use strict";
 
-  function mergeOverrides(baseMartyrs, overridesEdits) {
-    // Kept for backward compat with any leftover overrides.json files.
-    // In the SQL Server world, baseMartyrs are already the canonical merged
-    // rows, so callers typically pass overridesEdits={} and this is a near-no-op.
-    const norm = {};
-    for (const k of Object.keys(overridesEdits || {})) norm[String(k)] = overridesEdits[k];
-    return baseMartyrs.map(row => {
-      const ov = norm[String(row.msg_id)];
-      if (!ov) return { ...row, _overridden_fields: [] };
-      const merged = { ...row, ...ov };
-      const overriddenFields = Object.keys(ov).filter(k => !k.startsWith("_"));
-      merged._overridden_fields = overriddenFields;
-      return merged;
-    });
-  }
-
-  // Annotate each row with a `_verification` shorthand the templates can
-  // check ('unverified' | 'verified' | 'rejected'). _overridden_fields is
-  // kept for the older ✏️ badge logic in case anything still consumes it.
-  //
-  // `isVerified` is the boolean shorthand the admin grid sorts by. It's
-  // derived from verification_status so there's one source of truth —
-  // new rows arrive with verification_status='unverified' (SQL DEFAULT),
-  // which yields isVerified=false, and rejected rows are also false so
-  // the admin sees them alongside unverified at the top of the grid.
-  function annotateVerification(rows) {
-    return rows.map(r => {
-      const status = r.verification_status || "unverified";
-      return {
-        ...r,
-        _verification: status,
-        isVerified: status === "verified",
-        _overridden_fields: status === "verified" ? ["verified"] : [],
-      };
-    });
-  }
-
   // Try the local admin API first; fall back to the on-disk JSON snapshot.
   async function loadData() {
     if (global.AQMAR_API) {
       try {
         const rows = await global.AQMAR_API.get("/martyrs");
-        const annotated = annotateVerification(rows);
         return {
           generated_at: new Date().toISOString(),
           channel: "AqmarTofan",
           source: "api",
           martyrs: rows,
           overrides: {},
-          allRows: annotated,
         };
       } catch (e) {
         console.warn("API load failed, falling back to data/martyrs.json:", e.message);
@@ -69,7 +30,6 @@
     if (!res.ok) throw new Error(`Cannot load data/martyrs.json: ${res.status}`);
     const raw = await res.json();
     const rows = Array.isArray(raw) ? raw : (raw.martyrs || []);
-    const annotated = annotateVerification(rows);
     return {
       generated_at: raw.generated_at || new Date().toISOString(),
       channel: raw.channel || "AqmarTofan",
@@ -77,7 +37,6 @@
       version: raw.version,
       martyrs: rows,
       overrides: {},
-      allRows: annotated,
     };
   }
 
@@ -165,7 +124,6 @@
     return out;
   }
 
-  global.mergeOverrides = mergeOverrides;
   global.loadData = loadData;
   global.adaptMartyrToNewSchema = adaptMartyrToNewSchema;
   global.adaptOverridesToNewSchema = adaptOverridesToNewSchema;

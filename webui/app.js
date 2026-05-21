@@ -23,7 +23,7 @@ function aqmar() {
     // above the table. Per-column filters live in a row below the headers.
     adminStatusFilter: 'all',   // 'all' | 'unverified' | 'verified' | 'rejected'
     adminColFilters: {
-      name: '', born: '', martyrdom: '', city: '', battalion: '',
+      name: '', born: '', martyrdom: '', city: '', battalion: '', brigade: '',
     },
     adminSortBy: 'isVerified', // any of adminCols[].id — default to the isVerified boolean so unverified (false) bubbles to top of the queue
     adminSortDir: 'asc',         // 'asc' | 'desc'
@@ -416,20 +416,6 @@ function aqmar() {
       this.view = 'home';
     },
 
-    get adminHeaders() {
-      // Switches with lang. Previously a static array of "Arabic / English"
-      // dual-language strings — inconsistent with the rest of the SPA.
-      const ar = this.lang === 'ar';
-      return [
-        '#',
-        ar ? 'الاسم' : 'Name',
-        ar ? 'الميلاد' : 'Born',
-        ar ? 'الاستشهاد' : 'Martyrdom',
-        ar ? 'المدينة' : 'City',
-        ar ? 'الكتيبة' : 'Battalion',
-        ar ? 'الحالة' : 'Status',
-      ];
-    },
     // Columns for the admin table. Drives both the header rendering AND
     // which fields are sortable / filterable. Status column is required
     // for the verification workflow — kept rightmost as the visual anchor.
@@ -441,7 +427,11 @@ function aqmar() {
         { id: 'born',         label: ar ? 'الميلاد' : 'Born',       width: '130px', sortable: true,  filterable: true  },
         { id: 'martyrdom',    label: ar ? 'الاستشهاد' : 'Martyrdom', width: '130px', sortable: true,  filterable: true  },
         { id: 'city',         label: ar ? 'المدينة' : 'City',       width: '120px', sortable: true,  filterable: true  },
-        { id: 'battalion',    label: ar ? 'الكتيبة' : 'Battalion',  width: '180px', sortable: true,  filterable: true  },
+        { id: 'battalion',    label: ar ? 'الكتيبة' : 'Battalion',  width: '160px', sortable: true,  filterable: true  },
+        // Brigade (اللواء) — military unit above the battalion. Optional in
+        // OCR output (sometimes the video frame doesn't show it, sometimes
+        // the caption omits it). Admin can fill it in from the source video.
+        { id: 'brigade',      label: ar ? 'اللواء' : 'Brigade',     width: '150px', sortable: true,  filterable: true  },
         // Status column header sorts by the `isVerified` boolean (false first
         // by default, so unverified + rejected rows bubble to the top of the
         // verification queue). The pill itself still displays the full 3-state
@@ -486,6 +476,7 @@ function aqmar() {
       if (f.martyrdom) list = list.filter(m => norm(m.martyrdom).includes(norm(f.martyrdom)));
       if (f.city)      list = list.filter(m => norm(m.city).includes(norm(f.city)));
       if (f.battalion) list = list.filter(m => norm(m.battalion).includes(norm(f.battalion)));
+      if (f.brigade)   list = list.filter(m => norm(m.brigade).includes(norm(f.brigade)));
 
       // 4) Sort (copy first so we don't mutate this.all)
       const key = this.adminSortBy;
@@ -538,7 +529,7 @@ function aqmar() {
     },
     adminClearFilters() {
       this.adminSearch = '';
-      this.adminColFilters = { name: '', born: '', martyrdom: '', city: '', battalion: '' };
+      this.adminColFilters = { name: '', born: '', martyrdom: '', city: '', battalion: '', brigade: '' };
       this.adminStatusFilter = 'all';
     },
 
@@ -565,10 +556,12 @@ function aqmar() {
       const m = this.editingMartyr();
       if (!m) return false;
       const current = { ...m, ...(this.edits[m.id] || {}) };
-      for (const k of Object.keys(this.draft)) {
-        if (this.draft[k] !== current[k]) return true;
-      }
-      return false;
+      // Mirror the save path exactly: a row is "dirty" only if saveEdit would
+      // actually persist a change. buildEditDiff does the key-union (so a field
+      // cleared in the draft still counts as dirty); translateToDbSchema drops
+      // UI-only fields (age, bio) that have no DB column and would otherwise be
+      // false positives.
+      return Object.keys(translateToDbSchema(buildEditDiff(current, this.draft))).length > 0;
     },
     cancelEdit() {
       this.editingId = null;
@@ -986,12 +979,6 @@ function dayDelta(birthIso, targetMonth, targetDay) {
 
 function pad(n) { return String(n).padStart(2, '0'); }
 
-function initials(name) {
-  if (!name) return '؟';
-  const parts = String(name).trim().split(/\s+/);
-  return parts[0][0] + (parts[1] ? parts[1][0] : '');
-}
-
 function esc(s) {
   return String(s).replace(/[&<>"']/g, c => ({
     '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'
@@ -1015,10 +1002,4 @@ function formatDate(iso, locale = 'ar') {
   }
   const arMonths = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
   return `${d} ${arMonths[mIdx]} ${y}`;
-}
-
-async function sha256(text) {
-  const buf = new TextEncoder().encode(text);
-  const hash = await crypto.subtle.digest('SHA-256', buf);
-  return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('');
 }

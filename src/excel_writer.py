@@ -1,7 +1,7 @@
 import os
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass
 from openpyxl import Workbook, load_workbook
-from openpyxl.styles import Font, PatternFill, Alignment
+from openpyxl.styles import Font, PatternFill
 
 MAIN_SHEET = "الشهداء"
 DUPES_SHEET = "النسخ_المكررة"
