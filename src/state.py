@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 class State:
     processed_msg_ids: set = field(default_factory=set)
     statuses: dict = field(default_factory=dict)
-    last_processed_msg_id: int = None
+    last_processed_msg_id: int | None = None
 
     @classmethod
     def load(cls, path: str) -> "State":

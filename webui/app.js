@@ -416,20 +416,6 @@ function aqmar() {
       this.view = 'home';
     },
 
-    get adminHeaders() {
-      // Switches with lang. Previously a static array of "Arabic / English"
-      // dual-language strings — inconsistent with the rest of the SPA.
-      const ar = this.lang === 'ar';
-      return [
-        '#',
-        ar ? 'الاسم' : 'Name',
-        ar ? 'الميلاد' : 'Born',
-        ar ? 'الاستشهاد' : 'Martyrdom',
-        ar ? 'المدينة' : 'City',
-        ar ? 'الكتيبة' : 'Battalion',
-        ar ? 'الحالة' : 'Status',
-      ];
-    },
     // Columns for the admin table. Drives both the header rendering AND
     // which fields are sortable / filterable. Status column is required
     // for the verification workflow — kept rightmost as the visual anchor.
@@ -570,10 +556,12 @@ function aqmar() {
       const m = this.editingMartyr();
       if (!m) return false;
       const current = { ...m, ...(this.edits[m.id] || {}) };
-      for (const k of Object.keys(this.draft)) {
-        if (this.draft[k] !== current[k]) return true;
-      }
-      return false;
+      // Mirror the save path exactly: a row is "dirty" only if saveEdit would
+      // actually persist a change. buildEditDiff does the key-union (so a field
+      // cleared in the draft still counts as dirty); translateToDbSchema drops
+      // UI-only fields (age, bio) that have no DB column and would otherwise be
+      // false positives.
+      return Object.keys(translateToDbSchema(buildEditDiff(current, this.draft))).length > 0;
     },
     cancelEdit() {
       this.editingId = null;
@@ -991,12 +979,6 @@ function dayDelta(birthIso, targetMonth, targetDay) {
 
 function pad(n) { return String(n).padStart(2, '0'); }
 
-function initials(name) {
-  if (!name) return '؟';
-  const parts = String(name).trim().split(/\s+/);
-  return parts[0][0] + (parts[1] ? parts[1][0] : '');
-}
-
 function esc(s) {
   return String(s).replace(/[&<>"']/g, c => ({
     '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'
@@ -1020,10 +1002,4 @@ function formatDate(iso, locale = 'ar') {
   }
   const arMonths = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
   return `${d} ${arMonths[mIdx]} ${y}`;
-}
-
-async function sha256(text) {
-  const buf = new TextEncoder().encode(text);
-  const hash = await crypto.subtle.digest('SHA-256', buf);
-  return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('');
 }

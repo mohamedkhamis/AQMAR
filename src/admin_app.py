@@ -26,7 +26,7 @@ from typing import Optional, Annotated
 
 from fastapi import FastAPI, Depends, HTTPException, Header, Body
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import RedirectResponse, JSONResponse
+from fastapi.responses import RedirectResponse
 
 from src.config import load_config
 from src.sqlserver_client import (

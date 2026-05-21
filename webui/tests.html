@@ -126,53 +126,6 @@
   </script>
 
   <script>
-    // ===== data-loader.js =====
-
-    test("mergeOverrides applies override fields on top of base", () => {
-      const base = [
-        { msg_id: 20, name: "A", birth_date: "1980-01-01" },
-        { msg_id: 21, name: "B", birth_date: "1981-02-02" },
-      ];
-      const overrides = {
-        "20": { birth_date: "1979-12-31", _manual_edit_at: "2026-05-13T10:00:00" },
-      };
-      const merged = mergeOverrides(base, overrides);
-      assertEq(merged[0].birth_date, "1979-12-31");
-      assertEq(merged[0].name, "A");                                // unchanged
-      assertEq(merged[0]._overridden_fields, ["birth_date"]);
-      assertEq(merged[1].birth_date, "1981-02-02");                 // untouched
-      assertEq(merged[1]._overridden_fields, []);
-    });
-
-    test("mergeOverrides ignores meta fields when reporting overridden", () => {
-      const base = [{ msg_id: 5, name: "X" }];
-      const overrides = { "5": { name: "Y", _manual_edit_at: "2026-05-13" } };
-      const merged = mergeOverrides(base, overrides);
-      assertEq(merged[0].name, "Y");
-      assertEq(merged[0]._overridden_fields, ["name"]);
-    });
-
-    test("mergeOverrides leaves rows alone when no override matches", () => {
-      const base = [{ msg_id: 99, name: "Z" }];
-      const merged = mergeOverrides(base, { "1": { name: "ignored" } });
-      assertEq(merged[0].name, "Z");
-      assertEq(merged[0]._overridden_fields, []);
-    });
-
-    test("mergeOverrides accepts numeric and string msg_id keys", () => {
-      const base = [{ msg_id: 42, name: "old" }];
-      const merged = mergeOverrides(base, { 42: { name: "new" } });
-      assertEq(merged[0].name, "new");
-    });
-
-    test("mergeOverrides preserves row order from base", () => {
-      const base = [{ msg_id: 3 }, { msg_id: 1 }, { msg_id: 2 }];
-      const merged = mergeOverrides(base, {});
-      assertEq(merged.map(r => r.msg_id), [3, 1, 2]);
-    });
-  </script>
-
-  <script>
     // ===== admin-edit.js =====
 
     test("buildEditDiff returns only changed fields", () => {
@@ -194,35 +147,6 @@
       const original = { name: "A", _delta_days: 5 };
       const edited =   { name: "A", _delta_days: 999 };
       assertEq(buildEditDiff(original, edited), {});
-    });
-
-    test("addEdit merges new diff with existing override + adds meta", () => {
-      const existing = { "20": { name: "old override", _manual_edit_at: "2026-05-12" } };
-      const diff = { birth_date: "1980-01-01" };
-      const result = addEdit(existing, 20, diff, "2026-05-13T10:00:00", "admin");
-      assertEq(result["20"].name, "old override");
-      assertEq(result["20"].birth_date, "1980-01-01");
-      assertEq(result["20"]._manual_edit_at, "2026-05-13T10:00:00");
-      assertEq(result["20"]._editor, "admin");
-    });
-
-    test("addEdit creates a new override entry when none exists", () => {
-      const result = addEdit({}, 99, { name: "fresh" }, "2026-05-13", "admin");
-      assertEq(result["99"].name, "fresh");
-      assertEq(result["99"]._manual_edit_at, "2026-05-13");
-    });
-
-    test("addEdit returns the same object reference unmodified when diff is empty", () => {
-      const existing = { "20": { name: "old" } };
-      const result = addEdit(existing, 20, {}, "2026-05-13", "admin");
-      assertEq(result, existing);
-    });
-
-    test("buildExportPayload wraps edits with version", () => {
-      const edits = { "20": { name: "X" } };
-      const payload = buildExportPayload(edits);
-      assertEq(payload.version, 1);
-      assertEq(payload.edits, edits);
     });
   </script>
 

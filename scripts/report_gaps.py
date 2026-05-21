@@ -86,7 +86,7 @@ def main():
         ("P5", "P5 · partial_martyrdom",
          "Most fields OK but martyrdom date blank."),
         ("P6", "P6 · no photo on disk",
-         "Photo file missing (data/photos/N.jpg). Use scripts/recover_photos.py."),
+         "Photo file missing on disk (data/photos/N.jpg)."),
     ]
     for key, title, blurb in priorities:
         ids = sorted(buckets[key])
@@ -141,7 +141,7 @@ def main():
     lines.append(f"| `military_rank`  | {emp('military_rank')} / {total}  | Often visible in caption but parser may miss it. |")
     lines.append(f"| `battalion`      | {emp('battalion')} / {total}  | |")
     lines.append(f"| `brigade`        | {emp('brigade')} / {total}  | |")
-    lines.append(f"| `photo_path`     | {emp('photo_path')} / {total}  | P6 — recover with `scripts/recover_photos.py`. |")
+    lines.append(f"| `photo_path`     | {emp('photo_path')} / {total}  | P6 — photo file missing on disk. |")
     lines.append(f"| `name`           | {emp('name')} / {total}    | Same 3 as P0 `missing_critical`. |")
     lines.append("")
 
@@ -150,10 +150,8 @@ def main():
     lines.append("| Script | Use for |")
     lines.append("|:---|:---|")
     lines.append("| `python scripts/reprocess.py --msg-id N`         | Re-OCR a single row, print result. |")
-    lines.append("| `python scripts/reprocess.py --msg-id N --update` | Re-OCR and overwrite the existing Excel row. |")
-    lines.append("| `python scripts/fill_birth_dates_v2.py`          | Overnight batch: re-OCR all rows where birth_date is blank. |")
-    lines.append("| `python scripts/recover_photos.py`               | Re-download missing photo files. |")
-    lines.append("| Admin UI (`webui/` → \"تحرير\")                   | Hand-edit any row; saves to overrides. Best for P1 malformed dates. |")
+    lines.append("| `python scripts/reprocess.py --msg-id N --update` | Re-OCR and overwrite the existing SQL Server row. |")
+    lines.append("| Admin UI (`webui/` → \"تحرير\")                   | Hand-edit any row; saves to SQL Server. Best for P1 malformed dates. |")
     lines.append("")
 
     out_path.write_text("\n".join(lines), encoding="utf-8")
