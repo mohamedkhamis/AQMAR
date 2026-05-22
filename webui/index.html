@@ -23,7 +23,7 @@
 <!-- Fonts -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Reem+Kufi:wght@400;500;600;700&family=Tajawal:wght@300;400;500;700&family=Crimson+Pro:ital,wght@0,400;0,600;1,400&family=Inter+Tight:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=El+Messiri:wght@400;500;600;700&family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
 
 <!-- Tailwind (Play CDN — no build step, matches your existing setup) -->
 <script src="https://cdn.tailwindcss.com"></script>
@@ -87,7 +87,7 @@
 
   <!-- ===================== HEADER ===================== -->
   <header role="banner" class="sticky top-0 z-50 border-b border-divider" style="background: color-mix(in oklab, var(--bg) 88%, transparent); backdrop-filter: blur(10px);">
-    <div class="max-w-[1240px] mx-auto px-8 py-3.5 flex items-center gap-6">
+    <div class="header-bar max-w-[1240px] mx-auto px-8 py-3.5 flex items-center gap-6">
       <!-- Logo -->
       <button @click="goto('home')" class="flex items-center gap-3 bg-transparent border-0 p-0">
         <svg width="34" height="34" viewBox="0 0 60 60" style="opacity:.55">
@@ -99,7 +99,7 @@
           </g>
         </svg>
         <div class="text-right leading-none">
-          <div class="font-naskh text-[22px] font-bold text-ink">أَقْمَارُ الطّوفان</div>
+          <div class="font-display text-[22px] font-bold text-ink">أَقْمَارُ الطّوفان</div>
           <div class="font-latin-sans text-[10px] tracking-[0.3em] text-olive mt-1 uppercase">AQMAR · MEMORIAL</div>
         </div>
       </button>
@@ -117,7 +117,7 @@
 
       <div class="flex-1"></div>
 
-      <!-- Mobile-only hamburger toggle (hidden ≥901px via .nav-links breakpoint) -->
+      <!-- Mobile-only hamburger toggle (shown ≤1024px; desktop nav hidden there) -->
       <button class="nav-hamburger" @click="mobileNavOpen = !mobileNavOpen"
               :aria-expanded="mobileNavOpen ? 'true' : 'false'"
               aria-controls="mobile-nav"
@@ -184,7 +184,7 @@
     <div class="max-w-[1100px] mx-auto px-8 pt-10 pb-8 relative">
       <div class="text-center">
         <div class="section-kicker" x-text="lang === 'ar' ? 'ذكرى · توثيق · كرامة' : 'Memory · Record · Dignity'"></div>
-        <h1 class="h1-display font-naskh font-bold text-ink m-0 leading-[1.05]" style="font-size: clamp(48px, 6vw, 84px);">أَقْمَارُ الطّوفان</h1>
+        <h1 class="h1-display font-display font-bold text-ink m-0 leading-[1.05]">أَقْمَارُ الطّوفان</h1>
         <div class="font-latin-serif italic text-[22px] text-muted mt-3.5"
              x-text="lang === 'ar' ? 'ذاكرةٌ موصولةٌ بأسماءِ شهداءِ معركةِ طوفان الأقصى' : 'A living memory of those who fell in Tūfān al-Aqṣā'"></div>
         <div class="mt-4 mb-9 ornament-row"><span class="ornament-star"></span></div>
@@ -207,7 +207,7 @@
                x-text="lang === 'ar' ? 'بحث رئيسي' : 'Primary search'"></div>
         </div>
 
-        <div class="grid-bday grid gap-3" style="grid-template-columns: 1.4fr 1.2fr auto; align-items: end;">
+        <div class="grid-bday grid gap-3">
           <!-- Litepicker birth-date input — year + month dropdowns always visible.
                Replaces the previous day + month select pair so users can pick the
                full date (including year) in one widget. dayDelta only uses
@@ -263,12 +263,12 @@
         <div class="mt-6 pt-5.5" style="border-top: 1px dashed var(--divider);">
           <div class="font-body text-[12px] text-muted mb-3.5"
                x-text="lang === 'ar' ? 'أقربُ الأسماءِ مولداً ليومك' : 'Nearest birthdays to your date'"></div>
-          <div class="preview-matches grid gap-3" style="grid-template-columns: repeat(3, 1fr);">
+          <div class="preview-matches grid gap-3">
             <template x-for="m in previewMatches" :key="m.id">
               <button @click="openMartyr(m.id)" class="bg-page-2 border border-divider rounded p-3 flex items-center gap-3 text-right cursor-pointer">
                 <div x-html="renderPortrait(m, 42, false)"></div>
                 <div class="min-w-0 flex-1">
-                  <div class="font-naskh text-[16px] font-bold text-ink truncate" x-text="m.name"></div>
+                  <div class="font-body text-[16px] font-bold text-ink truncate" x-text="m.name"></div>
                   <div class="text-[11px] text-muted mt-0.5">
                     <span x-show="m.delta === 0" x-text="lang === 'ar' ? 'نفس اليوم' : 'same day'"></span>
                     <span x-show="m.delta > 0" x-text="`${m.delta} ${lang === 'ar' ? 'يوم فارقاً' : 'days away'}`"></span>
@@ -297,7 +297,7 @@
           <template x-for="m in onThisDay" :key="m.id">
             <button @click="openMartyr(m.id)" class="bg-paper border border-divider rounded p-3.5 text-right cursor-pointer flex flex-col gap-1.5"
                     style="border-inline-start: 2px solid var(--forest);">
-              <div class="font-naskh text-[16px] font-bold text-ink truncate" x-text="m.name"></div>
+              <div class="font-body text-[16px] font-bold text-ink truncate" x-text="m.name"></div>
               <div class="text-[12px] text-muted flex justify-between">
                 <span x-text="m.battalion || '—'"></span>
                 <!-- yearLabel handles ar-digit conversion + null guard -->
@@ -309,10 +309,10 @@
       </section>
 
       <!-- Stats -->
-      <div class="stats-strip mt-14 grid gap-0" style="grid-template-columns: repeat(4, 1fr); border-top: 1px solid var(--divider); border-bottom: 1px solid var(--divider);">
+      <div class="stats-strip mt-14 grid gap-0">
         <template x-for="(s, i) in stats" :key="i">
           <div class="p-5 text-center" :style="i > 0 ? 'border-inline-start: 1px solid var(--divider);' : ''">
-            <div class="font-naskh text-[28px] font-bold text-forest" x-text="lang === 'ar' ? s.k_ar : s.k_en"></div>
+            <div class="font-body text-[28px] font-bold text-forest" x-text="lang === 'ar' ? s.k_ar : s.k_en"></div>
             <div class="text-[12px] text-muted mt-1 tracking-wide" x-text="lang === 'ar' ? s.v_ar : s.v_en"></div>
           </div>
         </template>
@@ -350,8 +350,7 @@
     </div>
 
     <!-- Filters -->
-    <div class="grid-filters bg-paper border border-divider rounded-md p-5 mb-6 grid gap-3"
-         style="grid-template-columns: 1.4fr 1fr 1fr 1fr 1fr auto; align-items: end;">
+    <div class="grid-filters bg-paper border border-divider rounded-md p-5 mb-6 grid gap-3">
       <label>
         <div class="field-label" x-text="lang === 'ar' ? 'بحث بالاسم أو المدينة' : 'Search name or city'"></div>
         <input type="text" class="input" x-model="filters.q"
@@ -416,7 +415,7 @@
       <div class="mb-5">
         <div class="font-display text-[12px] tracking-[0.2em] uppercase text-olive mb-3"
              x-text="lang === 'ar' ? 'تاريخ الاستشهاد' : 'Martyrdom date range'"></div>
-        <div class="grid gap-3" style="grid-template-columns: 1fr 1fr;">
+        <div class="grid-pair grid gap-3">
           <label class="block">
             <div class="field-label" x-text="lang === 'ar' ? 'من' : 'From'"></div>
             <div class="input flex items-center gap-2" style="padding-inline-start: 12px;">
@@ -454,7 +453,7 @@
       <div class="mb-2">
         <div class="font-display text-[12px] tracking-[0.2em] uppercase text-olive mb-3"
              x-text="lang === 'ar' ? 'العمر عند الاستشهاد' : 'Age at martyrdom'"></div>
-        <div class="grid gap-3" style="grid-template-columns: 1fr 1fr;">
+        <div class="grid-pair grid gap-3">
           <label class="block">
             <div class="field-label" x-text="lang === 'ar' ? 'الحد الأدنى' : 'Min age'"></div>
             <input type="number" min="0" max="120" x-model.number="ageMin" class="input"
@@ -602,7 +601,7 @@
               <!-- Info section below photo -->
               <div class="p-4 flex-1 flex flex-col gap-2.5" style="padding: 14px 16px;">
                 <div>
-                  <div class="font-naskh text-[18px] font-bold text-ink leading-tight" x-text="m.name"></div>
+                  <div class="font-body text-[18px] font-bold text-ink leading-tight" x-text="m.name"></div>
                   <div class="font-body text-[12px] text-muted mt-1">
                     <span x-text="m.city || '—'"></span>
                     <span x-show="m.city"> · </span>
@@ -638,7 +637,7 @@
               <div x-html="renderPortrait(m, 72, true)" class="flex-shrink-0"></div>
               <div class="flex-1 min-w-0 flex flex-col gap-2">
                 <div>
-                  <div class="font-naskh text-[18px] font-bold text-ink leading-tight" x-text="m.name"></div>
+                  <div class="font-body text-[18px] font-bold text-ink leading-tight" x-text="m.name"></div>
                   <div class="font-body text-[13px] text-muted mt-1">
                     <span x-text="m.city || '—'"></span>
                     <span x-show="m.city"> · </span>
@@ -680,12 +679,12 @@
 
         <!-- Hero -->
         <article class="bg-paper border border-divider rounded-lg p-12 relative overflow-hidden" style="padding: 44px 48px;">
-          <div class="grid-detail grid gap-10 items-start" style="grid-template-columns: 200px 1fr;">
+          <div class="grid-detail grid gap-10 items-start">
             <div class="grid-detail-portrait" x-html="renderPortrait(current, 200, true)"></div>
             <div>
               <div class="font-body text-[14px] text-olive tracking-[0.15em] mb-2"
                    x-text="lang === 'ar' ? 'الشهيد' : 'Martyr'"></div>
-              <h1 class="font-naskh font-bold text-ink m-0 leading-[1.1]" style="font-size: clamp(28px, 5vw, 46px); overflow-wrap: break-word; word-break: break-word;" x-text="current.name"></h1>
+              <h1 class="font-display font-bold text-ink m-0 leading-[1.1]" style="font-size: var(--text-2xl); overflow-wrap: break-word; word-break: break-word;" x-text="current.name"></h1>
               <div class="mt-4 flex gap-2.5 flex-wrap">
                 <span x-show="current.rank" class="badge badge-forest" x-text="current.rank"></span>
                 <span x-show="current.weapon" class="badge badge-olive" x-text="current.weapon"></span>
@@ -694,21 +693,21 @@
                 <span x-show="current.brigade" class="badge" x-text="current.brigade"></span>
               </div>
 
-              <div class="dates-strip grid mt-7" style="grid-template-columns: 1fr 1fr 1fr; border-top: 1px solid var(--divider); border-bottom: 1px solid var(--divider);">
+              <div class="dates-strip grid mt-7">
                 <div class="py-4 text-center" style="border-inline-start: 1px solid var(--divider); margin-inline-start: -1px;">
                   <div class="font-body text-[11px] tracking-[0.15em] text-muted uppercase"
                        x-text="lang === 'ar' ? 'تاريخ الميلاد' : 'Birth date'"></div>
-                  <div class="font-naskh text-[18px] font-bold text-ink mt-1.5" x-text="formatDate(current.birth)"></div>
+                  <div class="font-body text-[18px] font-bold text-ink mt-1.5" x-text="formatDate(current.birth)"></div>
                 </div>
                 <div class="py-4 text-center" style="border-inline-start: 1px solid var(--divider);">
                   <div class="font-body text-[11px] tracking-[0.15em] text-muted uppercase"
                        x-text="lang === 'ar' ? 'تاريخ الاستشهاد' : 'Martyrdom date'"></div>
-                  <div class="font-naskh text-[18px] font-bold text-forest mt-1.5" x-text="formatDate(current.martyrdom)"></div>
+                  <div class="font-body text-[18px] font-bold text-forest mt-1.5" x-text="formatDate(current.martyrdom)"></div>
                 </div>
                 <div class="py-4 text-center" style="border-inline-start: 1px solid var(--divider);">
                   <div class="font-body text-[11px] tracking-[0.15em] text-muted uppercase"
                        x-text="lang === 'ar' ? 'العمر عند الاستشهاد' : 'Age'"></div>
-                  <div class="font-naskh text-[18px] font-bold text-ink mt-1.5" x-text="ageLabel(current)"></div>
+                  <div class="font-body text-[18px] font-bold text-ink mt-1.5" x-text="ageLabel(current)"></div>
                 </div>
               </div>
 
@@ -724,7 +723,7 @@
           <div x-show="current.bio" class="mt-9 pt-7 max-w-[720px]" style="border-top: 1px dashed var(--divider);">
             <div class="font-body text-[12px] text-olive tracking-[0.2em] uppercase mb-2.5"
                  x-text="lang === 'ar' ? 'نبذة' : 'Profile note'"></div>
-            <p class="font-naskh text-[19px] leading-[1.85] text-ink-2 m-0" x-text="current.bio"></p>
+            <p class="font-body text-[19px] leading-[1.85] text-ink-2 m-0" x-text="current.bio"></p>
           </div>
         </article>
 
@@ -734,14 +733,14 @@
         </section>
 
         <!-- Details grid -->
-        <section class="grid-2col grid gap-5 mt-7" style="grid-template-columns: 1fr 1fr;">
+        <section class="grid-2col grid gap-5 mt-7">
           <div class="bg-paper border border-divider rounded-md p-6">
             <h4 class="font-display text-[14px] font-medium text-olive m-0 mb-3.5 uppercase tracking-[0.2em]"
                 x-text="lang === 'ar' ? 'البيانات الشخصية' : 'Personal'"></h4>
             <template x-for="row in personalRows(current)" :key="row.k">
               <div class="grid py-2.5 text-[14px]" style="grid-template-columns: 140px 1fr; border-bottom: 1px dashed var(--divider);">
                 <div class="text-muted" x-text="row.k"></div>
-                <div class="text-ink-2 font-naskh font-bold" x-text="row.v"></div>
+                <div class="text-ink-2 font-body font-bold" x-text="row.v"></div>
               </div>
             </template>
           </div>
@@ -751,7 +750,7 @@
             <template x-for="row in militaryRows(current)" :key="row.k">
               <div class="grid py-2.5 text-[14px]" style="grid-template-columns: 140px 1fr; border-bottom: 1px dashed var(--divider);">
                 <div class="text-muted" x-text="row.k"></div>
-                <div class="text-ink-2 font-naskh font-bold" x-text="row.v"></div>
+                <div class="text-ink-2 font-body font-bold" x-text="row.v"></div>
               </div>
             </template>
             <template x-if="current && current.source">
@@ -779,7 +778,7 @@
                 <div class="flex gap-3 items-start">
                   <div x-html="renderPortrait(m, 56, true)"></div>
                   <div class="flex-1 min-w-0">
-                    <div class="font-naskh text-[17px] font-bold text-ink leading-tight truncate" x-text="m.name"></div>
+                    <div class="font-body text-[17px] font-bold text-ink leading-tight truncate" x-text="m.name"></div>
                     <div class="text-[12px] text-muted mt-1">
                       <span x-text="ageLabel(m)"></span>
                       · <span x-text="m.city || '—'"></span>
@@ -802,7 +801,7 @@
       ? 'أَقْمَارُ الطّوفان أرشيفٌ مفتوحُ المصدر يحفظ أسماءَ شهداء معركة طوفان الأقصى من كتائب القسّام، بياناتُهم تُستخلص آلياً من قناة @AqmarTofan ثم تُراجع بشرياً.'
       : 'AQMAR is an open-source archive preserving the names of those who fell in Tūfān al-Aqṣā from the Qassam Brigades. Data is extracted automatically from the @AqmarTofan channel and human-reviewed.'"></p>
     <div class="ornament-row mt-7"><span class="ornament-star"></span></div>
-    <div class="grid grid-cols-2 gap-4.5 mt-6">
+    <div class="grid-pair grid gap-4.5 mt-6">
       <template x-for="(b, i) in aboutBlocks" :key="i">
         <div class="bg-paper border border-divider rounded-md p-6">
           <h4 class="font-display text-[18px] m-0 text-ink" x-text="lang === 'ar' ? b.ar[0] : b.en[0]"></h4>
@@ -811,7 +810,7 @@
       </template>
     </div>
     <div class="mt-8 rounded p-6" style="background: linear-gradient(110deg, rgba(31,61,43,0.06), transparent); border-inline-start: 3px solid var(--forest);">
-      <p class="m-0 font-naskh text-[18px] text-ink-2"
+      <p class="m-0 font-body text-[18px] text-ink-2"
          x-text="lang === 'ar' ? '«إنّ الموتى لا يَموتون ما دامت أسماؤُهم تُذكَر.»' : '“The dead are not dead so long as their names are remembered.”'"></p>
     </div>
   </section>
@@ -821,12 +820,12 @@
     <div class="admin-banner bg-forest-grad text-paper px-7 py-5 rounded-lg mb-7 flex items-center justify-between gap-6">
       <div>
         <div class="font-latin-sans text-[11px] tracking-[0.3em] opacity-70">EDITOR · ADMIN MODE</div>
-        <div class="font-naskh text-[24px] font-bold mt-1"
+        <div class="font-body text-[24px] font-bold mt-1"
              x-text="lang === 'ar' ? 'لوحة تحرير السجلّ' : 'Registry editing dashboard'"></div>
       </div>
       <div class="flex items-center gap-3.5">
         <div class="text-center">
-          <div class="font-naskh text-[26px] font-bold" x-text="Object.keys(edits).length"></div>
+          <div class="font-body text-[26px] font-bold" x-text="Object.keys(edits).length"></div>
           <!-- Edits write through to SQL Server immediately. This counter shows
                how many records the admin touched in *this session*. -->
           <div class="text-[11px] opacity-75 tracking-wide"
@@ -845,7 +844,7 @@
     </div>
 
     <!-- Edit form -->
-    <div x-show="editingId" class="grid-detail grid gap-7" style="grid-template-columns: 260px 1fr;">
+    <div x-show="editingId" class="grid-detail is-admin grid gap-7">
       <div>
         <div x-html="renderPortrait(editingMartyr(), 220, true)"></div>
 
@@ -864,7 +863,7 @@
             <div class="flex-shrink-0 w-11 h-11 rounded-full flex items-center justify-center text-[20px]"
                  style="background: rgba(255,255,255,0.15); backdrop-filter: blur(4px);">▶</div>
             <div class="flex-1 min-w-0">
-              <div class="font-naskh text-[15px] font-bold leading-tight"
+              <div class="font-body text-[15px] font-bold leading-tight"
                    x-text="lang === 'ar' ? 'مشاهدة الفيديو الأصلي' : 'Watch source video'"></div>
               <div class="font-body text-[11px] mt-1" style="opacity: 0.8;"
                    x-text="lang === 'ar' ? 'افتح المنشور في تيليجرام لاستكمال البيانات الناقصة' : 'Open Telegram post to fill in missed data'"></div>
@@ -964,14 +963,14 @@
             <div class="font-body text-[11px] tracking-[0.2em] text-olive">
               SHID #<span x-text="String(editingId).padStart(3, '0')"></span>
             </div>
-            <h3 class="font-naskh text-[26px] font-bold m-0 mt-1" x-text="editingMartyr()?.name"></h3>
+            <h3 class="font-body text-[26px] font-bold m-0 mt-1" x-text="editingMartyr()?.name"></h3>
           </div>
           <span x-show="draftDirty()" class="badge badge-olive">
             ● <span x-text="lang === 'ar' ? 'تغييرات غير محفوظة' : 'unsaved changes'"></span>
           </span>
         </div>
 
-        <div class="grid gap-x-6" style="grid-template-columns: 1fr 1fr;">
+        <div class="grid-pair grid gap-x-6">
           <div class="col-span-2">
             <div class="font-display text-[13px] text-olive tracking-[0.2em] uppercase mb-3 mt-1"
                  x-text="lang === 'ar' ? 'الحقول الإلزامية' : 'Mandatory fields'"></div>
@@ -1073,7 +1072,7 @@
           </label>
           <label class="block mb-4 col-span-2">
             <div class="field-label" x-text="lang === 'ar' ? 'نبذة (اختياري)' : 'Profile note (optional)'"></div>
-            <textarea class="input font-naskh text-[16px]" rows="3" style="resize: vertical;" x-model="draft.bio"
+            <textarea class="input font-body text-[16px]" rows="3" style="resize: vertical;" x-model="draft.bio"
                       :placeholder="lang === 'ar' ? 'نبذةٌ موجزةٌ مأخوذةٌ من القناة…' : 'Short note pulled from the channel…'"></textarea>
           </label>
         </div>
@@ -1136,6 +1135,7 @@
       </div>
 
       <!-- ===== Table: sortable headers + per-column filter row ===== -->
+      <div class="table-scroll">
       <table class="w-full bg-paper border border-divider rounded-md overflow-hidden text-[14px]" style="border-collapse: collapse;">
         <thead>
           <!-- Sortable column headers -->
@@ -1181,7 +1181,7 @@
                 <div class="flex items-center gap-2.5">
                   <div x-html="renderPortrait(m, 36, false)"></div>
                   <div>
-                    <div class="font-naskh text-[16px] font-bold" x-text="m.name"></div>
+                    <div class="font-body text-[16px] font-bold" x-text="m.name"></div>
                     <div class="text-[12px] text-muted" x-text="ageLabel(m)"></div>
                   </div>
                 </div>
@@ -1244,6 +1244,7 @@
           </tr>
         </tbody>
       </table>
+      </div>
 
       <!-- Pagination — visible only when more rows exist beyond the current limit. -->
       <div x-show="adminList().length > adminLimit" class="flex flex-wrap items-center justify-center gap-3 mt-5 pt-4" style="border-top: 1px dashed var(--divider);">
@@ -1301,7 +1302,7 @@
 
   <!-- ===================== FOOTER ===================== -->
   <footer class="mt-16 px-8 pt-10 pb-8 bg-page-2" style="border-top: 1px solid var(--divider);">
-    <div class="footer-grid max-w-[1240px] mx-auto grid gap-8" style="grid-template-columns: 1.5fr 1fr 1fr 1fr;">
+    <div class="footer-grid max-w-[1240px] mx-auto grid gap-8">
       <div>
         <div class="flex items-center gap-3 mb-3.5">
           <svg width="32" height="32" viewBox="0 0 60 60" style="opacity:.45">
@@ -1310,7 +1311,7 @@
               <path d="M30 10 L30 50 M10 30 L50 30 M16 16 L44 44 M44 16 L16 44"/>
             </g>
           </svg>
-          <div class="font-naskh text-[20px] font-bold">أَقْمَارُ الطّوفان</div>
+          <div class="font-display text-[20px] font-bold">أَقْمَارُ الطّوفان</div>
         </div>
         <p class="text-[13px] text-muted m-0 leading-[1.8] max-w-[380px]"
            x-text="lang === 'ar'

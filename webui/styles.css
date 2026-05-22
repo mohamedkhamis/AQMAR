@@ -23,11 +23,21 @@
   --gold:      #fbbf24;
   --crimson:   #ea4444;
 
-  --font-display: "Reem Kufi", "Tajawal", serif;
-  --font-naskh:   "Amiri", "Reem Kufi", serif;
-  --font-body:    "Tajawal", system-ui, sans-serif;
-  --font-latin-sans: "Inter Tight", system-ui, sans-serif;
-  --font-latin-serif: "Crimson Pro", "Amiri", serif;
+  --font-display: "El Messiri", "Amiri", serif;
+  --font-naskh:   "Amiri", serif;
+  --font-body:    "IBM Plex Sans Arabic", system-ui, sans-serif;
+  --font-latin-sans: "IBM Plex Sans", system-ui, sans-serif;
+  --font-latin-serif: "IBM Plex Sans", "Amiri", serif;
+
+  /* Fluid type scale — each step interpolates between a mobile min and a
+     desktop max, so text resizes smoothly with the viewport (no breakpoints). */
+  --text-xs:   clamp(0.72rem, 0.69rem + 0.15vw, 0.80rem);
+  --text-sm:   clamp(0.80rem, 0.76rem + 0.20vw, 0.92rem);
+  --text-base: clamp(0.94rem, 0.89rem + 0.25vw, 1.06rem);
+  --text-lg:   clamp(1.05rem, 0.97rem + 0.40vw, 1.30rem);
+  --text-xl:   clamp(1.25rem, 1.08rem + 0.85vw, 1.75rem);
+  --text-2xl:  clamp(1.55rem, 1.20rem + 1.70vw, 2.55rem);
+  --text-hero: clamp(2.60rem, 1.55rem + 5.20vw, 5.25rem);
 }
 
 /* When dark theme is active, the paper-grain pattern needs lighter dots
@@ -77,6 +87,7 @@ html[data-theme="dark"] body::before { mix-blend-mode: screen; opacity: 0.4; }
 /* Type utilities */
 .font-display { font-family: var(--font-display); }
 .font-naskh   { font-family: var(--font-naskh); }
+.font-body    { font-family: var(--font-body); }
 .font-latin-sans  { font-family: var(--font-latin-sans); }
 .font-latin-serif { font-family: var(--font-latin-serif); }
 
@@ -163,7 +174,7 @@ html[data-theme="dark"] body::before { mix-blend-mode: screen; opacity: 0.4; }
 }
 .field-label {
   font-family: var(--font-body);
-  font-size: 13px; font-weight: 500;
+  font-size: var(--text-xs); font-weight: 500;
   color: var(--muted);
   margin-bottom: 6px;
   letter-spacing: 0;
@@ -228,21 +239,24 @@ html[data-theme="dark"] body::before { mix-blend-mode: screen; opacity: 0.4; }
 /* Section header */
 .section-kicker {
   font-family: var(--font-body);
-  font-size: 12px; font-weight: 500;
+  font-size: var(--text-xs); font-weight: 500;
   letter-spacing: 0.18em;
   color: var(--olive);
   text-transform: uppercase;
   margin-bottom: 10px;
 }
+.h1-display {
+  font-size: var(--text-hero);
+}
 .section-title {
   font-family: var(--font-display);
-  font-size: 38px; font-weight: 500;
+  font-size: var(--text-2xl); font-weight: 500;
   color: var(--ink);
   margin: 0; line-height: 1.15;
 }
 .section-sub {
   font-family: var(--font-body);
-  font-size: 16px; color: var(--muted);
+  font-size: var(--text-base); color: var(--muted);
   margin-top: 10px;
   max-width: 560px;
 }
@@ -252,32 +266,70 @@ html[data-theme="dark"] body::before { mix-blend-mode: screen; opacity: 0.4; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--faint); border-radius: 999px; border: 2px solid var(--bg); }
 
-/* Responsive */
-@media (max-width: 900px) {
+/* Grid layouts — defaults live here so the media queries below can override
+   them without !important (the defaults used to be inline styles in the HTML). */
+.grid-bday       { grid-template-columns: 1.4fr 1.2fr auto; align-items: end; }
+.preview-matches { grid-template-columns: repeat(3, 1fr); }
+.stats-strip {
+  grid-template-columns: repeat(4, 1fr);
+  border-top: 1px solid var(--divider);
+  border-bottom: 1px solid var(--divider);
+}
+.grid-filters    { grid-template-columns: 1.4fr 1fr 1fr 1fr 1fr auto; align-items: end; }
+.grid-detail     { grid-template-columns: 200px 1fr; }
+.grid-detail.is-admin { grid-template-columns: 260px 1fr; }
+.dates-strip {
+  grid-template-columns: 1fr 1fr 1fr;
+  border-top: 1px solid var(--divider);
+  border-bottom: 1px solid var(--divider);
+}
+.grid-2col       { grid-template-columns: 1fr 1fr; }
+.footer-grid     { grid-template-columns: 1.5fr 1fr 1fr 1fr; }
+.grid-pair       { grid-template-columns: 1fr 1fr; }
+
+/* Admin registry table — scrolls sideways on screens too narrow for its columns,
+   so the table never breaks the page layout on a phone. */
+.table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.table-scroll > table { min-width: 720px; }
+.table-scroll::-webkit-scrollbar { height: 8px; }
+.table-scroll::-webkit-scrollbar-track { background: transparent; }
+.table-scroll::-webkit-scrollbar-thumb { background: var(--faint); border-radius: 999px; }
+
+/* Responsive — tablet (1024) / large phone (768) / small phone (480).
+   Grid rules need no !important now that defaults live in classes above. The
+   .nav-links / .admin-banner / .hero-pad rules DO keep it — they override
+   Tailwind utility classes (.flex / .items-center / .px-9 .py-8). */
+@media (max-width: 1024px) {
   .nav-links { display: none !important; }
-  /* Birthday-match grid: 3 elements (date picker, window pills, submit) each
-     get their own row at mobile widths. Single-column is the only thing that
-     reads cleanly for these. */
-  .grid-bday { grid-template-columns: 1fr !important; }
-  .grid-bday > .grid-bday-window { grid-column: 1 / -1; }
-  .grid-bday > .grid-bday-submit { grid-column: 1 / -1; }
-  .grid-filters { grid-template-columns: 1fr 1fr !important; }
-  .grid-detail { grid-template-columns: 1fr !important; }
+  .nav-hamburger { display: inline-flex; }
+  .mobile-nav { display: block; }
+  .grid-filters { grid-template-columns: 1fr 1fr 1fr; }
+  .grid-detail, .grid-detail.is-admin { grid-template-columns: 1fr; }
   .grid-detail-portrait { justify-self: center; }
-  .grid-2col { grid-template-columns: 1fr !important; }
-  .stats-strip { grid-template-columns: 1fr 1fr !important; }
-  .footer-grid { grid-template-columns: 1fr 1fr !important; }
+}
+@media (max-width: 768px) {
+  /* Birthday-match grid: date picker, window pills, submit each get their
+     own full-width row — the only layout that reads cleanly this narrow. */
+  .grid-bday { grid-template-columns: 1fr; }
+  .grid-bday > .grid-bday-window,
+  .grid-bday > .grid-bday-submit { grid-column: 1 / -1; }
+  .grid-filters { grid-template-columns: 1fr 1fr; }
+  .grid-2col { grid-template-columns: 1fr; }
+  .stats-strip { grid-template-columns: 1fr 1fr; }
+  .footer-grid { grid-template-columns: 1fr 1fr; }
   .footer-grid > *:first-child { grid-column: 1 / -1; }
   .admin-banner { flex-direction: column; align-items: flex-start !important; gap: 16px; }
-  .preview-matches { grid-template-columns: 1fr !important; }
-  .dates-strip { grid-template-columns: 1fr 1fr !important; }
+  .preview-matches { grid-template-columns: 1fr; }
+  .dates-strip { grid-template-columns: 1fr 1fr; }
+  .grid-pair { grid-template-columns: 1fr; }
+  /* Tighten the header so logo + controls (incl. the admin button) fit
+     small phones without overflowing. !important beats Tailwind px-8 / gap-6. */
+  .header-bar { padding-inline: 16px !important; gap: 12px !important; }
 }
-@media (max-width: 600px) {
-  .grid-bday { grid-template-columns: 1fr !important; }
-  .grid-filters { grid-template-columns: 1fr !important; }
-  .h1-display { font-size: 44px !important; }
-  .section-title { font-size: 28px !important; }
-  .hero-pad { padding: 24px !important; }
+@media (max-width: 480px) {
+  .grid-filters { grid-template-columns: 1fr; }
+  .stats-strip { grid-template-columns: 1fr 1fr; }
+  .hero-pad { padding: clamp(20px, 5vw, 44px) !important; }
 }
 
 /* Skip-to-content link — visible only on keyboard focus */
@@ -320,7 +372,58 @@ html[data-theme="dark"] body::before { mix-blend-mode: screen; opacity: 0.4; }
 }
 .nav-hamburger:hover { background: var(--bg-2); border-color: var(--olive); }
 .mobile-nav { display: none; }
-@media (max-width: 900px) {
-  .nav-hamburger { display: inline-flex; }
-  .mobile-nav { display: block; }
+
+/* ── Date picker — Litepicker restyled to the AQMAR dark theme ───────────
+   Litepicker themes through its own --litepicker-* custom properties; setting
+   them on .litepicker overrides the library defaults for every calendar.
+   Covers all three pickers (home birthday search + admin birth/martyrdom). */
+.litepicker {
+  --litepicker-container-months-color-bg: var(--paper);
+  --litepicker-container-months-box-shadow-color: rgba(0,0,0,.55);
+  --litepicker-footer-color-bg: var(--bg-3);
+  --litepicker-footer-box-shadow-color: var(--divider);
+  --litepicker-tooltip-color-bg: var(--bg-3);
+  --litepicker-month-header-color: var(--ink);
+  --litepicker-button-prev-month-color: var(--muted);
+  --litepicker-button-next-month-color: var(--muted);
+  --litepicker-button-prev-month-color-hover: var(--forest);
+  --litepicker-button-next-month-color-hover: var(--forest);
+  --litepicker-month-weekday-color: var(--faint);
+  --litepicker-month-week-number-color: var(--faint);
+  --litepicker-day-width: 40px;
+  --litepicker-day-color: var(--ink-2);
+  --litepicker-day-color-hover: var(--forest);
+  --litepicker-is-today-color: var(--olive-2);
+  --litepicker-is-in-range-color: rgba(251,191,36,.14);
+  --litepicker-is-locked-color: var(--faint);
+  --litepicker-is-start-color: #1a1505;
+  --litepicker-is-start-color-bg: var(--forest);
+  --litepicker-is-end-color: #1a1505;
+  --litepicker-is-end-color-bg: var(--forest);
+  --litepicker-highlighted-day-color: var(--ink);
+  --litepicker-highlighted-day-color-bg: var(--bg-3);
+  --litepicker-button-apply-color-bg: var(--forest);
+  --litepicker-button-apply-color: #1a1505;
+  --litepicker-button-cancel-color-bg: var(--bg-3);
+  --litepicker-button-cancel-color: var(--ink);
+  font-family: var(--font-body);
+}
+.litepicker .container__months {
+  border: 1px solid var(--divider);
+  border-radius: 8px;
+}
+.litepicker .container__days > div,
+.litepicker .container__days > a { font-size: var(--text-sm); }
+/* Month + year <select> dropdowns (the SPA inits Litepicker with dropdowns). */
+.litepicker .month-item-header select {
+  background: var(--bg-3);
+  color: var(--ink);
+  border: 1px solid var(--divider);
+  border-radius: 6px;
+  padding: 4px 6px;
+  font-family: var(--font-body);
+}
+.litepicker .month-item-header select option {
+  background: var(--bg-2);
+  color: var(--ink);
 }
