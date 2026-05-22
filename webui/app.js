@@ -74,9 +74,12 @@ function aqmar() {
     ],
 
     // ----- birthday-match -----
-    // year is null until the user picks one via Litepicker — dayDelta only uses
-    // month + day for matching, so an empty year doesn't break filtering.
-    bday: { day: new Date().getDate(), month: new Date().getMonth() + 1, year: null, window: 30 },
+    // year is null until the user picks a date via Litepicker. Once a full date
+    // is picked the search matches on the whole date (year + month + day);
+    // before that, previewMatches falls back to month+day proximity.
+    // Default window is 365 ("السنة كاملة"): with full-date matching a narrow
+    // window often yields almost nothing, so default to a year-wide cohort.
+    bday: { day: new Date().getDate(), month: new Date().getMonth() + 1, year: null, window: 365 },
     _birthdayPicker: null,
     matchFilter: null,
 
@@ -218,8 +221,15 @@ function aqmar() {
     // DERIVED — birthday match preview & on-this-day
     // ============================================================
     get previewMatches() {
+      // Full-date proximity once a date (with year) is picked; month+day
+      // fallback before any pick so the home teaser still has something to show.
+      const iso = isoDate(this.bday.year, this.bday.month, this.bday.day);
       return this.all
-        .map(m => ({ ...m, delta: dayDelta(m.birth, this.bday.month, this.bday.day) }))
+        .map(m => ({
+          ...m,
+          delta: iso ? birthDistance(iso, m.birth)
+                     : dayDelta(m.birth, this.bday.month, this.bday.day),
+        }))
         .sort((a, b) => a.delta - b.delta)
         .slice(0, 3);
     },
@@ -272,14 +282,19 @@ function aqmar() {
     get filtered() {
       let list = this.all.map(m => ({ ...m }));
       if (this.matchFilter) {
-        const { month, day, window: w, customDays } = this.matchFilter;
+        const { month, day, year, window: w, customDays } = this.matchFilter;
         // Resolve 'custom' to the captured customDays value, with a sensible
         // clamp to [1, 365] so a malformed input can't filter to nothing.
         const days = w === 'custom'
           ? Math.max(1, Math.min(365, Number(customDays) || 14))
           : w;
+        // Match on the whole picked date (year + month + day) — birthDistance
+        // is real calendar distance. Falls back to month+day cyclic matching
+        // only if no year was picked (e.g. searching without choosing a date).
+        const userIso = isoDate(year, month, day);
         list = list
-          .map(m => ({ ...m, delta: dayDelta(m.birth, month, day) }))
+          .map(m => ({ ...m, delta: userIso ? birthDistance(userIso, m.birth)
+                                            : dayDelta(m.birth, month, day) }))
           .filter(m => m.delta <= days);
       }
       const f = this.filters;
@@ -975,6 +990,21 @@ function dayDelta(birthIso, targetMonth, targetDay) {
   const b = cum[targetMonth-1] + targetDay;
   const diff = Math.abs(a - b);
   return Math.min(diff, 365 - diff);
+}
+
+// Build a "YYYY-MM-DD" string from numeric parts, or null when no year is set.
+function isoDate(year, month, day) {
+  return year ? `${year}-${pad(month)}-${pad(day)}` : null;
+}
+
+// Absolute calendar-day distance between the user's full birth date and a
+// martyr's birth date — honours the year (unlike the month+day-only dayDelta).
+// Infinity when either date is missing or unparseable, so such rows fall
+// outside every window and sort last. daysBetween() comes from filter-logic.js.
+function birthDistance(userIso, birthIso) {
+  if (!userIso || !birthIso) return Infinity;
+  const d = daysBetween(userIso, birthIso);
+  return Number.isFinite(d) ? Math.abs(d) : Infinity;
 }
 
 function pad(n) { return String(n).padStart(2, '0'); }
