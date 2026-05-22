@@ -223,14 +223,15 @@ function aqmar() {
     get previewMatches() {
       // Full-date proximity once a date (with year) is picked; month+day
       // fallback before any pick so the home teaser still has something to show.
+      // birthDelta is signed (+ younger / − older); sort by magnitude (closest).
       const iso = isoDate(this.bday.year, this.bday.month, this.bday.day);
       return this.all
         .map(m => ({
           ...m,
-          delta: iso ? birthDistance(iso, m.birth)
+          delta: iso ? birthDelta(iso, m.birth)
                      : dayDelta(m.birth, this.bday.month, this.bday.day),
         }))
-        .sort((a, b) => a.delta - b.delta)
+        .sort((a, b) => Math.abs(a.delta) - Math.abs(b.delta))
         .slice(0, 3);
     },
     get onThisDay() {
@@ -257,6 +258,30 @@ function aqmar() {
         { k_ar: '٪١٠٠', k_en: '100%', v_ar: 'أرشيفٌ مفتوحٌ ودائم', v_en: 'open · always free' },
       ];
     },
+    // True when the SPA is being served from a developer's machine (local
+    // http.server or the IIS admin portal). Gates the "data is from the
+    // published snapshot, run admin_server.py" hint banner — that hint makes
+    // no sense on the public deployment (GitHub Pages), where there is no
+    // admin API and never will be.
+    get isLocalDev() {
+      const h = location.hostname;
+      return h === 'localhost' || h === '127.0.0.1' || h === '';
+    },
+
+    // Compact label for the birthday-match delta badge.
+    //   signed delta in days: positive → "+" (younger), negative → "−" (older)
+    //   0 → "نفس اليوم" / "SAME DAY"
+    //   non-finite (missing/unparseable birth date) → "" (badge hidden)
+    deltaLabel(delta) {
+      if (!Number.isFinite(delta)) return '';
+      if (delta === 0) return this.lang === 'ar' ? 'نفس اليوم' : 'SAME DAY';
+      const sign = delta > 0 ? '+' : '−';
+      const abs = Math.abs(delta);
+      return this.lang === 'ar'
+        ? `${sign} ${this.toArDigits(abs)} يوماً`
+        : `${sign}${abs}d`;
+    },
+
     get aboutBlocks() {
       return [
         { ar: ['١. الجمع','Telethon يَجلب الرسائل عبر MTProto بلا كلفة، ويحتفظ بحالةِ التشغيل ليستأنف عند توقّفه.'], en: ['1. Collection','Telethon pulls messages via MTProto. State is persisted so a crashed run resumes.'] },
@@ -288,14 +313,14 @@ function aqmar() {
         const days = w === 'custom'
           ? Math.max(1, Math.min(365, Number(customDays) || 14))
           : w;
-        // Match on the whole picked date (year + month + day) — birthDistance
-        // is real calendar distance. Falls back to month+day cyclic matching
-        // only if no year was picked (e.g. searching without choosing a date).
+        // Match on the whole picked date (year + month + day) — birthDelta is
+        // signed real calendar distance (so the badge can render + / −). Falls
+        // back to month+day cyclic matching only if no year was picked.
         const userIso = isoDate(year, month, day);
         list = list
-          .map(m => ({ ...m, delta: userIso ? birthDistance(userIso, m.birth)
+          .map(m => ({ ...m, delta: userIso ? birthDelta(userIso, m.birth)
                                             : dayDelta(m.birth, month, day) }))
-          .filter(m => m.delta <= days);
+          .filter(m => Math.abs(m.delta) <= days);
       }
       const f = this.filters;
       if (f.q) {
@@ -325,7 +350,7 @@ function aqmar() {
       }
 
       if (this.matchFilter) {
-        list.sort((a, b) => a.delta - b.delta);
+        list.sort((a, b) => Math.abs(a.delta) - Math.abs(b.delta));
       } else {
         // Six explicit sort modes. Missing values sort to the end via the
         // U+FFFD sentinel (always greater than real strings) or Infinity for nums.
@@ -997,14 +1022,18 @@ function isoDate(year, month, day) {
   return year ? `${year}-${pad(month)}-${pad(day)}` : null;
 }
 
-// Absolute calendar-day distance between the user's full birth date and a
-// martyr's birth date — honours the year (unlike the month+day-only dayDelta).
-// Infinity when either date is missing or unparseable, so such rows fall
-// outside every window and sort last. daysBetween() comes from filter-logic.js.
-function birthDistance(userIso, birthIso) {
+// Signed calendar-day delta between the user's full birth date and a martyr's
+// birth date — honours the year (unlike the month+day-only dayDelta).
+//   positive → martyr born AFTER the user → martyr is younger ("+" badge)
+//   negative → martyr born BEFORE the user → martyr is older ("−" badge)
+//   0        → same calendar date → "نفس اليوم"
+//   Infinity → date missing/unparseable; Math.abs(Infinity) keeps the row
+//              outside every window and sorts it last.
+// daysBetween() comes from filter-logic.js.
+function birthDelta(userIso, birthIso) {
   if (!userIso || !birthIso) return Infinity;
   const d = daysBetween(userIso, birthIso);
-  return Number.isFinite(d) ? Math.abs(d) : Infinity;
+  return Number.isFinite(d) ? d : Infinity;
 }
 
 function pad(n) { return String(n).padStart(2, '0'); }

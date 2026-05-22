@@ -60,7 +60,10 @@
          · 'api' → green/info: live SQL Server data via admin server
          · 'static-json' → amber/warning: published snapshot (admin server not running)
          · 'sample-data' → red/warning: ?demo mode, synthetic rows only -->
-  <template x-if="dataSource && dataSource !== 'api'">
+  <!-- 'sample-data' shows everywhere (it's a public ?demo-mode notice).
+       The 'static-json' hint is dev-only — suppressed on the public site so
+       it doesn't tell visitors to "run python scripts/admin_server.py". -->
+  <template x-if="(dataSource === 'static-json' && isLocalDev) || dataSource === 'sample-data'">
     <div role="status"
          class="px-4 py-2.5 text-center text-[13px]"
          :style="dataSource === 'static-json'
@@ -269,10 +272,7 @@
                 <div x-html="renderPortrait(m, 42, false)"></div>
                 <div class="min-w-0 flex-1">
                   <div class="font-body text-[16px] font-bold text-ink truncate" x-text="m.name"></div>
-                  <div class="text-[11px] text-muted mt-0.5">
-                    <span x-show="m.delta === 0" x-text="lang === 'ar' ? 'نفس اليوم' : 'same day'"></span>
-                    <span x-show="m.delta > 0" x-text="`${m.delta} ${lang === 'ar' ? 'يوم فارقاً' : 'days away'}`"></span>
-                  </div>
+                  <div class="text-[11px] text-muted mt-0.5" x-text="deltaLabel(m.delta)"></div>
                 </div>
               </button>
             </template>
@@ -593,10 +593,8 @@
                      class="absolute top-3 start-3 font-latin-sans text-[11px] tracking-[0.12em] px-2 py-0.5 rounded-full"
                      :style="m.delta === 0
                        ? 'color: var(--paper); background: rgba(31,61,43,0.85); backdrop-filter: blur(4px);'
-                       : 'color: var(--paper); background: rgba(138,109,59,0.85); backdrop-filter: blur(4px);'">
-                  <span x-show="m.delta === 0" x-text="lang === 'ar' ? 'نفس اليوم' : 'SAME DAY'"></span>
-                  <span x-show="m.delta > 0" x-text="`±${m.delta}d`"></span>
-                </div>
+                       : 'color: var(--paper); background: rgba(138,109,59,0.85); backdrop-filter: blur(4px);'"
+                     x-text="deltaLabel(m.delta)"></div>
               </div>
               <!-- Info section below photo -->
               <div class="p-4 flex-1 flex flex-col gap-2.5" style="padding: 14px 16px;">
@@ -630,10 +628,8 @@
                    class="absolute top-3.5 start-3.5 font-latin-sans text-[11px] tracking-[0.12em] px-2 py-0.5 rounded-full"
                    :style="m.delta === 0
                      ? 'color: var(--forest); background: rgba(31,61,43,0.10);'
-                     : 'color: var(--olive); background: rgba(138,109,59,0.10);'">
-                <span x-show="m.delta === 0" x-text="lang === 'ar' ? 'نفس اليوم' : 'SAME DAY'"></span>
-                <span x-show="m.delta > 0" x-text="`±${m.delta}d`"></span>
-              </div>
+                     : 'color: var(--olive); background: rgba(138,109,59,0.10);'"
+                   x-text="deltaLabel(m.delta)"></div>
               <div x-html="renderPortrait(m, 72, true)" class="flex-shrink-0"></div>
               <div class="flex-1 min-w-0 flex flex-col gap-2">
                 <div>
