@@ -36,25 +36,42 @@ def test_serialize_row_isoformats_date_and_datetime():
 
 
 def test_serialize_row_filters_to_published_fields_only():
-    """Admin-side metadata must not leak into the public JSON."""
+    """Verifies the public/private boundary on published JSON.
+
+    Published (per admin request 2026-05-23): ocr_*, created_at, updated_at,
+    frame_paths — kept as a transparent audit trail and provenance record.
+
+    Still admin-only: verification_status (redundant — only verified rows
+    are exported), verified_at, verified_by (identifies the reviewer),
+    duplicate_status (pipeline-internal flag).
+    """
     row = {
         "msg_id": 20, "name": "x",
-        # These should NOT appear in the output
-        "verification_status": "verified",
-        "verified_at": "2026-05-17T10:00:00",
-        "verified_by": "admin",
+        # Audit fields — now included
         "ocr_name": "raw ocr name",
         "ocr_birth_date": "garbage",
         "ocr_martyrdom_date": "more garbage",
-        "duplicate_status": "unique",
         "created_at": "2026-01-01",
         "updated_at": "2026-05-17",
+        "frame_paths": "data/frames/20_28.jpg",
+        # Reviewer + redundant + internal fields — must NOT leak
+        "verification_status": "verified",
+        "verified_at": "2026-05-17T10:00:00",
+        "verified_by": "admin",
+        "duplicate_status": "unique",
     }
     out = serialize_row(row)
     leaked = set(out.keys()) - set(PUBLISHED_FIELDS)
     assert leaked == set(), f"These fields leaked into the public JSON: {leaked}"
+    # Hard-coded checks for fields that must stay admin-only.
     assert "verification_status" not in out
-    assert "ocr_name" not in out
+    assert "verified_at" not in out
+    assert "verified_by" not in out
+    assert "duplicate_status" not in out
+    # And confirm the newly-published audit fields actually made it through.
+    assert out["ocr_name"] == "raw ocr name"
+    assert out["created_at"] == "2026-01-01"
+    assert out["frame_paths"] == "data/frames/20_28.jpg"
 
 
 def test_serialize_row_preserves_none_values():

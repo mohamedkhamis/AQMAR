@@ -20,10 +20,16 @@ from src.sqlserver_client import (
 # Default location of the published JSON snapshot. Callers can override.
 DEFAULT_JSON_PATH = "data/martyrs.json"
 
-# Fields included in the published JSON — only the user-facing ones the SPA
-# actually consumes. Excludes verification_status, verified_at, verified_by,
-# ocr_*, created_at, updated_at, duplicate_status (admin-side metadata that
-# doesn't need to be exposed to visitors).
+# Fields included in the published JSON. The SPA consumes a subset of these,
+# but every field listed below ships in data/martyrs.json so nothing is
+# silently dropped on publish. Still excluded (genuinely admin-only):
+#   verification_status / verified_at / verified_by — exporter only emits
+#       verified rows, so the status fields are redundant + verified_by
+#       identifies the reviewer (not for public site).
+#   duplicate_status — pipeline-internal flag, no public meaning.
+# Included audit fields (admin requested 2026-05-23): ocr_* preserve the
+# original OCR output as a transparent before/after trail; frame_paths +
+# created_at + updated_at preserve the full row history.
 PUBLISHED_FIELDS = [
     "msg_id",
     "name",
@@ -36,9 +42,15 @@ PUBLISHED_FIELDS = [
     "battalion",
     "brigade",
     "photo_path",
+    "frame_paths",
     "posted_date",
     "message_link",
     "extraction_status",
+    "ocr_name",
+    "ocr_birth_date",
+    "ocr_martyrdom_date",
+    "created_at",
+    "updated_at",
 ]
 
 

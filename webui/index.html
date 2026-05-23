@@ -1219,6 +1219,10 @@
                 :style="edits[m.id] ? 'background: rgba(184,146,74,0.06);' : ''">
               <!-- # -->
               <td class="p-3.5 text-muted font-latin-sans tabular-nums" x-text="String(m.id).padStart(3,'0')"></td>
+              <!-- Added (created_at) — when the scraper inserted this row.
+                   formatDateTime handles null + malformed inputs with '—'. -->
+              <td class="p-3.5 text-[12px] text-muted font-latin-sans tabular-nums whitespace-nowrap"
+                  x-text="formatDateTime(m.addedAt)"></td>
               <!-- Name + portrait + age -->
               <td class="p-3.5">
                 <div class="flex items-center gap-2.5">
@@ -1279,7 +1283,7 @@
           </template>
           <!-- Empty state when filters yield nothing -->
           <tr x-show="adminList().length === 0">
-            <td colspan="8" class="p-8 text-center text-muted">
+            <td colspan="9" class="p-8 text-center text-muted">
               <div x-text="lang === 'ar' ? 'لا توجد سجلات مطابقة' : 'No matching records'"></div>
               <button @click="adminClearFilters()" class="btn btn-text mt-2"
                       x-text="lang === 'ar' ? 'مسح الفلاتر' : 'Clear filters'"></button>

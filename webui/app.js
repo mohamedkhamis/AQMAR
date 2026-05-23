@@ -478,6 +478,10 @@ function aqmar() {
       const ar = this.lang === 'ar';
       return [
         { id: 'id',           label: '#',                          width: '80px',  sortable: true,  filterable: false },
+        // "Added" — UTC timestamp when the scraper inserted the row. Sortable so
+        // the admin can jump straight to the newest arrivals; not filterable
+        // (date range filtering would need a calendar picker, not in scope).
+        { id: 'addedAt',      label: ar ? 'تاريخ الإضافة' : 'Added', width: '160px', sortable: true,  filterable: false },
         { id: 'name',         label: ar ? 'الاسم' : 'Name',         width: 'auto',  sortable: true,  filterable: true  },
         { id: 'born',         label: ar ? 'الميلاد' : 'Born',       width: '130px', sortable: true,  filterable: true  },
         { id: 'martyrdom',    label: ar ? 'الاستشهاد' : 'Martyrdom', width: '130px', sortable: true,  filterable: true  },
@@ -916,6 +920,10 @@ function aqmar() {
       if (!this.lastSyncIso) return '—';
       return formatDate(this.lastSyncIso, this.lang);
     },
+    // Shortened "DD Mon YYYY · HH:MM" for the admin grid's Added column.
+    // Falls back to '—' for null / unparseable values (rows loaded from the
+    // published JSON snapshot won't carry created_at).
+    formatDateTime(iso) { return formatDateTime(iso, this.lang); },
     toArDigits(n) {
       const map = ['٠','١','٢','٣','٤','٥','٦','٧','٨','٩'];
       return String(n).replace(/\d/g, d => map[+d]);
@@ -1060,6 +1068,27 @@ function esc(s) {
   return String(s).replace(/[&<>"']/g, c => ({
     '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'
   }[c]));
+}
+
+// Compact date+time for the admin grid's Added column. Accepts ISO strings
+// like "2026-05-23T12:34:56.789000" (pyodbc → FastAPI default JSON encoding
+// of datetime). Renders "DD Month YYYY · HH:MM" in the matching locale.
+function formatDateTime(iso, locale = 'ar') {
+  if (!iso || typeof iso !== 'string') return '—';
+  const m = iso.match(/^(\d{4})-(\d{1,2})-(\d{1,2})[T\s](\d{1,2}):(\d{2})/);
+  if (!m) return formatDate(iso, locale);  // date-only fallback
+  const y = m[1];
+  const mIdx = parseInt(m[2], 10) - 1;
+  const d = parseInt(m[3], 10);
+  const hh = String(m[4]).padStart(2, '0');
+  const mm = m[5];
+  if (mIdx < 0 || mIdx > 11 || d < 1 || d > 31) return '—';
+  if (locale === 'en') {
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    return `${d} ${months[mIdx]} ${y} · ${hh}:${mm}`;
+  }
+  const arMonths = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+  return `${d} ${arMonths[mIdx]} ${y} · ${hh}:${mm}`;
 }
 
 function formatDate(iso, locale = 'ar') {

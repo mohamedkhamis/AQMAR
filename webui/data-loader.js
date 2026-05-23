@@ -85,6 +85,10 @@
       // or correcting the structured fields.
       frames:    normalizeFramePaths(row.frame_paths),
       source:    row.message_link || "",
+      // When the scraper inserted this row into SQL Server (UTC ISO string).
+      // Used by the admin grid's "Added" column + sort. Null on rows that
+      // came from the published JSON snapshot (the exporter strips this).
+      addedAt:   row.created_at || null,
       verification: row.verification_status || "unverified",
       // Boolean shorthand the admin grid sorts by. Default false for any
       // row that isn't explicitly 'verified' (including unverified +
