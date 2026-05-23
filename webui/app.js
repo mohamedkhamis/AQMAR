@@ -15,6 +15,7 @@ function aqmar() {
     loginError: '',
     selectedId: null,
     editingId: null,
+    photoZoomed: false,       // admin edit: portrait click opens a fullscreen lightbox of the photo
     draft: {},
     edits: {},
     adminSearch: '',
@@ -144,6 +145,19 @@ function aqmar() {
       this.$watch('bday.month', () => {
         if (this.bday.day > this.bdayDaysInMonth) this.bday.day = this.bdayDaysInMonth;
       });
+
+      // Auto-recompute "Age at martyrdom" whenever the admin edits either
+      // date in the edit form. Reuses the existing year-only computeAge so
+      // freshly-typed values match how rows are seeded on load. The age input
+      // stays editable so the admin can still override manually if one date
+      // is unparseable but a known age was mentioned elsewhere.
+      const recomputeDraftAge = () => {
+        if (!this.editingId || !this.draft) return;
+        const a = this.computeAge(this.draft.birth, this.draft.martyrdom);
+        if (a != null) this.draft.age = a;
+      };
+      this.$watch('draft.birth', recomputeDraftAge);
+      this.$watch('draft.martyrdom', recomputeDraftAge);
     },
 
     // Data-loading helper, callable from init() and retryLoad(). Now delegates
@@ -453,6 +467,7 @@ function aqmar() {
       if (window.AQMAR_API) window.AQMAR_API.clearToken();
       this.isAdmin = false;
       this.editingId = null;
+      this.photoZoomed = false;
       this.view = 'home';
     },
 
@@ -606,6 +621,7 @@ function aqmar() {
     cancelEdit() {
       this.editingId = null;
       this.draft = {};
+      this.photoZoomed = false;
     },
     // Saves an admin edit. Async because it round-trips to the local API,
     // which writes to SQL Server + flips verification_status to 'verified'
@@ -639,6 +655,7 @@ function aqmar() {
       }
       this.editingId = null;
       this.draft = {};
+      this.photoZoomed = false;
     },
     // Trigger a publish from the admin header. Confirms first, then POSTs to
     // /api/publish which writes data/martyrs.json + records publish_versions.
@@ -685,6 +702,7 @@ function aqmar() {
       if (idx >= 0) this.all[idx] = { ...this.all[idx], verification: 'rejected', isVerified: false };
       this.editingId = null;
       this.draft = {};
+      this.photoZoomed = false;
     },
 
     // ============================================================
