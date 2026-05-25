@@ -11,6 +11,7 @@ Used by:
   - scripts/admin_server.py (FastAPI: read/edit/verify via the admin SPA)
   - scripts/export_to_json.py (publish: read verified rows → versioned JSON)
 """
+import re
 from dataclasses import asdict
 
 
@@ -52,6 +53,34 @@ def _str_or_none(v):
     return v
 
 
+# Strict YYYY-MM-DD only. The DB DATE column rejects anything else (e.g. OCR
+# clipped a year-only "1989" or month-only "2024-04"). When a value fails this
+# match, the typed DATE column gets NULL but the raw text stays in the ocr_*
+# mirror column (NVARCHAR — accepts any string) for the admin to fix during
+# verification.
+_ISO_DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+# DATETIME2 is more forgiving — accepts "2026-01-07 14:02" / "2026-01-07T14:02:00".
+_ISO_DATETIME = re.compile(r"^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}(:\d{2})?$")
+
+
+def _sanitize_date(v, *, allow_datetime=False):
+    """Validate that the value parses as YYYY-MM-DD (or full DATETIME when
+    allow_datetime=True). Returns the cleaned string, or None for any value
+    that doesn't match. Called by martyr_row_to_db_dict before payload reaches
+    the DB so OCR garbage never lands in DATE / DATETIME2 columns and crashes
+    the insert with SQL error 22007 (conversion failed)."""
+    if v is None:
+        return None
+    s = str(v).strip()
+    if s == "":
+        return None
+    if _ISO_DATE.match(s):
+        return s
+    if allow_datetime and _ISO_DATETIME.match(s):
+        return s
+    return None
+
+
 def martyr_row_to_db_dict(row) -> dict:
     """Convert a MartyrRow dataclass into a dict matching COLUMNS.
 
@@ -60,21 +89,29 @@ def martyr_row_to_db_dict(row) -> dict:
     pipeline extracted before any admin edit. The scraper writes them once
     on first insert; subsequent re-scrapes don't overwrite them (preserved
     in the UPDATE branch by listing only the post-OCR fields).
+
+    CRITICAL: date fields are sanitized BEFORE going to the DB. OCR sometimes
+    produces malformed dates ('22', '1989', '2024-04') that SQL Server DATE
+    columns reject with error 22007. We NULL the structured date columns for
+    those values but keep the raw OCR text in the ocr_* mirror columns so the
+    admin can see what was extracted and decide what the right date is.
     """
     d = asdict(row)
-    # Capture OCR-side snapshot from the same values (first scrape only — on
-    # re-scrape the upsert UPDATE branch refreshes these, which matches our
-    # intent: rescrape = re-OCR, so newer ocr_* is the latest extraction).
+    # Preserve raw OCR text in the mirror columns BEFORE we sanitize the
+    # structured date columns. The mirrors are NVARCHAR, so they accept
+    # anything; the admin sees them in the verification UI.
     d["ocr_name"] = d.get("name")
     d["ocr_birth_date"] = d.get("birth_date")
     d["ocr_martyrdom_date"] = d.get("martyrdom_date")
-    # Coerce empties on every nullable text/date column. frame_paths is also
-    # coerced (empty string → NULL) — the admin SPA tolerates either but
-    # NULL is cleaner.
+    # Sanitize the structured DATE / DATETIME2 columns. Junk → NULL.
+    d["birth_date"] = _sanitize_date(d.get("birth_date"))
+    d["martyrdom_date"] = _sanitize_date(d.get("martyrdom_date"))
+    d["posted_date"] = _sanitize_date(d.get("posted_date"), allow_datetime=True)
+    # Coerce empties on every nullable text column.
     for k in (
-        "name", "name_normalized", "birth_date", "martyrdom_date",
+        "name", "name_normalized",
         "city", "military_rank", "weapon", "battalion", "brigade",
-        "photo_path", "frame_paths", "posted_date", "message_link",
+        "photo_path", "frame_paths", "message_link",
         "extraction_status", "duplicate_status",
         "ocr_name", "ocr_birth_date", "ocr_martyrdom_date",
     ):

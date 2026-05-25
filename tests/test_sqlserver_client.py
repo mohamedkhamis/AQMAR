@@ -75,6 +75,36 @@ def test_martyr_row_to_db_dict_empty_dates_become_none():
     assert payload["city"] is None
 
 
+def test_martyr_row_to_db_dict_malformed_dates_become_none_but_preserve_ocr_text():
+    """Regression for SQL error 22007 (conversion failed) on msg 1033 in the
+    2026-05-24 daily scrape: OCR produced a clipped date string like '1989' or
+    '2024-04' which SQL Server DATE column rejected, killing the entire upsert.
+    Fix: structured DATE columns are NULL'd when not strict YYYY-MM-DD, but the
+    raw OCR text stays in the NVARCHAR ocr_* mirror columns so the admin can
+    see what was extracted and decide how to fix it."""
+    from src.excel_writer import MartyrRow
+    row = MartyrRow(
+        msg_id=1033, name="osama", name_normalized="osama",
+        birth_date="1989",            # year only — would crash DATE column (SQL 22007)
+        martyrdom_date="2024-04",     # missing day — would also crash
+        city="", military_rank="", weapon="",
+        battalion="", brigade="",
+        photo_path="", frame_paths="",
+        posted_date="not a date",     # garbage — would crash DATETIME2 column
+        message_link="",
+        extraction_status="partial_birth", duplicate_status="unique",
+    )
+    payload = martyr_row_to_db_dict(row)
+    # Structured DATE / DATETIME2 columns get NULL — won't crash the insert
+    assert payload["birth_date"] is None
+    assert payload["martyrdom_date"] is None
+    assert payload["posted_date"] is None
+    # Raw OCR text preserved in the mirror columns so the admin sees what
+    # was extracted and can correct it during verification
+    assert payload["ocr_birth_date"] == "1989"
+    assert payload["ocr_martyrdom_date"] == "2024-04"
+
+
 # =============================================================================
 # UPSERT
 # =============================================================================
