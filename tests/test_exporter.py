@@ -54,6 +54,8 @@ def test_serialize_row_filters_to_published_fields_only():
         "created_at": "2026-01-01",
         "updated_at": "2026-05-17",
         "frame_paths": "data/frames/20_28.jpg",
+        # featured_frame_path: included (Phase 1 cover-image feature, 2026-05-25)
+        "featured_frame_path": "data/frames/20_28.jpg",
         # Reviewer + redundant + internal fields — must NOT leak
         "verification_status": "verified",
         "verified_at": "2026-05-17T10:00:00",
@@ -72,6 +74,7 @@ def test_serialize_row_filters_to_published_fields_only():
     assert out["ocr_name"] == "raw ocr name"
     assert out["created_at"] == "2026-01-01"
     assert out["frame_paths"] == "data/frames/20_28.jpg"
+    assert out["featured_frame_path"] == "data/frames/20_28.jpg"
 
 
 def test_serialize_row_preserves_none_values():

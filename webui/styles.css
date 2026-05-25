@@ -208,6 +208,124 @@ html[data-theme="dark"] body::before { mix-blend-mode: screen; opacity: 0.4; }
   box-shadow: 0 16px 30px -22px rgba(40,30,15,0.4);
 }
 
+/* ===== Admin edit — image carousel =====
+   Replaces the old 220px portrait + 3-col OCR-frames thumbnail strip with a
+   single big stage that cycles through the portrait + every OCR frame for the
+   row. Arrows + thumbstrip control it; the big image is clickable for max-
+   screen zoom (re-uses the photoZoomed modal, now bound to carouselCurrent). */
+.edit-carousel-stage {
+  position: relative;
+  background: #000;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid var(--divider);
+  min-height: 460px;
+  display: flex; align-items: center; justify-content: center;
+}
+.edit-carousel-stage img {
+  max-width: 100%;
+  max-height: 78vh;
+  object-fit: contain;
+  display: block;
+  cursor: zoom-in;
+}
+.edit-carousel-arrow {
+  position: absolute; top: 50%; transform: translateY(-50%);
+  width: 44px; height: 44px;
+  background: rgba(0,0,0,0.55);
+  color: #fff;
+  border: 1px solid rgba(255,255,255,0.3);
+  border-radius: 999px;
+  font-size: 22px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  backdrop-filter: blur(6px);
+  transition: background .15s ease;
+  z-index: 2;
+}
+.edit-carousel-arrow:hover { background: rgba(0,0,0,0.78); }
+.edit-carousel-arrow.prev { inset-inline-start: 12px; }
+.edit-carousel-arrow.next { inset-inline-end: 12px; }
+.edit-carousel-counter {
+  position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%);
+  background: rgba(0,0,0,0.55);
+  color: rgba(255,255,255,0.95);
+  font-family: var(--font-latin-sans);
+  font-size: 12px; font-weight: 600;
+  padding: 4px 10px; border-radius: 999px;
+  backdrop-filter: blur(6px);
+  letter-spacing: 0.05em;
+  z-index: 2;
+}
+.edit-carousel-kind {
+  position: absolute; top: 10px; inset-inline-start: 10px;
+  background: rgba(31,61,43,0.85);
+  color: var(--forest);
+  font-family: var(--font-display);
+  font-size: 10px;
+  padding: 3px 9px; border-radius: 999px;
+  letter-spacing: 0.18em; text-transform: uppercase;
+  backdrop-filter: blur(6px);
+  z-index: 2;
+}
+.edit-carousel-thumbs {
+  margin-top: 10px;
+  display: grid; gap: 6px;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+}
+.edit-carousel-thumb {
+  position: relative;
+  aspect-ratio: 4/3;
+  background: var(--bg-3);
+  border-radius: 5px;
+  overflow: hidden;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: border-color .12s ease;
+  padding: 0;
+}
+.edit-carousel-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.edit-carousel-thumb:hover { border-color: var(--olive); }
+.edit-carousel-thumb.active { border-color: var(--forest); }
+/* ★ badge on the thumbnail that matches dbo.martyrs.featured_frame_path —
+   tells admin "this is what's stored in the DB right now". Sits in the
+   top-end corner so it doesn't overlap the active-border thick edge. */
+.edit-carousel-thumb-saved {
+  position: absolute; top: 2px; inset-inline-end: 2px;
+  width: 16px; height: 16px;
+  background: var(--forest);
+  color: var(--paper);
+  border-radius: 999px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 10px; line-height: 1;
+  font-weight: 700;
+  z-index: 1;
+}
+/* Status strip directly under the stage. Color reflects the cover-image
+   state: forest gold = saved/will-save (good), olive = needs action. */
+.edit-carousel-status {
+  margin-top: 8px;
+  font-family: var(--font-body);
+  font-size: 12px;
+  padding: 7px 10px;
+  border-radius: 4px;
+  text-align: center;
+}
+.edit-carousel-status.is-good {
+  background: rgba(251,191,36,0.08);
+  color: var(--forest);
+  border: 1px solid rgba(251,191,36,0.25);
+}
+.edit-carousel-status.needs-action {
+  background: rgba(184,146,74,0.10);
+  color: var(--olive);
+  border: 1px solid rgba(184,146,74,0.3);
+}
+@media (max-width: 1024px) {
+  .edit-carousel-stage { min-height: 320px; }
+}
+
 /* Portrait placeholder (monogram) */
 .portrait {
   position: relative;
@@ -277,7 +395,12 @@ html[data-theme="dark"] body::before { mix-blend-mode: screen; opacity: 0.4; }
 }
 .grid-filters    { grid-template-columns: 1.4fr 1fr 1fr 1fr 1fr auto; align-items: end; }
 .grid-detail     { grid-template-columns: 200px 1fr; }
-.grid-detail.is-admin { grid-template-columns: 260px 1fr; }
+/* Admin edit panel: image carousel on the right (first column in RTL), form on
+   the left. 2fr/3fr = ~40%/60% — picked over 50/50 and 60/40 by the user
+   2026-05-25 because it gives a big carousel image without cramping the
+   9 optional form fields. align-items: start prevents the form's natural
+   height from stretching the image column and leaving black letterbox space. */
+.grid-detail.is-admin { grid-template-columns: 2fr 3fr; align-items: start; }
 .dates-strip {
   grid-template-columns: 1fr 1fr 1fr;
   border-top: 1px solid var(--divider);

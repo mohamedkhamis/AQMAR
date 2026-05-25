@@ -842,25 +842,95 @@
     <!-- Edit form -->
     <div x-show="editingId" class="grid-detail is-admin grid gap-7">
       <div>
-        <!-- Portrait — clickable when a real photo is loaded. Click → lightbox.
-             Hover hint shows a magnifier overlay so the affordance is obvious;
-             rows with no photo (silhouette only) are left non-interactive. -->
-        <div class="relative w-fit"
-             :class="editingMartyr()?.photo ? 'cursor-zoom-in group' : ''"
-             :role="editingMartyr()?.photo ? 'button' : null"
-             :tabindex="editingMartyr()?.photo ? '0' : null"
-             :title="editingMartyr()?.photo ? (lang === 'ar' ? 'انقر لتكبير الصورة' : 'Click to zoom photo') : ''"
-             :aria-label="editingMartyr()?.photo ? (lang === 'ar' ? 'تكبير صورة الشهيد' : 'Enlarge martyr photo') : null"
-             @click="if (editingMartyr()?.photo) photoZoomed = true"
-             @keydown.enter.prevent="if (editingMartyr()?.photo) photoZoomed = true"
-             @keydown.space.prevent="if (editingMartyr()?.photo) photoZoomed = true">
-          <div x-html="renderPortrait(editingMartyr(), 220, true)"></div>
-          <div x-show="editingMartyr()?.photo"
-               class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"
-               style="background: rgba(0,0,0,0.45);">
-            <span aria-hidden="true"
-                  style="color: #fff; font-size: 32px; line-height: 1; text-shadow: 0 2px 8px rgba(0,0,0,0.5);">🔍</span>
+        <!-- ===== Image carousel — portrait + OCR frames combined =====
+             Single big stage on the right (first column in RTL). Arrows +
+             thumbstrip cycle through: portrait (if present) → OCR frame 1 →
+             frame 2 → … → wrap. Clicking the big image opens the photoZoomed
+             modal for max-screen zoom. Picked over the old 220px portrait +
+             3-col thumbnail strip on 2026-05-25: admin asked for a way to
+             verify OCR text against the photo without clicking, and to scan
+             all frames in one place. -->
+        <div x-show="carouselImages().length > 0">
+          <div class="edit-carousel-stage">
+            <button x-show="carouselImages().length > 1"
+                    @click="carouselPrev()" type="button"
+                    :aria-label="lang === 'ar' ? 'السابق' : 'Previous'"
+                    :title="lang === 'ar' ? 'السابق' : 'Previous'"
+                    class="edit-carousel-arrow prev">
+              <span x-text="lang === 'ar' ? '→' : '←'" aria-hidden="true"></span>
+            </button>
+            <button x-show="carouselImages().length > 1"
+                    @click="carouselNext()" type="button"
+                    :aria-label="lang === 'ar' ? 'التالي' : 'Next'"
+                    :title="lang === 'ar' ? 'التالي' : 'Next'"
+                    class="edit-carousel-arrow next">
+              <span x-text="lang === 'ar' ? '←' : '→'" aria-hidden="true"></span>
+            </button>
+            <div class="edit-carousel-kind"
+                 x-text="carouselCurrent()?.kind === 'portrait'
+                   ? (lang === 'ar' ? 'صورة شخصية' : 'Portrait')
+                   : (lang === 'ar' ? 'إطار من المصدر — OCR' : 'OCR source frame')"></div>
+            <div class="edit-carousel-counter"
+                 x-text="`${toArDigits(carouselIdx + 1)} / ${toArDigits(carouselImages().length)}`"></div>
+            <img :src="carouselCurrent()?.src"
+                 :alt="editingMartyr()?.name || ''"
+                 @click="photoZoomed = true"
+                 :title="lang === 'ar' ? 'انقر لتكبير الصورة' : 'Click to zoom'">
           </div>
+
+          <!-- Cover-image status banner (Phase 1, 2026-05-25). Three states:
+               • current is the saved frame → forest gold "this is the saved cover"
+               • current is a DIFFERENT frame → forest gold "will be saved on Save"
+               • current is the portrait while frames exist → olive warning
+               • no frames at all → hidden (nothing to choose) -->
+          <div class="edit-carousel-status is-good"
+               x-show="carouselCurrent()?.kind === 'frame' && isSavedFrame(carouselCurrent())"
+               x-text="lang === 'ar'
+                 ? '★ هذا هو الإطار المحفوظ كصورة غلاف'
+                 : '★ This frame is the saved cover image'"></div>
+          <div class="edit-carousel-status is-good"
+               x-show="carouselCurrent()?.kind === 'frame' && !isSavedFrame(carouselCurrent())"
+               x-text="lang === 'ar'
+                 ? '✓ سيُحفظ هذا الإطار كصورة غلاف عند الحفظ'
+                 : '✓ This frame will be saved as the cover on Save'"></div>
+          <div class="edit-carousel-status needs-action"
+               x-show="carouselCurrent()?.kind === 'portrait' && (editingMartyr()?.frames?.length || 0) > 0"
+               x-text="lang === 'ar'
+                 ? '⚠ هذه هي الصورة الشخصية — يجب اختيار إطار قبل الحفظ'
+                 : '⚠ This is the portrait — pick a frame before saving'"></div>
+
+          <div class="edit-carousel-thumbs" x-show="carouselImages().length > 1">
+            <template x-for="(im, i) in carouselImages()" :key="i">
+              <button @click="carouselIdx = i" type="button"
+                      :class="{ 'edit-carousel-thumb': true, 'active': carouselIdx === i }"
+                      :title="im.kind === 'portrait'
+                        ? (lang === 'ar' ? 'صورة شخصية' : 'Portrait')
+                        : (lang === 'ar' ? `إطار رقم ${toArDigits(i)}` : `Frame ${i}`)">
+                <img :src="im.src" loading="lazy" alt="">
+                <!-- ★ on the thumbnail that matches the saved featured_frame_path -->
+                <span class="edit-carousel-thumb-saved"
+                      x-show="isSavedFrame(im)"
+                      :title="lang === 'ar' ? 'صورة الغلاف المحفوظة' : 'Saved cover image'">★</span>
+              </button>
+            </template>
+          </div>
+
+          <!-- Pipeline samples birth-date frames at video seconds 28/30/32 —
+               hint surfaces that so the admin knows which frame is most likely
+               to carry the date they need. -->
+          <div class="text-[10px] text-faint mt-2 leading-snug"
+               x-show="(editingMartyr()?.frames?.length || 0) > 0"
+               x-text="lang === 'ar' ? 'تاريخ الميلاد يَظهر عادةً في الثانية ٢٨–٣٢ من الفيديو' : 'Birth date is usually visible at video second 28–32'"></div>
+        </div>
+
+        <!-- Fallback when the row has no portrait + no frames at all (rare —
+             only happens when both OCR failed AND the channel post had no
+             attached photo). Shows the monogram placeholder so the column
+             doesn't collapse to zero height. -->
+        <div x-show="carouselImages().length === 0"
+             class="edit-carousel-stage"
+             style="min-height: 320px;">
+          <div x-html="renderPortrait(editingMartyr(), 220, true)"></div>
         </div>
 
         <!-- Source video link — opens the original Telegram post in a new tab so
@@ -886,105 +956,6 @@
             <div class="flex-shrink-0 text-[14px]" style="opacity: 0.7;">↗</div>
           </div>
         </a>
-
-        <!-- OCR source frames — clickable thumbnails. Birth date and martyrdom
-             date are usually visible in one of these frames (the pipeline samples
-             at video seconds 25/28/30/32/35). Click a thumbnail → fullscreen
-             lightbox with prev/next + close. Same modal pattern as the portrait
-             zoom above. Helps the admin verify what OCR saw before accepting /
-             correcting the structured fields. -->
-        <div x-show="editingMartyr()?.frames && editingMartyr()?.frames?.length > 0"
-             class="mt-4"
-             x-data="{ frameExpanded: null }"
-             @keydown.escape.window="frameExpanded = null">
-          <div class="flex items-baseline justify-between mb-2">
-            <div class="font-display text-[11px] text-olive tracking-[0.2em] uppercase"
-                 x-text="lang === 'ar' ? 'إطارات المصدر — OCR' : 'OCR source frames'"></div>
-            <div class="text-[10px] text-faint"
-                 x-text="(editingMartyr()?.frames?.length || 0) + (lang === 'ar' ? ' إطار' : ' frames')"></div>
-          </div>
-
-          <!-- Strip: 3-column grid of small thumbnails. Always visible; the
-               lightbox below overlays the whole page when a thumb is clicked. -->
-          <div class="grid gap-1.5"
-               style="grid-template-columns: repeat(3, 1fr);">
-            <template x-for="(f, i) in (editingMartyr()?.frames || [])" :key="i">
-              <button @click="frameExpanded = i" type="button"
-                      class="bg-transparent p-0 cursor-zoom-in overflow-hidden rounded relative group"
-                      style="aspect-ratio: 16/9; border: 1px solid var(--divider);"
-                      :title="lang === 'ar' ? 'اضغط للتكبير' : 'Click to enlarge'">
-                <img :src="f" loading="lazy"
-                     class="w-full h-full object-cover transition-opacity"
-                     style="display: block;">
-                <!-- Frame number badge (bottom-right, semi-transparent) -->
-                <span class="absolute bottom-0.5 end-0.5 px-1.5 py-0.5 rounded font-latin-sans tabular-nums"
-                      style="background: rgba(0,0,0,0.55); color: rgba(255,255,255,0.9); font-size: 9px;"
-                      x-text="`${i + 1}/${editingMartyr()?.frames?.length || 0}`"></span>
-              </button>
-            </template>
-          </div>
-
-          <div class="text-[10px] text-faint mt-1.5 leading-snug"
-               x-text="lang === 'ar' ? 'تاريخ الميلاد يَظهر عادةً في الثانية ٢٨–٣٢ من الفيديو' : 'Birth date is usually visible at video second 28–32'"></div>
-
-          <!-- Modal lightbox — same pattern as the portrait zoom above. fixed-
-               position escapes this column's grid, so the image fills the screen
-               regardless of how cramped the edit panel is. -->
-          <div x-show="frameExpanded !== null"
-               @click.self="frameExpanded = null"
-               x-trap.inert.noscroll="frameExpanded !== null"
-               x-transition.opacity.duration.150ms
-               x-cloak
-               role="dialog" aria-modal="true"
-               :aria-label="lang === 'ar' ? 'إطار المصدر' : 'Source frame'"
-               class="fixed inset-0 z-[110] flex items-center justify-center p-6"
-               style="background: rgba(0,0,0,0.86); backdrop-filter: blur(8px);">
-            <!-- Close (top-right) -->
-            <button @click.stop="frameExpanded = null" type="button"
-                    :aria-label="lang === 'ar' ? 'إغلاق' : 'Close'"
-                    :title="lang === 'ar' ? 'إغلاق' : 'Close (Esc)'"
-                    class="absolute top-4 end-4 rounded-full flex items-center justify-center cursor-pointer"
-                    style="width: 44px; height: 44px; background: rgba(255,255,255,0.18); color: #fff; border: 1px solid rgba(255,255,255,0.35); font-size: 22px; backdrop-filter: blur(8px); z-index: 2;">
-              ✕
-            </button>
-
-            <!-- Prev (semantically lower index). Sits on the logical "start"
-                 side — right in RTL, left in LTR — so it matches reading order. -->
-            <button x-show="(editingMartyr()?.frames?.length || 0) > 1"
-                    @click.stop="frameExpanded = (frameExpanded - 1 + editingMartyr().frames.length) % editingMartyr().frames.length"
-                    type="button"
-                    :aria-label="lang === 'ar' ? 'السابق' : 'Previous'"
-                    class="absolute top-1/2 start-4 rounded-full flex items-center justify-center cursor-pointer"
-                    style="width: 52px; height: 52px; transform: translateY(-50%); background: rgba(255,255,255,0.15); color: #fff; border: 1px solid rgba(255,255,255,0.3); font-size: 24px; backdrop-filter: blur(8px); z-index: 2;">
-              <span aria-hidden="true" x-text="lang === 'ar' ? '→' : '←'"></span>
-            </button>
-
-            <!-- Next (semantically higher index). End side. -->
-            <button x-show="(editingMartyr()?.frames?.length || 0) > 1"
-                    @click.stop="frameExpanded = (frameExpanded + 1) % editingMartyr().frames.length"
-                    type="button"
-                    :aria-label="lang === 'ar' ? 'التالي' : 'Next'"
-                    class="absolute top-1/2 end-4 rounded-full flex items-center justify-center cursor-pointer"
-                    style="width: 52px; height: 52px; transform: translateY(-50%); background: rgba(255,255,255,0.15); color: #fff; border: 1px solid rgba(255,255,255,0.3); font-size: 24px; backdrop-filter: blur(8px); z-index: 2;">
-              <span aria-hidden="true" x-text="lang === 'ar' ? '←' : '→'"></span>
-            </button>
-
-            <img :src="editingMartyr()?.frames?.[frameExpanded]"
-                 :alt="lang === 'ar' ? 'إطار من فيديو المصدر' : 'Frame from source video'"
-                 class="rounded-lg"
-                 style="max-width: 100%; max-height: 90vh; object-fit: contain; box-shadow: 0 40px 80px -30px rgba(0,0,0,0.7);">
-
-            <!-- Counter + dismiss hint (bottom-center) -->
-            <div class="absolute bottom-4 inset-x-0 text-center pointer-events-none">
-              <div class="font-latin-sans tabular-nums"
-                   style="color: rgba(255,255,255,0.85); font-size: 16px; font-weight: 600;"
-                   x-text="`${(frameExpanded ?? 0) + 1} / ${editingMartyr()?.frames?.length || 0}`"></div>
-              <div class="font-latin-sans mt-1"
-                   style="color: rgba(255,255,255,0.55); font-size: 11px; letter-spacing: 0.12em;"
-                   x-text="lang === 'ar' ? 'انقر خارج الصورة أو اضغط Esc للإغلاق' : 'Click outside or press Esc to close'"></div>
-            </div>
-          </div>
-        </div>
 
         <!-- Photo upload not yet implemented (would need a Storage write path
              plus image cropping/resizing). Disabled until the feature lands. -->
@@ -1134,6 +1105,18 @@
                Even with no changes, clicking Save = "verify as-is" (a valid action). -->
           <button @click="saveEdit()" class="btn btn-primary">
             ✓ <span x-text="lang === 'ar' ? 'حفظ والتحقق' : 'Save & verify'"></span>
+          </button>
+          <!-- Save & Next: queue-processing shortcut. Saves + verifies (same as
+               Save), then jumps to the next unverified row sorted by created_at
+               ASC (oldest scraper output first). Exits to the list view when
+               the queue is empty. Added 2026-05-25 — admin asked for a way to
+               work through unverified rows without bouncing back to the table
+               between each one. -->
+          <button @click="saveAndNext()" class="btn btn-primary"
+                  :title="lang === 'ar' ? 'حفظ + الانتقال إلى أقدم سجلٍّ غير محقّق' : 'Save then jump to the oldest unverified row'">
+            ✓ <span x-text="lang === 'ar' ? 'حفظ والتالي' : 'Save & next'"></span>
+            <span aria-hidden="true" style="font-weight: 700; font-size: 16px; margin-inline-start: 2px;"
+                  x-text="lang === 'ar' ? '←' : '→'"></span>
           </button>
         </div>
       </div>
@@ -1347,11 +1330,14 @@
     </div>
   </div>
 
-  <!-- ===================== PHOTO ZOOM LIGHTBOX (admin edit) =====================
-       Opens when the admin clicks the portrait in the edit form. Click outside,
-       press Esc, or click ✕ to close. z-index sits above the login modal so a
-       background scroll lock from x-trap doesn't fight other overlays. -->
-  <div x-show="photoZoomed && editingMartyr()?.photo"
+  <!-- ===================== IMAGE ZOOM LIGHTBOX (admin edit) =====================
+       Opens when the admin clicks the big carousel image in the edit form.
+       Re-bound to carouselCurrent() on 2026-05-25 so it works for any image
+       in the carousel (portrait + every OCR frame), not just the portrait.
+       Click outside, press Esc, or click ✕ to close. z-index sits above the
+       login modal so a background scroll lock from x-trap doesn't fight other
+       overlays. -->
+  <div x-show="photoZoomed && carouselCurrent()"
        @click.self="photoZoomed = false"
        @keydown.escape.window="photoZoomed = false"
        x-trap.inert.noscroll="photoZoomed"
@@ -1368,7 +1354,7 @@
             style="width: 44px; height: 44px; background: rgba(255,255,255,0.18); color: #fff; border: 1px solid rgba(255,255,255,0.35); font-size: 22px; backdrop-filter: blur(8px);">
       ✕
     </button>
-    <img :src="editingMartyr()?.photo"
+    <img :src="carouselCurrent()?.src"
          :alt="editingMartyr()?.name || ''"
          class="rounded-lg"
          style="max-width: 100%; max-height: 90vh; object-fit: contain; box-shadow: 0 40px 80px -30px rgba(0,0,0,0.7);">

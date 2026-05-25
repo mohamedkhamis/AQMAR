@@ -15,7 +15,8 @@ function aqmar() {
     loginError: '',
     selectedId: null,
     editingId: null,
-    photoZoomed: false,       // admin edit: portrait click opens a fullscreen lightbox of the photo
+    photoZoomed: false,       // admin edit: big-image click opens fullscreen lightbox of carouselCurrent()
+    carouselIdx: 0,           // admin edit: index into carouselImages() (portrait + frames combined). Reset to 0 on every editMartyr / cancel / save / reject / logout.
     draft: {},
     edits: {},
     adminSearch: '',
@@ -158,6 +159,19 @@ function aqmar() {
       };
       this.$watch('draft.birth', recomputeDraftAge);
       this.$watch('draft.martyrdom', recomputeDraftAge);
+
+      // Phase 1 cover-image (2026-05-25): mirror the current carousel slide
+      // into draft.featuredFrame so the "unsaved changes" badge correctly
+      // lights up when the admin navigates to a different frame. Stored in
+      // raw DB format (no "../" prefix) so it diffs cleanly against the
+      // loader's m.featuredFrame.
+      this.$watch('carouselIdx', () => {
+        if (!this.editingId || !this.draft) return;
+        const current = this.carouselCurrent();
+        this.draft.featuredFrame = (current?.kind === 'frame')
+          ? denormalizePath(current.src)
+          : null;
+      });
     },
 
     // Data-loading helper, callable from init() and retryLoad(). Now delegates
@@ -468,6 +482,7 @@ function aqmar() {
       this.isAdmin = false;
       this.editingId = null;
       this.photoZoomed = false;
+      this.carouselIdx = 0;
       this.view = 'home';
     },
 
@@ -599,6 +614,17 @@ function aqmar() {
       this.draft = { ...m, ...e };
       this.view = 'admin';
       window.scrollTo({ top: 0, behavior: 'smooth' });
+      // Open the carousel at the previously-saved frame if any (Phase 1
+      // cover-image, 2026-05-25). featuredFrame is stored in raw DB format
+      // ("data/frames/X_Y.jpg"); each carousel src is normalized with "../"
+      // for the browser, so we compare denormalized.
+      this.carouselIdx = 0;
+      const saved = m?.featuredFrame;
+      if (saved) {
+        const imgs = this.carouselImages();
+        const idx = imgs.findIndex(im => denormalizePath(im.src) === saved);
+        if (idx >= 0) this.carouselIdx = idx;
+      }
       // Push the freshly-loaded draft dates into the Litepicker instances so the
       // calendars open to the right month/year. nextTick waits for Alpine to
       // finish rendering — important on the very first edit (before that, the
@@ -611,6 +637,41 @@ function aqmar() {
     editingMartyr() {
       return this.editingId ? this.all.find(m => m.id === this.editingId) : null;
     },
+
+    // ----- Image carousel (admin edit panel) -----
+    // Combined list of [portrait, ...frames] used by the big right-side
+    // carousel. Portrait is always slot 0 when present so editMartyr() can
+    // safely reset carouselIdx=0 and land on the most important image.
+    // Each entry: { src, kind: 'portrait'|'frame' }.
+    carouselImages() {
+      const m = this.editingMartyr();
+      if (!m) return [];
+      const out = [];
+      if (m.photo) out.push({ src: m.photo, kind: 'portrait' });
+      (m.frames || []).forEach(f => out.push({ src: f, kind: 'frame' }));
+      return out;
+    },
+    carouselCurrent() {
+      const imgs = this.carouselImages();
+      return imgs.length ? imgs[Math.min(this.carouselIdx, imgs.length - 1)] : null;
+    },
+    carouselPrev() {
+      const n = this.carouselImages().length;
+      if (n) this.carouselIdx = (this.carouselIdx - 1 + n) % n;
+    },
+    carouselNext() {
+      const n = this.carouselImages().length;
+      if (n) this.carouselIdx = (this.carouselIdx + 1) % n;
+    },
+    // True when the given carousel image is the same frame currently stored
+    // in dbo.martyrs.featured_frame_path. Drives the ★ badge on the matching
+    // thumbnail and the "this is the saved cover" banner under the stage.
+    isSavedFrame(im) {
+      const m = this.editingMartyr();
+      if (!m?.featuredFrame || !im) return false;
+      return denormalizePath(im.src) === m.featuredFrame;
+    },
+
     draftDirty() {
       const m = this.editingMartyr();
       if (!m) return false;
@@ -626,6 +687,7 @@ function aqmar() {
       this.editingId = null;
       this.draft = {};
       this.photoZoomed = false;
+      this.carouselIdx = 0;
     },
     // Saves an admin edit. Async because it round-trips to the local API,
     // which writes to SQL Server + flips verification_status to 'verified'
@@ -635,6 +697,24 @@ function aqmar() {
     async saveEdit() {
       const m = this.editingMartyr();
       if (!m) return;
+      // Phase 1 cover-image (2026-05-25): the carousel position IS the saved
+      // frame. If row has frames AND admin is currently on the portrait, block
+      // — they must navigate to a frame first. Rows with no frames at all skip
+      // validation (nothing to pick from).
+      const hasFrames = (m.frames || []).length > 0;
+      const current = this.carouselCurrent();
+      if (hasFrames && current?.kind !== 'frame') {
+        alert(this.lang === 'ar'
+          ? '⚠ اختر إطاراً من الفيديو قبل الحفظ.\nاستخدم الأسهم أو الصور المصغّرة للتنقّل، ثم انقر «حفظ».'
+          : '⚠ Pick a frame from the video before saving.\nUse the arrows or thumbnails to navigate, then click Save.');
+        return;
+      }
+      // Inject draft.featuredFrame (raw DB path) from current carousel slide.
+      // Set to null on rows with no frames so the column gets cleared if it
+      // was previously set and frames were later removed.
+      this.draft.featuredFrame = (current?.kind === 'frame')
+        ? denormalizePath(current.src)
+        : null;
       const diff = buildEditDiff(m, this.draft);
       // Note: empty diff is still a valid "verify only" gesture — the API
       // accepts an empty body and just flips verification_status to 'verified'.
@@ -660,6 +740,29 @@ function aqmar() {
       this.editingId = null;
       this.draft = {};
       this.photoZoomed = false;
+      this.carouselIdx = 0;
+    },
+    // Queue-processing shortcut (admin asked for it 2026-05-25). Same save
+    // path as saveEdit(), then jumps straight into the next unverified row
+    // sorted by addedAt ASC (oldest scraper output first). When the queue is
+    // empty, it just exits to the list view — the status pills above the
+    // table already make "0 unverified" obvious.
+    //
+    // Note: nulls-last on addedAt is defensive — admin always reads from the
+    // API which returns created_at, so addedAt should always be set. The null
+    // case would only trigger if data ever came from the static JSON fallback
+    // (which the exporter strips of created_at).
+    async saveAndNext() {
+      await this.saveEdit();    // current row → verified, editingId cleared
+      const next = this.all
+        .filter(m => (m.verification || 'unverified') === 'unverified')
+        .sort((a, b) => {
+          if (!a.addedAt && !b.addedAt) return 0;
+          if (!a.addedAt) return 1;
+          if (!b.addedAt) return -1;
+          return a.addedAt.localeCompare(b.addedAt);  // ASC = oldest first
+        })[0];
+      if (next) this.editMartyr(next.id);
     },
     // Trigger a publish from the admin header. Confirms first, then POSTs to
     // /api/publish which writes data/martyrs.json + records publish_versions.
@@ -707,6 +810,7 @@ function aqmar() {
       this.editingId = null;
       this.draft = {};
       this.photoZoomed = false;
+      this.carouselIdx = 0;
     },
 
     // ============================================================
@@ -729,7 +833,6 @@ function aqmar() {
         ]},
         { title: ar ? 'تواصل' : 'Contact', links: [
           { text: '@AqmarTofan',                      href: 'https://t.me/AqmarTofan', external: true },
-          { text: ar ? 'بلّغ عن خطأ' : 'Report correction', href: 'mailto:info@azkapmo.com?subject=AQMAR%20correction' },
         ]},
       ];
     },
@@ -1030,6 +1133,17 @@ function aqmar() {
 }
 
 // ===== Free functions ===========================================
+
+// Inverse of normalizePhotoPath() in data-loader.js. Strips the leading "../"
+// that the loader prepends so paths resolve from /webui/ → /data/photos/...
+// Used by the admin save path to turn a normalized carousel src ("../data/
+// frames/41_28.jpg") back into the raw DB shape ("data/frames/41_28.jpg")
+// before sending it to the API. Pass-through for absolute URLs and already-
+// raw paths.
+function denormalizePath(p) {
+  if (!p) return p;
+  return p.replace(/\\/g, '/').replace(/^\.\.\//, '');
+}
 
 function dayDelta(birthIso, targetMonth, targetDay) {
   if (!birthIso) return Infinity;

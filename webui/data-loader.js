@@ -84,6 +84,13 @@
       // see what OCR actually extracted from the video before accepting
       // or correcting the structured fields.
       frames:    normalizeFramePaths(row.frame_paths),
+      // featuredFrame: the single frame the admin picked as the "cover"
+      // (Phase 1 cover-image feature, 2026-05-25). Kept in RAW DB format
+      // ("data/frames/41_28.jpg" — no "../" prefix) so buildEditDiff can
+      // compare it apples-to-apples with what the save path sends back.
+      // Null until the admin picks one. To compare against a normalized
+      // carousel src, strip the leading "../" with denormalizePath().
+      featuredFrame: row.featured_frame_path || null,
       source:    row.message_link || "",
       // When the scraper inserted this row into SQL Server (UTC ISO string).
       // Used by the admin grid's "Added" column + sort. Null on rows that

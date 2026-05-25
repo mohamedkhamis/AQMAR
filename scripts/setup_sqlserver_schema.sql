@@ -47,6 +47,11 @@ BEGIN
         -- Shown to the admin in the edit form so they can compare what OCR
         -- saw vs what landed in the structured columns.
         frame_paths         NVARCHAR(MAX)   NULL,
+        -- One token from frame_paths that the admin picked as the "cover"
+        -- for this row (Phase 1 of cover-image feature, 2026-05-25).
+        -- Used by the public detail page to show a frame instead of / next to
+        -- the portrait. Stays NULL on existing rows until admin re-edits them.
+        featured_frame_path NVARCHAR(500)   NULL,
         posted_date         DATETIME2       NULL,
         message_link        NVARCHAR(500)   NULL,
         extraction_status   NVARCHAR(50)    NULL,    -- 'complete', 'partial_birth', etc.

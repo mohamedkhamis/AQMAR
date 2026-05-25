@@ -168,6 +168,11 @@ _EDITABLE_FIELDS = {
     "city", "military_rank", "weapon", "battalion", "brigade",
     "photo_path", "message_link",
     "extraction_status", "duplicate_status",
+    # featured_frame_path: the OCR frame the admin picked as the "cover" for
+    # this row (Phase 1 cover-image feature, 2026-05-25). One token from
+    # frame_paths, stored separately so the public detail page can show it
+    # alongside the portrait without re-parsing the semicolon list.
+    "featured_frame_path",
 }
 
 

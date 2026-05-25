@@ -19,16 +19,22 @@
   // / ocr_* fields). UI-only fields (draft.age computed in app.js init,
   // draft.bio with no DB column) are silently filtered out.
   const FIELD_REVERSE_MAP = {
-    name:      "name",
-    birth:     "birth_date",
-    martyrdom: "martyrdom_date",
-    city:      "city",
-    rank:      "military_rank",
-    weapon:    "weapon",
-    battalion: "battalion",
-    brigade:   "brigade",
-    photo:     "photo_path",
-    source:    "message_link",
+    name:          "name",
+    birth:         "birth_date",
+    martyrdom:     "martyrdom_date",
+    city:          "city",
+    rank:          "military_rank",
+    weapon:        "weapon",
+    battalion:     "battalion",
+    brigade:       "brigade",
+    photo:         "photo_path",
+    source:        "message_link",
+    // Phase 1 cover-image feature (2026-05-25). draft.featuredFrame is set
+    // from the current carousel position in saveEdit / saveAndNext; values
+    // are kept in raw DB format ("data/frames/X_Y.jpg") so this is a direct
+    // pass-through. Null means "no cover" (row has no frames or admin
+    // explicitly cleared it).
+    featuredFrame: "featured_frame_path",
   };
 
   function translateToDbSchema(diffInNewSchema) {

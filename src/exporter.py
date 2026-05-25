@@ -43,6 +43,7 @@ PUBLISHED_FIELDS = [
     "brigade",
     "photo_path",
     "frame_paths",
+    "featured_frame_path",
     "posted_date",
     "message_link",
     "extraction_status",
