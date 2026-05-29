@@ -18,18 +18,32 @@
 
 ## Table of contents
 
-1. [Prerequisites](#1-prerequisites)
-2. [Create your Archive.org account](#2-create-your-archiveorg-account)
-3. [Get your S3-like API credentials](#3-get-your-s3-like-api-credentials)
-4. [Install + configure the `internetarchive` CLI](#4-install--configure-the-internetarchive-cli)
-5. [Set up Google Drive Desktop (file-system mirror)](#5-set-up-google-drive-desktop-file-system-mirror)
-6. [Add `archive_org_id` column to SQL Server](#6-add-archive_org_id-column-to-sql-server)
-7. [Create the mirror script `scripts/mirror_to_archive_org.py`](#7-create-the-mirror-script-scriptsmirror_to_archive_orgpy)
-8. [Wire the SPA to embed Archive.org videos](#8-wire-the-spa-to-embed-archiveorg-videos)
-9. [Run the first migration (manual, with `--limit 3` smoke test)](#9-run-the-first-migration-manual-with---limit-3-smoke-test)
-10. [Automate daily mirror via Windows Task Scheduler](#10-automate-daily-mirror-via-windows-task-scheduler)
-11. [Operational notes — Archive.org limits, deletion, content policy](#11-operational-notes--archiveorg-limits-deletion-content-policy)
-12. [Troubleshooting cheat-sheet](#12-troubleshooting-cheat-sheet)
+- [Hybrid Video Hosting: Google Drive (private master) → Archive.org (public CDN)](#hybrid-video-hosting-google-drive-private-master--archiveorg-public-cdn)
+  - [Table of contents](#table-of-contents)
+  - [1. Prerequisites](#1-prerequisites)
+  - [2. Create your Archive.org account](#2-create-your-archiveorg-account)
+  - [3. Get your S3-like API credentials](#3-get-your-s3-like-api-credentials)
+  - [4. Install + configure the `internetarchive` CLI](#4-install--configure-the-internetarchive-cli)
+  - [5. Set up Google Drive Desktop (file-system mirror)](#5-set-up-google-drive-desktop-file-system-mirror)
+    - [Install Drive Desktop](#install-drive-desktop)
+    - [Organize your videos in Drive](#organize-your-videos-in-drive)
+  - [6. Add `archive_org_id` column to SQL Server](#6-add-archive_org_id-column-to-sql-server)
+  - [7. Create the mirror script `scripts/mirror_to_archive_org.py`](#7-create-the-mirror-script-scriptsmirror_to_archive_orgpy)
+  - [8. Wire the SPA to embed Archive.org videos](#8-wire-the-spa-to-embed-archiveorg-videos)
+    - [8a. Expose the field in the API + SPA adapter](#8a-expose-the-field-in-the-api--spa-adapter)
+    - [8b. Add an embed card to the admin edit form](#8b-add-an-embed-card-to-the-admin-edit-form)
+    - [8c. (Optional) Show the embed on the public detail page](#8c-optional-show-the-embed-on-the-public-detail-page)
+  - [9. Run the first migration (manual, with `--limit 3` smoke test)](#9-run-the-first-migration-manual-with---limit-3-smoke-test)
+  - [10. Automate daily mirror via Windows Task Scheduler](#10-automate-daily-mirror-via-windows-task-scheduler)
+    - [Create the scheduled task](#create-the-scheduled-task)
+  - [11. Operational notes — Archive.org limits, deletion, content policy](#11-operational-notes--archiveorg-limits-deletion-content-policy)
+    - [What Archive.org gives you (free, no plan needed)](#what-archiveorg-gives-you-free-no-plan-needed)
+    - [What Archive.org does NOT do](#what-archiveorg-does-not-do)
+    - [Content policy for your use case](#content-policy-for-your-use-case)
+    - [Drive cleanup (optional)](#drive-cleanup-optional)
+  - [12. Troubleshooting cheat-sheet](#12-troubleshooting-cheat-sheet)
+  - [Appendix A: Quick-reference one-time setup checklist](#appendix-a-quick-reference-one-time-setup-checklist)
+  - [Appendix B: Daily operational flow (steady state)](#appendix-b-daily-operational-flow-steady-state)
 
 ---
 
@@ -56,7 +70,7 @@ which martyr by parsing the leading numeric `msg_id` from the filename.
 ## 2. Create your Archive.org account
 
 1. Open https://archive.org/account/signup
-2. Use the email **info@azkapmo.com** (matches your existing AQMAR identity)
+2. Use the email **A@A.com** (matches your existing AQMAR identity)
 3. Pick a screen name — recommended: `AQMAR` (uppercase, no spaces)
 4. Set a strong password (save it to your password manager)
 5. Check the verification email → click the confirmation link
@@ -125,7 +139,7 @@ ia configure
 
 It will prompt:
 ```
-Email address: info@azkapmo.com
+Email address: A@A.com
 Password: <your archive.org password — NOT the S3 keys>
 ```
 
@@ -729,7 +743,7 @@ Get-Content logs\mirror_to_archive_org.log -Tail 30
 - **No private mode.** Everything uploaded is public. If you have material
   that shouldn't be public, keep it in Drive only and don't mirror it.
 - **No easy delete.** You can "darken" items (remove from public view) but
-  full deletion requires emailing `info@archive.org`. Plan uploads carefully.
+  full deletion requires emailing `A@A.org`. Plan uploads carefully.
 - **No SLA.** Free service. Outages happen ~once a year, usually <24h.
 - **Some videos may be flagged.** Archive has anti-spam reviews; legitimate
   memorial content is fine, but high-volume uploads (1000+/day from a new
@@ -763,7 +777,7 @@ becomes your archival copy of record. Most people keep both for at least
 | Upload returns HTTP 503 | Archive.org under load | Script retries 3× automatically; wait + re-run if all fail |
 | "no file at G:\My Drive\AQMAR-Videos\955.mp4" | File missing or named differently | Check `dir "G:\My Drive\AQMAR-Videos\955*"` and rename if needed |
 | Embed shows "Item not yet available" | Archive is still processing (just uploaded) | Wait 1–10 min, refresh |
-| Embed shows "This item is darkened" | Archive flagged the item | Email `info@archive.org` to appeal — fast turnaround |
+| Embed shows "This item is darkened" | Archive flagged the item | Email `A@archive.org` to appeal — fast turnaround |
 | All uploads succeed but DB column stays NULL | Step 6 not done (column missing) | Re-run `add_archive_org_id_column.sql` |
 | SPA still shows "Watch on Telegram" only | Step 8 not done, OR browser cache | Hard refresh (Ctrl+F5); check `data-loader.js` includes `archive: row.archive_org_id` |
 | Drive Desktop says "Z: not ready" mid-upload | Drive sync paused / file not downloaded yet | In Drive Desktop settings, set the folder to "Available offline" |

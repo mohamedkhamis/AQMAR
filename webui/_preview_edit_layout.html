@@ -1,0 +1,458 @@
+<!doctype html>
+<html lang="ar" dir="rtl" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AQMAR — معاينة تخطيط لوحة التحرير</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=El+Messiri:wght@400;500;600;700&family=Amiri:wght@400;700&family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<style>
+  body { padding: 28px 36px 80px; max-width: 1680px; margin: 0 auto; }
+  h1 { font-family: var(--font-display); font-size: 28px; margin: 0 0 6px; color: var(--ink); }
+  .lead { color: var(--muted); font-size: 14px; max-width: 900px; line-height: 1.7; margin-bottom: 32px; }
+
+  .preview-section { margin-bottom: 56px; }
+  .preview-header {
+    display: flex; align-items: baseline; justify-content: space-between;
+    margin-bottom: 14px;
+    border-bottom: 1px solid var(--divider);
+    padding-bottom: 10px;
+  }
+  .preview-tag {
+    font-family: var(--font-display);
+    font-size: 12px;
+    color: var(--olive);
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+  }
+  .preview-name { font-family: var(--font-body); font-size: 22px; font-weight: 700; color: var(--ink); }
+  .preview-spec { font-family: var(--font-latin-sans); font-size: 12px; color: var(--faint); }
+
+  /* The edit-panel container — same styling for all variants */
+  .edit-panel {
+    background: var(--bg-2);
+    border: 1px solid var(--divider);
+    border-radius: 12px;
+    padding: 24px;
+  }
+
+  /* Three column-ratio variants. is-admin classes get the carousel side. */
+  .grid-A { display: grid; grid-template-columns: 1.5fr 1fr; gap: 28px; }   /* 60% image / 40% form */
+  .grid-B { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; }     /* 50% / 50% */
+  .grid-C { display: grid; grid-template-columns: 1fr 1.5fr; gap: 28px; }   /* 40% image / 60% form */
+
+  /* ===== Image stage ===== */
+  .stage {
+    position: relative;
+    background: #000;
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid var(--divider);
+    min-height: 460px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .stage img.big {
+    max-width: 100%;
+    max-height: 78vh;
+    object-fit: contain;
+    display: block;
+  }
+  .stage-arrow {
+    position: absolute; top: 50%; transform: translateY(-50%);
+    width: 44px; height: 44px;
+    background: rgba(0,0,0,0.55);
+    color: #fff;
+    border: 1px solid rgba(255,255,255,0.3);
+    border-radius: 999px;
+    font-size: 22px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    backdrop-filter: blur(6px);
+    transition: background .15s ease;
+  }
+  .stage-arrow:hover { background: rgba(0,0,0,0.78); }
+  .stage-arrow.prev { inset-inline-start: 12px; }
+  .stage-arrow.next { inset-inline-end: 12px; }
+  .stage-counter {
+    position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%);
+    background: rgba(0,0,0,0.55);
+    color: rgba(255,255,255,0.95);
+    font-family: var(--font-latin-sans);
+    font-size: 12px; font-weight: 600;
+    padding: 4px 10px; border-radius: 999px;
+    backdrop-filter: blur(6px);
+    letter-spacing: 0.05em;
+  }
+  .stage-kind {
+    position: absolute; top: 10px; inset-inline-start: 10px;
+    background: rgba(31,61,43,0.85);
+    color: var(--forest);
+    font-family: var(--font-display);
+    font-size: 10px;
+    padding: 3px 9px; border-radius: 999px;
+    letter-spacing: 0.18em; text-transform: uppercase;
+    backdrop-filter: blur(6px);
+  }
+  /* Thumbstrip below big image — clickable thumbs */
+  .thumbstrip {
+    margin-top: 10px;
+    display: grid; gap: 6px;
+    grid-auto-flow: column;
+    grid-auto-columns: 1fr;
+  }
+  .thumb {
+    aspect-ratio: 4/3;
+    background: var(--bg-3);
+    border-radius: 5px;
+    overflow: hidden;
+    border: 2px solid transparent;
+    cursor: pointer;
+    transition: border-color .12s ease;
+    padding: 0;
+  }
+  .thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .thumb:hover { border-color: var(--olive); }
+  .thumb.active { border-color: var(--forest); }
+
+  /* ===== Fake form column ===== */
+  .form-col {
+    background: var(--paper);
+    border: 1px solid var(--divider);
+    border-radius: 10px;
+    padding: 24px;
+  }
+  .form-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding-bottom: 14px; margin-bottom: 18px;
+    border-bottom: 1px solid var(--divider);
+  }
+  .form-id { font-family: var(--font-display); font-size: 11px; color: var(--olive); letter-spacing: 0.2em; }
+  .form-name { font-family: var(--font-body); font-size: 22px; font-weight: 700; margin: 4px 0 0; }
+  .field-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 18px; }
+  .field-grid .field-full { grid-column: 1 / -1; }
+  .kicker {
+    grid-column: 1 / -1;
+    font-family: var(--font-display);
+    font-size: 11px; color: var(--olive); letter-spacing: 0.2em;
+    text-transform: uppercase;
+    margin: 4px 0 -2px;
+  }
+  .input[disabled] { opacity: .9; }
+
+  /* ===== Action bar at bottom of form ===== */
+  .actions {
+    display: flex; gap: 10px; justify-content: space-between;
+    margin-top: 22px; padding-top: 18px;
+    border-top: 1px solid var(--divider);
+  }
+  .actions .left, .actions .right { display: flex; gap: 10px; }
+  .btn-save-next {
+    background: var(--forest);
+    color: var(--paper);
+    font-family: var(--font-display);
+    font-weight: 600;
+    border: 1px solid var(--forest);
+    border-radius: 999px;
+    padding: 10px 18px;
+    display: inline-flex; align-items: center; gap: 8px;
+    cursor: pointer;
+    font-size: 14px;
+  }
+  .btn-save-next:hover { background: var(--forest-2); }
+  .btn-save-next .arrow { font-weight: 700; font-size: 16px; }
+  .btn-reject {
+    background: transparent;
+    color: var(--crimson);
+    border: 1px solid rgba(234,68,68,0.4);
+    border-radius: 999px;
+    padding: 9px 16px;
+    font-family: var(--font-display);
+    font-size: 13px;
+    cursor: pointer;
+  }
+  .btn-reject:hover { background: rgba(234,68,68,0.1); }
+
+  /* Pick-me bar at top */
+  .pick-bar {
+    position: sticky; top: 0; z-index: 50;
+    background: var(--bg-2);
+    border-bottom: 1px solid var(--divider);
+    padding: 12px 16px;
+    margin: -28px -36px 24px;
+    display: flex; gap: 18px; align-items: center;
+    font-family: var(--font-display);
+    font-size: 13px;
+  }
+  .pick-bar a {
+    padding: 6px 14px;
+    border: 1px solid var(--divider);
+    border-radius: 999px;
+    color: var(--ink-2);
+    cursor: pointer;
+  }
+  .pick-bar a:hover { border-color: var(--olive); color: var(--ink); }
+  .pick-bar .hint { color: var(--faint); font-size: 12px; }
+</style>
+</head>
+<body>
+
+<div class="pick-bar">
+  <span class="hint">اقفز إلى:</span>
+  <a href="#var-A">A — صورة عريضة (٦٠/٤٠)</a>
+  <a href="#var-B">B — متساوي (٥٠/٥٠)</a>
+  <a href="#var-C">C — نموذج أعرض (٤٠/٦٠)</a>
+  <span class="hint" style="margin-inline-start:auto">جرّب الأسهم على الصورة • اضغط على أي صورة مصغّرة</span>
+</div>
+
+<h1>لوحة التحرير — معاينة التخطيط الجديد</h1>
+<p class="lead">
+  ثلاثة خيارات لتخطيط لوحة تحرير الشهيد بحجم سطح المكتب. الصورة الكبيرة على اليمين تتنقّل بين
+  <b>الصورة الشخصية + إطارات الـ OCR</b> دفعةً واحدة بواسطة الأسهم. تحت كل تخطيط شريط من الصور المصغّرة
+  للقفز المباشر. اختر <b>A</b> أو <b>B</b> أو <b>C</b> وأخبرني، وسأطبّقه على لوحة التحرير الفعلية.
+</p>
+
+<!-- ===== Variant A — 60/40 (BIGGEST IMAGE) ===== -->
+<section class="preview-section" id="var-A">
+  <div class="preview-header">
+    <div>
+      <div class="preview-tag">الخيار A — صورة عريضة</div>
+      <div class="preview-name">٦٠٪ صورة · ٤٠٪ نموذج</div>
+    </div>
+    <div class="preview-spec">يَظهر بأعرض شكل ممكن للصورة — مناسب لمراجعة سريعة بالعين</div>
+  </div>
+
+  <div class="edit-panel grid-A">
+    <!-- Image column -->
+    <div>
+      <div class="stage" data-stage="A">
+        <button class="stage-arrow prev" data-dir="-1" aria-label="السابق">→</button>
+        <img class="big" src="../data/photos/20.jpg" alt="" data-idx="0">
+        <button class="stage-arrow next" data-dir="1" aria-label="التالي">←</button>
+        <div class="stage-kind" data-kind>صورة شخصية</div>
+        <div class="stage-counter" data-counter>١ / ٤</div>
+      </div>
+      <div class="thumbstrip" data-strip="A">
+        <button class="thumb active" data-idx="0"><img src="../data/photos/20.jpg" alt=""></button>
+        <button class="thumb" data-idx="1"><img src="../data/frames/20_28.jpg" alt=""></button>
+        <button class="thumb" data-idx="2"><img src="../data/frames/20_30.jpg" alt=""></button>
+        <button class="thumb" data-idx="3"><img src="../data/frames/20_32.jpg" alt=""></button>
+      </div>
+    </div>
+
+    <!-- Form column (compressed) -->
+    <div class="form-col">
+      <div class="form-header">
+        <div>
+          <div class="form-id">SHID #020</div>
+          <h3 class="form-name">محمد عبد الله</h3>
+        </div>
+        <span class="badge badge-olive">● تغييرات غير محفوظة</span>
+      </div>
+      <div class="field-grid">
+        <div class="kicker">الحقول الإلزامية</div>
+        <label class="field-full"><div class="field-label">الاسم الكامل</div><input class="input" disabled value="محمد عبد الله الشهيد"></label>
+        <label><div class="field-label">العمر</div><input class="input" disabled value="٢٤"></label>
+        <label><div class="field-label">تاريخ الميلاد</div><input class="input" disabled value="٢٠٠٠/٠٣/١٢"></label>
+        <label class="field-full"><div class="field-label">تاريخ الاستشهاد</div><input class="input" disabled value="٢٠٢٤/٠٥/١٧"></label>
+        <div class="kicker">الحقول الاختيارية</div>
+        <label><div class="field-label">المدينة</div><input class="input" disabled value="غزة"></label>
+        <label><div class="field-label">الرتبة</div><input class="input" disabled value="مجاهد"></label>
+        <label><div class="field-label">السلاح</div><input class="input" disabled value=""></label>
+        <label><div class="field-label">الكتيبة</div><input class="input" disabled value=""></label>
+        <label class="field-full"><div class="field-label">اللواء</div><input class="input" disabled value=""></label>
+      </div>
+      <div class="actions">
+        <div class="left">
+          <button class="btn-reject">رفض</button>
+        </div>
+        <div class="right">
+          <button class="btn btn-ghost">إلغاء</button>
+          <button class="btn btn-primary">حفظ وتوثيق</button>
+          <button class="btn-save-next">حفظ والتالي <span class="arrow">←</span></button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== Variant B — 50/50 (BALANCED) ===== -->
+<section class="preview-section" id="var-B">
+  <div class="preview-header">
+    <div>
+      <div class="preview-tag">الخيار B — متساوي</div>
+      <div class="preview-name">٥٠٪ صورة · ٥٠٪ نموذج</div>
+    </div>
+    <div class="preview-spec">توازن بين رؤية الصورة وراحة كتابة الحقول</div>
+  </div>
+
+  <div class="edit-panel grid-B">
+    <div>
+      <div class="stage" data-stage="B">
+        <button class="stage-arrow prev" data-dir="-1" aria-label="السابق">→</button>
+        <img class="big" src="../data/photos/20.jpg" alt="" data-idx="0">
+        <button class="stage-arrow next" data-dir="1" aria-label="التالي">←</button>
+        <div class="stage-kind" data-kind>صورة شخصية</div>
+        <div class="stage-counter" data-counter>١ / ٤</div>
+      </div>
+      <div class="thumbstrip" data-strip="B">
+        <button class="thumb active" data-idx="0"><img src="../data/photos/20.jpg" alt=""></button>
+        <button class="thumb" data-idx="1"><img src="../data/frames/20_28.jpg" alt=""></button>
+        <button class="thumb" data-idx="2"><img src="../data/frames/20_30.jpg" alt=""></button>
+        <button class="thumb" data-idx="3"><img src="../data/frames/20_32.jpg" alt=""></button>
+      </div>
+    </div>
+
+    <div class="form-col">
+      <div class="form-header">
+        <div>
+          <div class="form-id">SHID #020</div>
+          <h3 class="form-name">محمد عبد الله</h3>
+        </div>
+        <span class="badge badge-olive">● تغييرات غير محفوظة</span>
+      </div>
+      <div class="field-grid">
+        <div class="kicker">الحقول الإلزامية</div>
+        <label><div class="field-label">الاسم الكامل</div><input class="input" disabled value="محمد عبد الله الشهيد"></label>
+        <label><div class="field-label">العمر</div><input class="input" disabled value="٢٤"></label>
+        <label><div class="field-label">تاريخ الميلاد</div><input class="input" disabled value="٢٠٠٠/٠٣/١٢"></label>
+        <label><div class="field-label">تاريخ الاستشهاد</div><input class="input" disabled value="٢٠٢٤/٠٥/١٧"></label>
+        <div class="kicker">الحقول الاختيارية</div>
+        <label><div class="field-label">المدينة</div><input class="input" disabled value="غزة"></label>
+        <label><div class="field-label">الرتبة</div><input class="input" disabled value="مجاهد"></label>
+        <label><div class="field-label">السلاح</div><input class="input" disabled value=""></label>
+        <label><div class="field-label">الكتيبة</div><input class="input" disabled value=""></label>
+        <label class="field-full"><div class="field-label">اللواء</div><input class="input" disabled value=""></label>
+      </div>
+      <div class="actions">
+        <div class="left">
+          <button class="btn-reject">رفض</button>
+        </div>
+        <div class="right">
+          <button class="btn btn-ghost">إلغاء</button>
+          <button class="btn btn-primary">حفظ وتوثيق</button>
+          <button class="btn-save-next">حفظ والتالي <span class="arrow">←</span></button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== Variant C — 40/60 (FORM-HEAVY) ===== -->
+<section class="preview-section" id="var-C">
+  <div class="preview-header">
+    <div>
+      <div class="preview-tag">الخيار C — نموذج أعرض</div>
+      <div class="preview-name">٤٠٪ صورة · ٦٠٪ نموذج</div>
+    </div>
+    <div class="preview-spec">صورة كبيرة بما يكفي، لكن مع راحة قصوى لحقول النموذج</div>
+  </div>
+
+  <div class="edit-panel grid-C">
+    <div>
+      <div class="stage" data-stage="C">
+        <button class="stage-arrow prev" data-dir="-1" aria-label="السابق">→</button>
+        <img class="big" src="../data/photos/20.jpg" alt="" data-idx="0">
+        <button class="stage-arrow next" data-dir="1" aria-label="التالي">←</button>
+        <div class="stage-kind" data-kind>صورة شخصية</div>
+        <div class="stage-counter" data-counter>١ / ٤</div>
+      </div>
+      <div class="thumbstrip" data-strip="C">
+        <button class="thumb active" data-idx="0"><img src="../data/photos/20.jpg" alt=""></button>
+        <button class="thumb" data-idx="1"><img src="../data/frames/20_28.jpg" alt=""></button>
+        <button class="thumb" data-idx="2"><img src="../data/frames/20_30.jpg" alt=""></button>
+        <button class="thumb" data-idx="3"><img src="../data/frames/20_32.jpg" alt=""></button>
+      </div>
+    </div>
+
+    <div class="form-col">
+      <div class="form-header">
+        <div>
+          <div class="form-id">SHID #020</div>
+          <h3 class="form-name">محمد عبد الله</h3>
+        </div>
+        <span class="badge badge-olive">● تغييرات غير محفوظة</span>
+      </div>
+      <div class="field-grid">
+        <div class="kicker">الحقول الإلزامية</div>
+        <label><div class="field-label">الاسم الكامل</div><input class="input" disabled value="محمد عبد الله الشهيد"></label>
+        <label><div class="field-label">العمر</div><input class="input" disabled value="٢٤"></label>
+        <label><div class="field-label">تاريخ الميلاد</div><input class="input" disabled value="٢٠٠٠/٠٣/١٢"></label>
+        <label><div class="field-label">تاريخ الاستشهاد</div><input class="input" disabled value="٢٠٢٤/٠٥/١٧"></label>
+        <div class="kicker">الحقول الاختيارية</div>
+        <label><div class="field-label">المدينة</div><input class="input" disabled value="غزة"></label>
+        <label><div class="field-label">الرتبة</div><input class="input" disabled value="مجاهد"></label>
+        <label><div class="field-label">السلاح</div><input class="input" disabled value=""></label>
+        <label><div class="field-label">الكتيبة</div><input class="input" disabled value=""></label>
+        <label class="field-full"><div class="field-label">اللواء</div><input class="input" disabled value=""></label>
+      </div>
+      <div class="actions">
+        <div class="left">
+          <button class="btn-reject">رفض</button>
+        </div>
+        <div class="right">
+          <button class="btn btn-ghost">إلغاء</button>
+          <button class="btn btn-primary">حفظ وتوثيق</button>
+          <button class="btn-save-next">حفظ والتالي <span class="arrow">←</span></button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+// Tiny carousel wiring — works for all three stages independently.
+(function () {
+  const IMAGES = [
+    { src: "../data/photos/20.jpg",     kind: "صورة شخصية" },
+    { src: "../data/frames/20_28.jpg",  kind: "إطار ٢٨ ث · OCR" },
+    { src: "../data/frames/20_30.jpg",  kind: "إطار ٣٠ ث · OCR" },
+    { src: "../data/frames/20_32.jpg",  kind: "إطار ٣٢ ث · OCR" },
+  ];
+  const AR_DIGITS = ["٠","١","٢","٣","٤","٥","٦","٧","٨","٩"];
+  const toAr = n => String(n).split("").map(c => /\d/.test(c) ? AR_DIGITS[+c] : c).join("");
+
+  document.querySelectorAll(".stage").forEach(stage => {
+    const tag = stage.dataset.stage;
+    const img = stage.querySelector("img.big");
+    const counter = stage.querySelector("[data-counter]");
+    const kind = stage.querySelector("[data-kind]");
+    const strip = document.querySelector(`[data-strip="${tag}"]`);
+    let idx = 0;
+
+    function render() {
+      img.src = IMAGES[idx].src;
+      img.dataset.idx = idx;
+      kind.textContent = IMAGES[idx].kind;
+      counter.textContent = `${toAr(idx + 1)} / ${toAr(IMAGES.length)}`;
+      strip.querySelectorAll(".thumb").forEach((t, i) => t.classList.toggle("active", i === idx));
+    }
+    stage.querySelectorAll(".stage-arrow").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const dir = +btn.dataset.dir;
+        idx = (idx + dir + IMAGES.length) % IMAGES.length;
+        render();
+      });
+    });
+    strip.querySelectorAll(".thumb").forEach(btn => {
+      btn.addEventListener("click", () => { idx = +btn.dataset.idx; render(); });
+    });
+  });
+
+  // Keyboard arrows control whichever stage was last focused / hovered
+  let lastStage = null;
+  document.querySelectorAll(".stage").forEach(s => {
+    s.addEventListener("mouseenter", () => { lastStage = s; });
+  });
+  document.addEventListener("keydown", e => {
+    if (!lastStage) return;
+    if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
+      const dir = e.key === "ArrowLeft" ? 1 : -1;     // RTL: left arrow = next
+      lastStage.querySelector(`.stage-arrow[data-dir="${dir}"]`).click();
+    }
+  });
+})();
+</script>
+
+</body>
+</html>
