@@ -230,7 +230,10 @@ html[data-theme="dark"] body::before { mix-blend-mode: screen; opacity: 0.4; }
   cursor: zoom-in;
 }
 .edit-carousel-arrow {
-  position: absolute; top: 50%; transform: translateY(-50%);
+  /* Nudged ~2cm below vertical-centre so the prev/next buttons no longer cover
+     the birth date printed on the OCR poster/frame — the admin reads the date
+     off this image, and centred arrows sat on top of it. */
+  position: absolute; top: 70%; transform: translateY(calc(-80% + 2cm));
   width: 44px; height: 44px;
   background: rgba(0,0,0,0.55);
   color: #fff;
@@ -387,7 +390,6 @@ html[data-theme="dark"] body::before { mix-blend-mode: screen; opacity: 0.4; }
 /* Grid layouts — defaults live here so the media queries below can override
    them without !important (the defaults used to be inline styles in the HTML). */
 .grid-bday       { grid-template-columns: 1.4fr 1.2fr auto; align-items: end; }
-.preview-matches { grid-template-columns: repeat(3, 1fr); }
 .stats-strip {
   grid-template-columns: repeat(4, 1fr);
   border-top: 1px solid var(--divider);
@@ -442,7 +444,6 @@ html[data-theme="dark"] body::before { mix-blend-mode: screen; opacity: 0.4; }
   .footer-grid { grid-template-columns: 1fr 1fr; }
   .footer-grid > *:first-child { grid-column: 1 / -1; }
   .admin-banner { flex-direction: column; align-items: flex-start !important; gap: 16px; }
-  .preview-matches { grid-template-columns: 1fr; }
   .dates-strip { grid-template-columns: 1fr 1fr; }
   .grid-pair { grid-template-columns: 1fr; }
   /* Tighten the header so logo + controls (incl. the admin button) fit

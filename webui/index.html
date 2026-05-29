@@ -126,8 +126,13 @@
               aria-controls="mobile-nav"
               :aria-label="lang === 'ar' ? 'القائمة' : 'Menu'">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-          <template x-if="!mobileNavOpen"><g><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></g></template>
-          <template x-if="mobileNavOpen"><g><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></g></template>
+          <!-- x-show (not x-if) on the <g> groups. A <template x-if> placed inside
+               <svg> is parsed in the SVG namespace, so it is an SVGElement with no
+               .content DocumentFragment — Alpine's x-if clone (el.content.cloneNode)
+               then throws "cannot read 'cloneNode' of undefined" on every load.
+               x-show toggles display directly on the SVG group: no cloning, no crash. -->
+          <g x-show="!mobileNavOpen"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></g>
+          <g x-show="mobileNavOpen"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></g>
         </svg>
       </button>
 
@@ -262,23 +267,76 @@
           </div>
         </div>
 
-        <!-- Preview matches -->
-        <div class="mt-6 pt-5.5" style="border-top: 1px dashed var(--divider);">
-          <div class="font-body text-[12px] text-muted mb-3.5"
-               x-text="lang === 'ar' ? 'أقربُ الأسماءِ مولداً ليومك' : 'Nearest birthdays to your date'"></div>
-          <div class="preview-matches grid gap-3">
-            <template x-for="m in previewMatches" :key="m.id">
-              <button @click="openMartyr(m.id)" class="bg-page-2 border border-divider rounded p-3 flex items-center gap-3 text-right cursor-pointer">
-                <div x-html="renderPortrait(m, 42, false)"></div>
-                <div class="min-w-0 flex-1">
-                  <div class="font-body text-[16px] font-bold text-ink truncate" x-text="m.name"></div>
-                  <div class="text-[11px] text-muted mt-0.5" x-text="deltaLabel(m.delta)"></div>
-                </div>
-              </button>
-            </template>
-          </div>
-        </div>
       </div>
+
+      <!-- Nearest birthdays — large registry-style cards shown inline as soon as
+           a birthday is picked (no extra click). Mirrors the browse-grid card.
+           Empty until a date is chosen → previewMatches returns [] and the
+           prompt below shows instead of arbitrary names. -->
+      <section class="mt-14" aria-labelledby="nb-heading">
+        <div class="flex items-baseline justify-between mb-5 flex-wrap gap-2">
+          <div>
+            <div class="font-latin-sans text-[11px] tracking-[0.25em] text-olive uppercase"
+                 x-text="lang === 'ar' ? 'مواليد قريبة' : 'Near in birth'"></div>
+            <h3 id="nb-heading" class="font-display text-[28px] font-medium m-0 mt-1.5">
+              <span x-text="lang === 'ar' ? 'أقربُ الأسماءِ مولداً ليومك' : 'Nearest birthdays to your date'"></span>
+              <span x-show="bday.year" class="text-forest"
+                    x-text="' · ' + formatDate(isoDate(bday.year, bday.month, bday.day))"></span>
+            </h3>
+          </div>
+          <button x-show="previewMatches.length" @click="runBirthdaySearch()" class="btn btn-text"
+                  x-text="lang === 'ar' ? 'عرض كل النتائج ←' : 'View all results ←'"></button>
+        </div>
+
+        <!-- Empty state — before a birthday is picked -->
+        <div x-show="!previewMatches.length"
+             class="border border-divider rounded-lg text-center"
+             style="border-style: dashed; padding: 48px 24px; background: rgba(31,61,43,0.05);">
+          <div style="font-size: 34px; opacity: .5;" aria-hidden="true">🕊️</div>
+          <div class="font-display text-ink mt-2.5" style="font-size: 20px;"
+               x-text="lang === 'ar' ? 'اختر تاريخ ميلادك أعلاه' : 'Pick your birthday above'"></div>
+          <div class="text-muted font-body mt-1.5" style="font-size: 14px;"
+               x-text="lang === 'ar' ? 'لعرض أقرب الأسماء مولداً ليومك، مرتّبةً حسب القرب.' : 'to see the names closest to your birthday, sorted by proximity.'"></div>
+        </div>
+
+        <!-- Results grid — large cards identical to the registry grid -->
+        <div x-show="previewMatches.length" class="grid gap-3.5"
+             style="grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));">
+          <template x-for="m in previewMatches" :key="m.id">
+            <button @click="openMartyr(m.id)" class="card card-hover text-right cursor-pointer relative overflow-hidden flex flex-col">
+              <div class="relative" style="aspect-ratio: 4/5; background: var(--bg-3);">
+                <div x-html="renderPortrait(m, 0, false, 'fill')"></div>
+                <div x-show="Number.isFinite(m.delta)"
+                     class="absolute top-3 start-3 font-latin-sans text-[11px] tracking-[0.12em] px-2 py-0.5 rounded-full"
+                     :style="m.delta === 0
+                       ? 'color: var(--paper); background: rgba(31,61,43,0.85); backdrop-filter: blur(4px);'
+                       : 'color: var(--paper); background: rgba(138,109,59,0.85); backdrop-filter: blur(4px);'"
+                     x-text="deltaLabel(m.delta)"></div>
+              </div>
+              <div class="flex-1 flex flex-col gap-2.5" style="padding: 14px 16px;">
+                <div>
+                  <div class="font-body text-[18px] font-bold text-ink leading-tight" x-text="m.name"></div>
+                  <div class="font-body text-[12px] text-muted mt-1">
+                    <span x-text="m.city || '—'"></span>
+                    <span x-show="m.city"> · </span>
+                    <span x-text="ageLabel(m)"></span>
+                  </div>
+                </div>
+                <div class="grid text-[12px]" style="grid-template-columns: auto 1fr; row-gap: 4px; column-gap: 10px;">
+                  <div class="text-muted" x-text="lang === 'ar' ? 'الميلاد' : 'Born'"></div>
+                  <div class="text-ink-2 tabular-nums" x-text="formatDate(m.birth)"></div>
+                  <div class="text-muted" x-text="lang === 'ar' ? 'الاستشهاد' : 'Martyrdom'"></div>
+                  <div class="text-ink-2 tabular-nums" x-text="formatDate(m.martyrdom)"></div>
+                </div>
+                <div class="flex flex-wrap gap-1.5">
+                  <span x-show="m.rank" class="badge badge-forest" x-text="m.rank"></span>
+                  <span x-show="m.battalion" class="badge" x-text="m.battalion"></span>
+                </div>
+              </div>
+            </button>
+          </template>
+        </div>
+      </section>
 
       <!-- On this day -->
       <section class="mt-18" x-show="onThisDay.length > 0" style="margin-top: 72px;">

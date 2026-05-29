@@ -78,7 +78,8 @@ function aqmar() {
     // ----- birthday-match -----
     // year is null until the user picks a date via Litepicker. Once a full date
     // is picked the search matches on the whole date (year + month + day);
-    // before that, previewMatches falls back to month+day proximity.
+    // before that, the home "Nearest birthdays" section is empty and shows a
+    // "pick your birthday" prompt instead of arbitrary names.
     // Default window is 365 ("السنة كاملة"): with full-date matching a narrow
     // window often yields almost nothing, so default to a year-wide cohort.
     bday: { day: new Date().getDate(), month: new Date().getMonth() + 1, year: null, window: 365 },
@@ -249,18 +250,19 @@ function aqmar() {
     // DERIVED — birthday match preview & on-this-day
     // ============================================================
     get previewMatches() {
-      // Full-date proximity once a date (with year) is picked; month+day
-      // fallback before any pick so the home teaser still has something to show.
-      // birthDelta is signed (+ younger / − older); sort by magnitude (closest).
+      // Home "Nearest birthdays" cards. Empty until the user picks a full birth
+      // date (year set) — the section then shows a prompt rather than arbitrary
+      // names. birthDelta is signed (+ younger / − older); rows whose birth date
+      // is missing/unparseable (non-finite delta) are dropped, the rest sorted by
+      // proximity (closest first) and capped at 12 large cards. "View all
+      // results" (runBirthdaySearch) opens the full sorted list in browse.
       const iso = isoDate(this.bday.year, this.bday.month, this.bday.day);
+      if (!iso) return [];
       return this.all
-        .map(m => ({
-          ...m,
-          delta: iso ? birthDelta(iso, m.birth)
-                     : dayDelta(m.birth, this.bday.month, this.bday.day),
-        }))
+        .map(m => ({ ...m, delta: birthDelta(iso, m.birth) }))
+        .filter(m => Number.isFinite(m.delta))
         .sort((a, b) => Math.abs(a.delta) - Math.abs(b.delta))
-        .slice(0, 3);
+        .slice(0, 12);
     },
     get onThisDay() {
       const t = new Date();
@@ -524,7 +526,9 @@ function aqmar() {
       ];
     },
     adminCountByStatus(status) {
-      if (status === 'all') return this.all.length;
+      // "All" counts only the active queue (excludes rejected), to match what
+      // the default "all" view in adminList() actually shows.
+      if (status === 'all') return this.all.filter(m => (m.verification || 'unverified') !== 'rejected').length;
       return this.all.filter(m => (m.verification || 'unverified') === status).length;
     },
     // Filter + sort applied in one pass. Order matters: status filter first
@@ -533,8 +537,15 @@ function aqmar() {
     adminList() {
       let list = this.all;
 
-      // 1) Status filter (the headline pill bar)
-      if (this.adminStatusFilter !== 'all') {
+      // 1) Status filter (the headline pill bar). The default "all" view shows
+      // only ACTIVE rows (unverified + verified). Rejected rows are entries the
+      // admin has already triaged out — junk / not-a-person / not-for-public —
+      // so they drop off the working queue here and never publish; they remain
+      // reachable (and restorable) only via the explicit "Rejected" pill.
+      // Selecting any specific pill shows exactly that status.
+      if (this.adminStatusFilter === 'all') {
+        list = list.filter(m => (m.verification || 'unverified') !== 'rejected');
+      } else {
         list = list.filter(m => (m.verification || 'unverified') === this.adminStatusFilter);
       }
 
