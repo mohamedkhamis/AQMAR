@@ -92,6 +92,20 @@
       // carousel src, strip the leading "../" with denormalizePath().
       featuredFrame: row.featured_frame_path || null,
       source:    row.message_link || "",
+      // Telegram post-embed URL derived from the message link. Renders an
+      // inline preview (channel header + blurred video thumbnail + caption +
+      // "VIEW IN TELEGRAM"). NOTE: Telegram refuses inline playback for these
+      // large memorial videos — clicking play opens Telegram. True inline play
+      // comes from archiveOrgId below. Empty string when there's no source.
+      tgEmbed:   row.message_link
+                   ? row.message_link.replace(/\/+$/, "") + "?embed=1&mode=tme"
+                   : "",
+      // Archive.org item identifier (Phase 2 — hybrid video hosting). When set,
+      // the SPA renders an Archive.org <iframe> player that plays INLINE on the
+      // page instead of the Telegram preview. Null/"" until a row's video is
+      // mirrored by scripts/mirror_to_archive_org.py, so every row currently
+      // falls back to the Telegram embed above. See docs/hybrid-video-hosting.md.
+      archiveOrgId: row.archive_org_id || "",
       // When the scraper inserted this row into SQL Server (UTC ISO string).
       // Used by the admin grid's "Added" column + sort. Null on rows that
       // came from the published JSON snapshot (the exporter strips this).

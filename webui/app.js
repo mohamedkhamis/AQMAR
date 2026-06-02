@@ -27,8 +27,12 @@ function aqmar() {
     adminColFilters: {
       name: '', born: '', martyrdom: '', city: '', battalion: '', brigade: '',
     },
-    adminSortBy: 'isVerified', // any of adminCols[].id — default to the isVerified boolean so unverified (false) bubbles to top of the queue
-    adminSortDir: 'asc',         // 'asc' | 'desc'
+    // Default sort puts the most-recently-scraped rows at the top so the admin
+    // sees fresh OCR output first when opening the dashboard. Status pills above
+    // the table still let them filter to 'unverified' (the verification queue)
+    // and the Status column header is one click away if they want isVerified-first.
+    adminSortBy: 'addedAt', // any of adminCols[].id
+    adminSortDir: 'desc',   // 'asc' | 'desc' — DESC = newest first for addedAt
     adminLimit: 30,           // pagination cap for the admin table — bumped by "Show more"
     mobileNavOpen: false,
     loading: true,            // true until the initial loadData() resolves (or errors out)
@@ -67,6 +71,11 @@ function aqmar() {
     // Six sort modes matching the v1 SPA — covers martyrdom/birth/age/name in
     // both directions. Default is martyrdom_desc (newest martyrs first).
     sortOptions: [
+      // "Newly added" = order in which rows landed in the DB. Default — what
+      // visitors see first is what was added to the registry most recently.
+      // Same semantic as the admin grid's default sort.
+      { id: 'created_desc',   ar: 'الإضافة ↓ (الأحدث)',    en: 'Added ↓ (newest)' },
+      { id: 'created_asc',    ar: 'الإضافة ↑ (الأقدم)',    en: 'Added ↑ (oldest)' },
       { id: 'martyrdom_desc', ar: 'الاستشهاد ↓ (الأحدث)', en: 'Martyrdom ↓ (newest)' },
       { id: 'martyrdom_asc',  ar: 'الاستشهاد ↑ (الأقدم)', en: 'Martyrdom ↑ (oldest)' },
       { id: 'birth_desc',     ar: 'الميلاد ↓ (الأصغر سناً)', en: 'Birth ↓ (youngest)' },
@@ -88,7 +97,10 @@ function aqmar() {
 
     // ----- browse filters -----
     filters: { q: '', city: '', rank: '', batt: '', age: '' },
-    sort: 'martyrdom_desc',
+    // Default registry sort puts the most recently added rows on top — matches
+    // the admin grid default so what the admin just verified shows up first
+    // for visitors too.
+    sort: 'created_desc',
     viewMode: 'grid',   // 'grid' (default, multi-column) or 'list' (single-column)
     // Advanced filters — collapsible panel below the primary filter row
     showAdvancedFilters: false,
@@ -386,6 +398,12 @@ function aqmar() {
         // U+FFFD sentinel (always greater than real strings) or Infinity for nums.
         const SENTINEL = '�';
         const sortFns = {
+          // Newly-added sort uses the addedAt ISO datetime from the API. Falls
+          // back to empty string (sorts last via SENTINEL) when missing — only
+          // happens for rows from the static JSON snapshot if the exporter
+          // stripped created_at, which it currently doesn't.
+          'created_desc':   (a, b) => (b.addedAt || '').localeCompare(a.addedAt || ''),
+          'created_asc':    (a, b) => (a.addedAt || SENTINEL).localeCompare(b.addedAt || SENTINEL),
           'martyrdom_desc': (a, b) => (b.martyrdom || '').localeCompare(a.martyrdom || ''),
           'martyrdom_asc':  (a, b) => (a.martyrdom || SENTINEL).localeCompare(b.martyrdom || SENTINEL),
           'birth_desc':     (a, b) => (b.birth || '').localeCompare(a.birth || ''),
@@ -393,7 +411,7 @@ function aqmar() {
           'age_asc':        (a, b) => (Number.isFinite(a.age) ? a.age : Infinity) - (Number.isFinite(b.age) ? b.age : Infinity),
           'name_asc':       (a, b) => (a.name || SENTINEL).localeCompare(b.name || SENTINEL, 'ar'),
         };
-        list.sort(sortFns[this.sort] || sortFns['martyrdom_desc']);
+        list.sort(sortFns[this.sort] || sortFns['created_desc']);
       }
       return list;
     },
@@ -585,6 +603,10 @@ function aqmar() {
           vb = STATUS_ORDER[b.verification || 'unverified'];
         } else if (key === 'id') {
           va = a.id; vb = b.id;
+        } else if (key === 'addedAt') {
+          // ISO datetime string — lexicographic compare matches chronological.
+          // Sentinel-fallback only fires for the static JSON snapshot path.
+          va = a.addedAt || SENT; vb = b.addedAt || SENT;
         } else if (key === 'born') {
           va = a.birth || SENT; vb = b.birth || SENT;
         } else if (key === 'martyrdom') {
@@ -605,7 +627,11 @@ function aqmar() {
         this.adminSortDir = this.adminSortDir === 'asc' ? 'desc' : 'asc';
       } else {
         this.adminSortBy = key;
-        this.adminSortDir = 'asc';
+        // For datetime + status columns, the useful first-click direction is
+        // descending (newest first / verified-last). Everything else (name,
+        // city, brigade, etc.) defaults to ascending which is the alphabetical
+        // intuition.
+        this.adminSortDir = (key === 'addedAt' || key === 'isVerified') ? 'desc' : 'asc';
       }
     },
     adminSortIndicator(key) {

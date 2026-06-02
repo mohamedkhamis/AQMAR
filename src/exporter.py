@@ -52,6 +52,11 @@ PUBLISHED_FIELDS = [
     "ocr_martyrdom_date",
     "created_at",
     "updated_at",
+    # Public-CDN video identifier (hybrid hosting Phase 2). NULL on every row
+    # until scripts/mirror_to_archive_org.py mirrors a video; published so the
+    # GitHub Pages site can swap a row's Telegram preview for an inline
+    # Archive.org player once mirrored. See docs/hybrid-video-hosting.md.
+    "archive_org_id",
 ]
 
 

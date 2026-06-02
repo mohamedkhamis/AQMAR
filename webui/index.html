@@ -786,6 +786,36 @@
           <div x-html="renderTimeline(current)"></div>
         </section>
 
+        <!-- Source video — always-visible inline player. Two modes:
+               1. archiveOrgId set → Archive.org player, plays INLINE on the page
+               2. otherwise        → Telegram post embed: preview only (channel +
+                  blurred thumbnail + caption). Telegram blocks inline play for
+                  large videos, so its built-in "VIEW IN TELEGRAM" button opens
+                  the post. Rows auto-upgrade to mode 1 once mirrored (Phase 2). -->
+        <template x-if="current && (current.archiveOrgId || current.tgEmbed)">
+          <section class="mt-7">
+            <div class="font-display text-[14px] text-olive tracking-[0.2em] uppercase mb-3"
+                 x-text="lang === 'ar' ? 'الفيديو المصدر' : 'Source video'"></div>
+            <template x-if="current.archiveOrgId">
+              <div class="rounded-lg overflow-hidden"
+                   style="border:1px solid var(--divider); aspect-ratio:16/9; max-width:760px;">
+                <iframe :src="`https://archive.org/embed/${current.archiveOrgId}`"
+                        class="w-full h-full" style="border:0;"
+                        allowfullscreen webkitallowfullscreen mozallowfullscreen
+                        loading="lazy"></iframe>
+              </div>
+            </template>
+            <template x-if="!current.archiveOrgId && current.tgEmbed">
+              <div class="rounded-lg overflow-hidden"
+                   style="border:1px solid var(--divider); background:#000; max-width:520px;">
+                <iframe :src="current.tgEmbed"
+                        class="w-full" style="border:0; display:block; height:600px;"
+                        scrolling="no" allowfullscreen loading="lazy"></iframe>
+              </div>
+            </template>
+          </section>
+        </template>
+
         <!-- Details grid -->
         <section class="grid-2col grid gap-5 mt-7">
           <div class="bg-paper border border-divider rounded-md p-6">
@@ -1041,6 +1071,37 @@
             ● <span x-text="lang === 'ar' ? 'تغييرات غير محفوظة' : 'unsaved changes'"></span>
           </span>
         </div>
+
+        <!-- Source video — always-visible inline player at the top of the form so
+             the admin can watch while filling the date fields below. Two modes:
+               1. archiveOrgId set → Archive.org player, plays INLINE (Phase 2)
+               2. otherwise        → Telegram post embed: preview only (channel +
+                  blurred thumbnail + caption). Telegram refuses inline play for
+                  large videos, so its built-in "VIEW IN TELEGRAM" button opens
+                  the post. This wide right column fits the ~500px embed (the
+                  260px left column wouldn't). -->
+        <template x-if="editingMartyr()?.archiveOrgId || editingMartyr()?.tgEmbed">
+          <div class="mb-6">
+            <div class="font-display text-[13px] text-olive tracking-[0.2em] uppercase mb-3"
+                 x-text="lang === 'ar' ? 'الفيديو المصدر' : 'Source video'"></div>
+            <template x-if="editingMartyr()?.archiveOrgId">
+              <div class="rounded-lg overflow-hidden" style="border:1px solid var(--divider); aspect-ratio:16/9;">
+                <iframe :src="`https://archive.org/embed/${editingMartyr().archiveOrgId}`"
+                        class="w-full h-full" style="border:0;"
+                        allowfullscreen webkitallowfullscreen mozallowfullscreen
+                        loading="lazy"></iframe>
+              </div>
+            </template>
+            <template x-if="!editingMartyr()?.archiveOrgId && editingMartyr()?.tgEmbed">
+              <div class="rounded-lg overflow-hidden"
+                   style="border:1px solid var(--divider); background:#000; max-width:520px;">
+                <iframe :src="editingMartyr().tgEmbed"
+                        class="w-full" style="border:0; display:block; height:600px;"
+                        scrolling="no" allowfullscreen loading="lazy"></iframe>
+              </div>
+            </template>
+          </div>
+        </template>
 
         <div class="grid-pair grid gap-x-6">
           <div class="col-span-2">
