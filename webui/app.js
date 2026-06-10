@@ -24,6 +24,10 @@ function aqmar() {
     // verification workflow's whole point), so it gets prominent pill buttons
     // above the table. Per-column filters live in a row below the headers.
     adminStatusFilter: 'all',   // 'all' | 'unverified' | 'verified' | 'rejected'
+    // AI verification filter (second pills row): 'all' | 'ai' (AI-checked) |
+    // 'pending' (eligible for AI = human-unverified, not yet AI-checked).
+    // ANDed with adminStatusFilter — they're independent dimensions.
+    adminAiFilter: 'all',
     adminColFilters: {
       name: '', born: '', martyrdom: '', city: '', battalion: '', brigade: '',
     },
@@ -526,6 +530,8 @@ function aqmar() {
         // OCR output (sometimes the video frame doesn't show it, sometimes
         // the caption omits it). Admin can fill it in from the source video.
         { id: 'brigade',      label: ar ? 'اللواء' : 'Brigade',     width: '150px', sortable: true,  filterable: true  },
+        // AI verification flag (2026-06-10). Sortable; tooltip shows ai_note.
+        { id: 'aiVerified',   label: 'AI',                          width: '90px',  sortable: true,  filterable: false },
         // Status column header sorts by the `isVerified` boolean (false first
         // by default, so unverified + rejected rows bubble to the top of the
         // verification queue). The pill itself still displays the full 3-state
@@ -549,6 +555,38 @@ function aqmar() {
       if (status === 'all') return this.all.filter(m => (m.verification || 'unverified') !== 'rejected').length;
       return this.all.filter(m => (m.verification || 'unverified') === status).length;
     },
+    // Pills for the AI filter row. 'pending' is the AI work queue: rows the
+    // batch will still process (human-verified rows are skipped by design).
+    get adminAiOptions() {
+      const ar = this.lang === 'ar';
+      return [
+        { v: 'all',     label: ar ? 'الكل'     : 'All',     color: 'var(--ink)'   },
+        { v: 'ai',      label: ar ? '🤖 تمّ'   : '🤖 Done', color: 'var(--ai)'    },
+        { v: 'pending', label: ar ? 'بانتظار' : 'Pending',  color: 'var(--olive)' },
+      ];
+    },
+    adminCountByAi(v) {
+      const active = this.all.filter(m => (m.verification || 'unverified') !== 'rejected');
+      if (v === 'all') return active.length;
+      if (v === 'ai')  return active.filter(m => m.aiVerified).length;
+      return active.filter(m => !m.aiVerified && (m.verification || 'unverified') === 'unverified').length;
+    },
+    // Four numbers for the stats strip (Option B from _preview_ai_verify.html).
+    // Rejected rows excluded from every denominator — they're triaged out of
+    // both queues. aiRest deliberately excludes human-verified rows: the AI
+    // batch skips those by design (user decision 2026-06-10).
+    get aiStats() {
+      const active = this.all.filter(m => (m.verification || 'unverified') !== 'rejected');
+      const humanVerified = active.filter(m => m.verification === 'verified').length;
+      const aiVerified = active.filter(m => m.aiVerified).length;
+      const aiRest = active.filter(m => !m.aiVerified && m.verification !== 'verified').length;
+      return {
+        humanVerified,
+        humanRest: active.length - humanVerified,
+        aiVerified,
+        aiRest,
+      };
+    },
     // Filter + sort applied in one pass. Order matters: status filter first
     // (most selective in the verification workflow), then global search,
     // then per-column filters, then sort.
@@ -565,6 +603,13 @@ function aqmar() {
         list = list.filter(m => (m.verification || 'unverified') !== 'rejected');
       } else {
         list = list.filter(m => (m.verification || 'unverified') === this.adminStatusFilter);
+      }
+
+      // 1b) AI filter (second pills row) — independent dimension, ANDed.
+      if (this.adminAiFilter === 'ai') {
+        list = list.filter(m => m.aiVerified);
+      } else if (this.adminAiFilter === 'pending') {
+        list = list.filter(m => !m.aiVerified && (m.verification || 'unverified') === 'unverified');
       }
 
       // 2) Global search (Arabic-aware via searchPredicate)
@@ -601,6 +646,8 @@ function aqmar() {
         } else if (key === 'verification') {
           va = STATUS_ORDER[a.verification || 'unverified'];
           vb = STATUS_ORDER[b.verification || 'unverified'];
+        } else if (key === 'aiVerified') {
+          va = a.aiVerified ? 1 : 0; vb = b.aiVerified ? 1 : 0;
         } else if (key === 'id') {
           va = a.id; vb = b.id;
         } else if (key === 'addedAt') {
@@ -631,7 +678,7 @@ function aqmar() {
         // descending (newest first / verified-last). Everything else (name,
         // city, brigade, etc.) defaults to ascending which is the alphabetical
         // intuition.
-        this.adminSortDir = (key === 'addedAt' || key === 'isVerified') ? 'desc' : 'asc';
+        this.adminSortDir = (key === 'addedAt' || key === 'isVerified' || key === 'aiVerified') ? 'desc' : 'asc';
       }
     },
     adminSortIndicator(key) {
@@ -642,6 +689,7 @@ function aqmar() {
       this.adminSearch = '';
       this.adminColFilters = { name: '', born: '', martyrdom: '', city: '', battalion: '', brigade: '' };
       this.adminStatusFilter = 'all';
+      this.adminAiFilter = 'all';
     },
 
     editMartyr(id) {

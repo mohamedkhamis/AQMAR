@@ -13,6 +13,9 @@ from src.sqlserver_client import (
     upsert_martyr,
     mark_verified,
     mark_rejected,
+    mark_ai_verified,
+    mark_ai_note,
+    get_ai_pending,
     get_by_status,
     get_by_msg_id,
     get_all,
@@ -199,6 +202,98 @@ def test_mark_rejected_sets_status_only():
     assert "verification_status = 'rejected'" in sql
     assert "WHERE msg_id = ?" in sql
     mock_conn.commit.assert_called_once()
+
+
+# =============================================================================
+# AI verification track (2026-06-10)
+# =============================================================================
+
+def test_mark_ai_verified_sets_flag_and_applies_date_fixes():
+    """AI found a swapped date → fixes the column AND sets the AI flag/audit,
+    WITHOUT touching the human verification fields."""
+    mock_cur = MagicMock()
+    mock_conn = MagicMock(cursor=MagicMock(return_value=mock_cur))
+
+    mark_ai_verified(
+        mock_conn, msg_id=23,
+        edits={"birth_date": "1991-01-08"},
+        note="fixed swap: birth 1991-08-01 -> 1991-01-08 (card: 08-01-1991)",
+    )
+
+    mock_cur.execute.assert_called_once()
+    sql = mock_cur.execute.call_args.args[0]
+    assert "ai_verified = 1" in sql
+    assert "ai_verified_at = SYSUTCDATETIME()" in sql
+    assert "ai_note = ?" in sql
+    assert "birth_date = ?" in sql
+    assert "WHERE msg_id = ?" in sql
+    # The AI track must NEVER touch the human verification fields
+    assert "verification_status" not in sql
+    assert "verified_by" not in sql
+    assert "ocr_" not in sql
+    mock_conn.commit.assert_called_once()
+
+
+def test_mark_ai_verified_without_edits_only_flags():
+    """Dates already match the card → flag + note only, no date columns in SQL."""
+    mock_cur = MagicMock()
+    mock_conn = MagicMock(cursor=MagicMock(return_value=mock_cur))
+
+    mark_ai_verified(mock_conn, msg_id=38, edits={}, note="match")
+
+    sql = mock_cur.execute.call_args.args[0]
+    assert "ai_verified = 1" in sql
+    assert "birth_date" not in sql
+    assert "martyrdom_date" not in sql
+
+
+def test_mark_ai_verified_rejects_malformed_dates():
+    """Strict yyyy-mm-dd only — the whole point is killing malformed dates.
+    Anything else must raise instead of silently writing NULL."""
+    import pytest
+    mock_conn = MagicMock()
+    for bad in ("08-01-1991", "1991-8-1", "1991/01/08", "garbage", ""):
+        with pytest.raises(ValueError):
+            mark_ai_verified(mock_conn, msg_id=1, edits={"birth_date": bad}, note="x")
+
+
+def test_mark_ai_verified_rejects_non_date_fields():
+    """AI batch is dates-only; any other field in edits is a bug upstream."""
+    import pytest
+    mock_conn = MagicMock()
+    with pytest.raises(ValueError):
+        mark_ai_verified(mock_conn, msg_id=1, edits={"name": "X"}, note="x")
+
+
+def test_mark_ai_note_writes_note_without_flagging():
+    """Unreadable frames → note for the human, ai_verified stays 0."""
+    mock_cur = MagicMock()
+    mock_conn = MagicMock(cursor=MagicMock(return_value=mock_cur))
+
+    mark_ai_note(mock_conn, msg_id=99, note="frames unreadable")
+
+    mock_cur.execute.assert_called_once()
+    sql = mock_cur.execute.call_args.args[0]
+    assert "ai_note = ?" in sql
+    assert "ai_verified = 1" not in sql
+    assert "WHERE msg_id = ?" in sql
+    mock_conn.commit.assert_called_once()
+
+
+def test_get_ai_pending_filters_unverified_not_yet_ai_checked():
+    mock_cur = MagicMock()
+    mock_cur.description = [("msg_id",), ("name",)]
+    mock_cur.fetchall.return_value = [(23, "Foo")]
+    mock_conn = MagicMock(cursor=MagicMock(return_value=mock_cur))
+
+    rows = get_ai_pending(mock_conn, limit=50)
+
+    assert rows == [{"msg_id": 23, "name": "Foo"}]
+    sql = mock_cur.execute.call_args.args[0]
+    assert "verification_status = 'unverified'" in sql
+    assert "ai_verified = 0" in sql
+    assert "ORDER BY msg_id" in sql
+    assert "TOP (50)" in sql
 
 
 # =============================================================================

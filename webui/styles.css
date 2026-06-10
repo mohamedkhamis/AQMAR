@@ -22,6 +22,10 @@
   --olive-2:   #d4a865;
   --gold:      #fbbf24;
   --crimson:   #ea4444;
+  /* AI verification track (2026-06-10) — teal, distinct from the human
+     gold/forest so the two verification dimensions never visually blur. */
+  --ai:        #4cc3b0;
+  --ai-dim:    rgba(76, 195, 176, 0.12);
 
   --font-display: "El Messiri", "Amiri", serif;
   --font-naskh:   "Amiri", serif;
@@ -420,6 +424,64 @@ html[data-theme="dark"] body::before { mix-blend-mode: screen; opacity: 0.4; }
 .table-scroll::-webkit-scrollbar-track { background: transparent; }
 .table-scroll::-webkit-scrollbar-thumb { background: var(--faint); border-radius: 999px; }
 
+/* ===== AI verification (admin, 2026-06-10) ===== */
+/* Option B stats strip — 4 cells above the admin filter card. Chosen by the
+   user from webui/_preview_ai_verify.html over the in-card chips variant. */
+.ai-stats-strip {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  background: var(--paper);
+  border: 1px solid var(--divider);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.ai-stat {
+  padding: 14px 18px;
+  text-align: center;
+  border-inline-start: 1px solid var(--divider);
+}
+.ai-stat:first-child { border-inline-start: none; }
+.ai-stat .v {
+  font-family: var(--font-latin-sans);
+  font-size: 26px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+}
+.ai-stat .l { font-size: 12px; color: var(--muted); margin-top: 2px; }
+.ai-stat .v-human { color: var(--gold); }
+.ai-stat .v-ai    { color: var(--ai); }
+.ai-stat .v-rest  { color: var(--ink-2); }
+
+/* AI badge in the admin table (tooltip carries ai_note) */
+.ai-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ai);
+  background: var(--ai-dim);
+  border: 1px solid rgba(76, 195, 176, 0.35);
+  border-radius: 999px;
+  padding: 2px 10px;
+  cursor: help;
+}
+
+/* AI audit panel at the top of the admin edit form */
+.ai-note-panel {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  background: var(--ai-dim);
+  border: 1px solid rgba(76, 195, 176, 0.35);
+  border-radius: 8px;
+  padding: 12px 16px;
+}
+.ai-note-panel .t { font-size: 13.5px; font-weight: 700; color: var(--ai); margin-bottom: 3px; }
+.ai-note-panel .d { font-size: 12.5px; color: var(--ink-2); line-height: 1.7; }
+.ai-note-panel .when { font-family: var(--font-latin-sans); font-size: 11px; color: var(--muted); margin-top: 4px; }
+
 /* Responsive — tablet (1024) / large phone (768) / small phone (480).
    Grid rules need no !important now that defaults live in classes above. The
    .nav-links / .admin-banner / .hero-pad rules DO keep it — they override
@@ -441,6 +503,11 @@ html[data-theme="dark"] body::before { mix-blend-mode: screen; opacity: 0.4; }
   .grid-filters { grid-template-columns: 1fr 1fr; }
   .grid-2col { grid-template-columns: 1fr; }
   .stats-strip { grid-template-columns: 1fr 1fr; }
+  /* AI stats strip folds 4 cells into 2×2; the 3rd cell starts a new visual
+     row so it loses its start-border and gains a top one. */
+  .ai-stats-strip { grid-template-columns: 1fr 1fr; }
+  .ai-stat:nth-child(3) { border-inline-start: none; }
+  .ai-stat:nth-child(n+3) { border-top: 1px solid var(--divider); }
   .footer-grid { grid-template-columns: 1fr 1fr; }
   .footer-grid > *:first-child { grid-column: 1 / -1; }
   .admin-banner { flex-direction: column; align-items: flex-start !important; gap: 16px; }

@@ -122,6 +122,13 @@
       // but the public browse grid doesn't sort or display the flag, so
       // this is invisible to visitors. Only the admin grid reads it.
       isVerified: (row.verification_status || "unverified") === "verified",
+      // AI verification track (2026-06-10): independent of the human
+      // verification_status above. pyodbc BIT arrives as true/false; rows
+      // from the static JSON snapshot never carry these (exporter excludes
+      // them) so they default to false/null — the public site ignores them.
+      aiVerified:   row.ai_verified === true || row.ai_verified === 1,
+      aiNote:       row.ai_note || null,
+      aiVerifiedAt: row.ai_verified_at || null,
     };
   }
 

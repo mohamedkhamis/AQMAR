@@ -170,3 +170,11 @@ def test_export_to_json_empty_note_passes_none_to_insert(tmp_path, monkeypatch):
     export_to_json(MagicMock(), json_path=str(out_path), note="")
 
     assert inserted == [(0, None)]
+
+
+def test_published_fields_exclude_ai_verification_columns():
+    """The AI verification track is admin-internal - must never publish.
+    (PUBLISHED_FIELDS is an allowlist, so this pins the invariant.)"""
+    from src.exporter import PUBLISHED_FIELDS
+    for f in ("ai_verified", "ai_verified_at", "ai_note"):
+        assert f not in PUBLISHED_FIELDS

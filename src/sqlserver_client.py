@@ -211,6 +211,77 @@ def mark_rejected(conn, msg_id: int, verified_by: str) -> None:
 
 
 # =============================================================================
+# AI verification track (2026-06-10)
+#
+# A second, independent verification dimension: the AI date-check batch
+# (scripts/ai_verify.py + Claude reading the OCR frames) confirms or fixes
+# birth_date / martyrdom_date and flips ai_verified. Deliberately decoupled
+# from the human verification_status workflow — neither touches the other.
+# =============================================================================
+
+# The AI batch may only ever correct the two date columns.
+_AI_EDITABLE_FIELDS = {"birth_date", "martyrdom_date"}
+
+
+def mark_ai_verified(conn, msg_id: int, edits: dict, note: str) -> None:
+    """Set ai_verified=1 (+timestamp +note), optionally fixing the date
+    columns. Strict yyyy-mm-dd enforced — raises ValueError on anything else
+    (fail loud: a malformed date here means the batch results file is wrong).
+    """
+    edits = edits or {}
+    unknown = set(edits) - _AI_EDITABLE_FIELDS
+    if unknown:
+        raise ValueError(f"AI batch may only edit dates, got: {sorted(unknown)}")
+
+    set_parts = ["ai_verified = 1",
+                 "ai_verified_at = SYSUTCDATETIME()",
+                 "ai_note = ?"]
+    params = [note]
+    for k, v in edits.items():
+        clean = _sanitize_date(v)
+        if clean is None:
+            raise ValueError(f"{k} must be strict YYYY-MM-DD, got: {v!r}")
+        set_parts.append(f"{k} = ?")
+        params.append(clean)
+    params.append(msg_id)
+
+    cur = conn.cursor()
+    cur.execute(
+        f"UPDATE dbo.martyrs SET {', '.join(set_parts)} WHERE msg_id = ?",
+        *params,
+    )
+    conn.commit()
+
+
+def mark_ai_note(conn, msg_id: int, note: str) -> None:
+    """Record why the AI could NOT verify a row (no frames / unreadable /
+    no date on card). ai_verified stays 0 so the row remains in the queue."""
+    cur = conn.cursor()
+    cur.execute(
+        "UPDATE dbo.martyrs SET ai_note = ? WHERE msg_id = ?",
+        note, msg_id,
+    )
+    conn.commit()
+
+
+def get_ai_pending(conn, limit: int = 50) -> list:
+    """Next rows for the AI batch: human-unverified AND not yet AI-checked.
+    msg_id ASC keeps batches deterministic and resumable (the flag itself is
+    the checkpoint). Dates come back as ISO strings via CONVERT(..., 23)."""
+    cur = conn.cursor()
+    cur.execute(
+        f"SELECT TOP ({int(limit)}) msg_id, name, "
+        "CONVERT(varchar(10), birth_date, 23) AS birth_date, "
+        "CONVERT(varchar(10), martyrdom_date, 23) AS martyrdom_date, "
+        "ocr_birth_date, ocr_martyrdom_date, frame_paths, photo_path "
+        "FROM dbo.martyrs "
+        "WHERE verification_status = 'unverified' AND ai_verified = 0 "
+        "ORDER BY msg_id ASC"
+    )
+    return _rows_to_dicts(cur)
+
+
+# =============================================================================
 # Read queries
 # =============================================================================
 

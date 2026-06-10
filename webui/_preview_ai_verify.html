@@ -1,0 +1,343 @@
+<!doctype html>
+<html lang="ar" dir="rtl" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AQMAR — معاينة: تحقّق الذكاء الاصطناعي</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=El+Messiri:wght@400;500;600;700&family=Amiri:wght@400;700&family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<style>
+  /* Proposed new design token (will land in styles.css :root if approved) */
+  :root { --ai: #4cc3b0; --ai-dim: rgba(76,195,176,0.12); }
+
+  body { padding: 28px 36px 80px; max-width: 1400px; margin: 0 auto; }
+  h1 { font-family: var(--font-display); font-size: 28px; margin: 0 0 6px; color: var(--ink); }
+  .lead { color: var(--muted); font-size: 14px; max-width: 900px; line-height: 1.8; margin-bottom: 36px; }
+  .lead b { color: var(--gold); }
+
+  .preview-section { margin-bottom: 60px; }
+  .preview-header {
+    display: flex; align-items: baseline; gap: 14px;
+    margin-bottom: 14px; border-bottom: 1px solid var(--divider); padding-bottom: 10px;
+  }
+  .preview-tag {
+    font-family: var(--font-display); font-size: 13px; color: var(--gold);
+    letter-spacing: 0.22em; text-transform: uppercase;
+    background: rgba(251,191,36,0.1); border: 1px solid rgba(251,191,36,0.35);
+    border-radius: 999px; padding: 3px 14px;
+  }
+  .preview-name { font-family: var(--font-body); font-size: 20px; font-weight: 700; color: var(--ink); }
+  .preview-note { color: var(--muted); font-size: 13px; margin: 0 0 16px; line-height: 1.7; }
+
+  /* ===== Mock of the existing admin filter card ===== */
+  .filter-card {
+    background: var(--paper); border: 1px solid var(--divider);
+    border-radius: 8px; padding: 16px; margin-bottom: 16px;
+  }
+  .search-row { display: flex; gap: 12px; align-items: center; margin-bottom: 12px; }
+  .mock-input {
+    flex: 1; background: var(--bg-2); border: 1px solid var(--divider); border-radius: 6px;
+    color: var(--muted); font-family: var(--font-body); font-size: 13px; padding: 8px 12px;
+  }
+  .row-count { font-size: 13px; color: var(--muted); white-space: nowrap; }
+  .row-count b { color: var(--ink); }
+
+  .pills-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .pills-row + .pills-row { margin-top: 10px; }
+  .pills-label {
+    font-size: 12px; color: var(--muted); font-weight: 500;
+    text-transform: uppercase; letter-spacing: 0.1em; min-width: 64px;
+  }
+  .pill {
+    border-radius: 999px; padding: 4px 12px; font-size: 12px; font-family: var(--font-body);
+    display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--divider);
+    background: transparent; cursor: pointer; transition: all .15s ease;
+  }
+  .pill .n { font-family: var(--font-latin-sans); font-variant-numeric: tabular-nums; opacity: .7; }
+
+  /* ===== Option A: counts chips inside the filter card ===== */
+  .counts-row {
+    display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
+    margin-top: 14px; padding-top: 12px; border-top: 1px dashed var(--divider);
+  }
+  .count-chip {
+    display: inline-flex; align-items: center; gap: 8px;
+    border-radius: 6px; padding: 6px 12px; font-size: 12.5px;
+    border: 1px solid var(--divider); background: var(--bg-2); color: var(--ink-2);
+  }
+  .count-chip .num { font-family: var(--font-latin-sans); font-weight: 700; font-size: 15px; font-variant-numeric: tabular-nums; }
+  .chip-human .num  { color: var(--gold); }
+  .chip-ai .num     { color: var(--ai); }
+  .chip-rest .num   { color: var(--muted); }
+  .count-sep { width: 1px; height: 22px; background: var(--divider); }
+
+  /* ===== Option B: stats strip above the card ===== */
+  .ai-stats-strip {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 0;
+    background: var(--paper); border: 1px solid var(--divider); border-radius: 8px;
+    overflow: hidden; margin-bottom: 16px;
+  }
+  .ai-stat {
+    padding: 14px 18px; text-align: center;
+    border-inline-start: 1px solid var(--divider);
+  }
+  .ai-stat:first-child { border-inline-start: none; }
+  .ai-stat .v { font-family: var(--font-latin-sans); font-size: 26px; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.2; }
+  .ai-stat .l { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .v-human { color: var(--gold); } .v-ai { color: var(--ai); } .v-rest { color: var(--ink-2); }
+
+  /* ===== Table mock ===== */
+  table { width: 100%; background: var(--paper); border: 1px solid var(--divider); border-radius: 8px; border-collapse: collapse; overflow: hidden; font-size: 14px; }
+  thead tr { background: var(--bg-3); border-bottom: 1px solid var(--divider); }
+  th { padding: 12px 14px; text-align: start; font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.12em; color: var(--muted); font-family: var(--font-body); }
+  th.sorted { color: var(--ink); }
+  td { padding: 12px 14px; border-bottom: 1px solid var(--divider); color: var(--ink-2); }
+  td.dates { font-variant-numeric: tabular-nums; font-family: var(--font-latin-sans); font-size: 13px; }
+  td .name { font-weight: 700; color: var(--ink); font-size: 15px; }
+  .st { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; }
+  .st .dot { width: 6px; height: 6px; border-radius: 99px; }
+  .fixed-date { color: var(--ai); }
+  .fixed-date .old { color: var(--muted); text-decoration: line-through; font-size: 11px; margin-inline-start: 6px; }
+
+  .ai-badge {
+    display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600;
+    color: var(--ai); background: var(--ai-dim); border: 1px solid rgba(76,195,176,0.35);
+    border-radius: 999px; padding: 2px 10px; cursor: help;
+  }
+  .ai-pending { color: var(--muted); font-size: 12px; }
+
+  /* ===== Edit form note panel ===== */
+  .edit-mock { background: var(--bg-2); border: 1px solid var(--divider); border-radius: 12px; padding: 22px; max-width: 760px; }
+  .ai-note-panel {
+    display: flex; gap: 12px; align-items: flex-start;
+    background: var(--ai-dim); border: 1px solid rgba(76,195,176,0.35);
+    border-radius: 8px; padding: 12px 16px; margin-bottom: 18px;
+  }
+  .ai-note-panel .icon { font-size: 20px; line-height: 1.3; }
+  .ai-note-panel .t { font-size: 13.5px; font-weight: 700; color: var(--ai); margin-bottom: 3px; }
+  .ai-note-panel .d { font-size: 12.5px; color: var(--ink-2); line-height: 1.7; }
+  .ai-note-panel .d code { font-family: var(--font-latin-sans); font-size: 12px; background: rgba(0,0,0,0.25); border-radius: 4px; padding: 1px 6px; direction: ltr; display: inline-block; }
+  .ai-note-panel .when { font-family: var(--font-latin-sans); font-size: 11px; color: var(--muted); margin-top: 4px; }
+  .mock-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .mock-field label { display: block; font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .1em; margin-bottom: 4px; }
+  .mock-field .val { background: var(--bg-3); border: 1px solid var(--divider); border-radius: 6px; padding: 8px 12px; font-family: var(--font-latin-sans); font-size: 13px; color: var(--ink); direction: ltr; text-align: right; }
+
+  .pick-banner {
+    background: var(--bg-2); border: 1px dashed var(--gold); border-radius: 10px;
+    padding: 18px 22px; font-size: 15px; color: var(--ink); line-height: 1.9;
+  }
+  .pick-banner b { color: var(--gold); }
+</style>
+</head>
+<body>
+
+<h1>تحقّق الذكاء الاصطناعي — معاينة واجهة لوحة التحكم</h1>
+<p class="lead">
+  هذه معاينة للتغييرات المقترحة على لوحة التحكم بعد إضافة علم <b>ai_verified</b>.
+  القرار المطلوب منك واحد: <b>أين تُعرض العدّادات؟</b> (الخيار A أم B).
+  بقية العناصر — صفّ فلاتر AI، عمود AI في الجدول، ولوحة الملاحظة في نموذج التحرير — ثابتة الشكل وستظهر كما هي هنا.
+  الأزرار في الأسفل تعمل فعلاً: جرّب الضغط على فلاتر AI لترى الجدول يتغيّر.
+</p>
+
+<!-- ============================================================ -->
+<!-- OPTION A -->
+<!-- ============================================================ -->
+<div class="preview-section">
+  <div class="preview-header">
+    <span class="preview-tag">الخيار A</span>
+    <span class="preview-name">عدّادات مدمجة داخل بطاقة الفلاتر</span>
+  </div>
+  <p class="preview-note">صفّ رابع داخل بطاقة الفلاتر الحالية يعرض الأرقام الأربعة. لا يضيف ارتفاعاً كبيراً للصفحة.</p>
+
+  <div class="filter-card">
+    <div class="search-row">
+      <div class="mock-input">ابحث في كل الأعمدة…</div>
+      <div class="row-count"><b>566</b> / 567 سجلًّا</div>
+    </div>
+    <div class="pills-row">
+      <span class="pills-label">الحالة:</span>
+      <span class="pill" style="background: var(--ink); color: var(--paper); border-color: var(--ink);">الكل <span class="n">566</span></span>
+      <span class="pill" style="color: var(--olive);">غير محقق <span class="n">512</span></span>
+      <span class="pill" style="color: var(--forest);">محقق <span class="n">54</span></span>
+      <span class="pill" style="color: var(--crimson);">مرفوض <span class="n">1</span></span>
+    </div>
+    <div class="pills-row">
+      <span class="pills-label">تحقق AI:</span>
+      <span class="pill" style="background: var(--ai); color: var(--paper); border-color: var(--ai);">الكل</span>
+      <span class="pill" style="color: var(--ai);">🤖 تمّ <span class="n">50</span></span>
+      <span class="pill" style="color: var(--olive);">بانتظار <span class="n">462</span></span>
+    </div>
+    <div class="counts-row">
+      <span class="count-chip chip-human"><span>تحقق بشري</span> <span class="num">54</span></span>
+      <span class="count-chip chip-rest"><span>متبقٍ للبشري</span> <span class="num">512</span></span>
+      <span class="count-sep"></span>
+      <span class="count-chip chip-ai"><span>تحقق AI</span> <span class="num">50</span></span>
+      <span class="count-chip chip-rest"><span>متبقٍ للـ AI</span> <span class="num">462</span></span>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- OPTION B -->
+<!-- ============================================================ -->
+<div class="preview-section">
+  <div class="preview-header">
+    <span class="preview-tag">الخيار B</span>
+    <span class="preview-name">شريط إحصائيات بارز فوق الفلاتر</span>
+  </div>
+  <p class="preview-note">أربع خلايا كبيرة فوق بطاقة الفلاتر — أوضح للقراءة السريعة، ويأخذ مساحة رأسية أكبر.</p>
+
+  <div class="ai-stats-strip">
+    <div class="ai-stat"><div class="v v-human">54</div><div class="l">تحقق بشري ✓</div></div>
+    <div class="ai-stat"><div class="v v-rest">512</div><div class="l">متبقٍ للبشري</div></div>
+    <div class="ai-stat"><div class="v v-ai">50</div><div class="l">تحقق AI 🤖</div></div>
+    <div class="ai-stat"><div class="v v-rest">462</div><div class="l">متبقٍ للـ AI</div></div>
+  </div>
+
+  <div class="filter-card">
+    <div class="search-row">
+      <div class="mock-input">ابحث في كل الأعمدة…</div>
+      <div class="row-count"><b>566</b> / 567 سجلًّا</div>
+    </div>
+    <div class="pills-row">
+      <span class="pills-label">الحالة:</span>
+      <span class="pill" style="background: var(--ink); color: var(--paper); border-color: var(--ink);">الكل <span class="n">566</span></span>
+      <span class="pill" style="color: var(--olive);">غير محقق <span class="n">512</span></span>
+      <span class="pill" style="color: var(--forest);">محقق <span class="n">54</span></span>
+      <span class="pill" style="color: var(--crimson);">مرفوض <span class="n">1</span></span>
+    </div>
+    <div class="pills-row">
+      <span class="pills-label">تحقق AI:</span>
+      <span class="pill" style="background: var(--ai); color: var(--paper); border-color: var(--ai);">الكل</span>
+      <span class="pill" style="color: var(--ai);">🤖 تمّ <span class="n">50</span></span>
+      <span class="pill" style="color: var(--olive);">بانتظار <span class="n">462</span></span>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- TABLE + working AI filter demo (same in both options) -->
+<!-- ============================================================ -->
+<div class="preview-section">
+  <div class="preview-header">
+    <span class="preview-tag">ثابت</span>
+    <span class="preview-name">عمود «AI» الجديد في الجدول — جرّب الفلترة</span>
+  </div>
+  <p class="preview-note">
+    عمود جديد قابل للترتيب. ✓ خضراء مائية = تحقّق AI (مرّر الفأرة فوقها لرؤية ملاحظة التدقيق).
+    التواريخ التي صحّحها AI تظهر هنا للتوضيح فقط بالقيمة القديمة مشطوبة — في اللوحة الفعلية يظهر التاريخ الصحيح فقط والملاحظة في العمود.
+  </p>
+
+  <div class="pills-row" style="margin-bottom: 12px;">
+    <span class="pills-label">تحقق AI:</span>
+    <button class="pill demo-pill" data-f="all" style="background: var(--ai); color: var(--paper); border-color: var(--ai);">الكل</button>
+    <button class="pill demo-pill" data-f="ai" style="color: var(--ai);">🤖 تمّ <span class="n">3</span></button>
+    <button class="pill demo-pill" data-f="pending" style="color: var(--olive);">بانتظار <span class="n">2</span></button>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>#</th><th>الاسم</th><th>الميلاد</th><th>الاستشهاد</th><th>الحالة</th><th class="sorted">AI ↓</th><th></th>
+      </tr>
+    </thead>
+    <tbody id="demoRows">
+      <tr data-ai="ai">
+        <td class="dates">023</td>
+        <td><span class="name">البراء عبد الكريم أبو حطب</span></td>
+        <td class="dates fixed-date">1991-01-08<span class="old">1991-08-01</span></td>
+        <td class="dates">2024-02-15</td>
+        <td><span class="st" style="color: var(--olive);"><span class="dot" style="background: var(--olive);"></span>غير محقق</span></td>
+        <td><span class="ai-badge" title="fixed swap: birth 1991-08-01 → 1991-01-08 (card: 08-01-1991)">🤖 ✓</span></td>
+        <td><span class="pill">✎ تحرير</span></td>
+      </tr>
+      <tr data-ai="ai">
+        <td class="dates">029</td>
+        <td><span class="name">محمد عبدالرحمن النجار</span></td>
+        <td class="dates fixed-date">1993-09-03<span class="old">1993-03-09</span></td>
+        <td class="dates">2023-06-15</td>
+        <td><span class="st" style="color: var(--olive);"><span class="dot" style="background: var(--olive);"></span>غير محقق</span></td>
+        <td><span class="ai-badge" title="fixed swap: birth 1993-03-09 → 1993-09-03 (card: 03-09-1993)">🤖 ✓</span></td>
+        <td><span class="pill">✎ تحرير</span></td>
+      </tr>
+      <tr data-ai="ai">
+        <td class="dates">038</td>
+        <td><span class="name">أحمد خليل أبو ندى</span></td>
+        <td class="dates">1998-10-29</td>
+        <td class="dates">2023-12-15</td>
+        <td><span class="st" style="color: var(--olive);"><span class="dot" style="background: var(--olive);"></span>غير محقق</span></td>
+        <td><span class="ai-badge" title="match — card: 29-10-1998 / ديسمبر 2023">🤖 ✓</span></td>
+        <td><span class="pill">✎ تحرير</span></td>
+      </tr>
+      <tr data-ai="pending">
+        <td class="dates">112</td>
+        <td><span class="name">يوسف سامي العطار</span></td>
+        <td class="dates">1996-04-11</td>
+        <td class="dates">2024-10-07</td>
+        <td><span class="st" style="color: var(--olive);"><span class="dot" style="background: var(--olive);"></span>غير محقق</span></td>
+        <td><span class="ai-pending">—</span></td>
+        <td><span class="pill">✎ تحرير</span></td>
+      </tr>
+      <tr data-ai="pending">
+        <td class="dates">154</td>
+        <td><span class="name">خالد نبيل الفرا</span></td>
+        <td class="dates">—</td>
+        <td class="dates">2023-11-20</td>
+        <td><span class="st" style="color: var(--forest);">✓ محقق</span></td>
+        <td><span class="ai-pending" title="تم تخطّيه — محقق بشرياً">— (محقق بشرياً)</span></td>
+        <td><span class="pill">✎ تحرير</span></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ============================================================ -->
+<!-- EDIT FORM NOTE PANEL -->
+<!-- ============================================================ -->
+<div class="preview-section">
+  <div class="preview-header">
+    <span class="preview-tag">ثابت</span>
+    <span class="preview-name">لوحة ملاحظة AI داخل نموذج التحرير</span>
+  </div>
+  <p class="preview-note">عند فتح سجلّ سبق أن دقّقه الـ AI، تظهر هذه اللوحة أعلى الحقول — فتعرف ماذا فعل الـ AI قبل أن تتحقّق بشرياً.</p>
+
+  <div class="edit-mock">
+    <div class="ai-note-panel">
+      <span class="icon">🤖</span>
+      <div>
+        <div class="t">دقّقه الذكاء الاصطناعي — التواريخ تطابق بطاقة الفيديو</div>
+        <div class="d">تم تصحيح قلب اليوم/الشهر في تاريخ الميلاد: <code>1991-08-01 → 1991-01-08</code> (البطاقة تُظهر <code>08 - 01 - 1991</code>)</div>
+        <div class="when">2026-06-10 14:32 UTC</div>
+      </div>
+    </div>
+    <div class="mock-fields">
+      <div class="mock-field"><label>تاريخ الميلاد</label><div class="val">1991-01-08</div></div>
+      <div class="mock-field"><label>تاريخ الاستشهاد</label><div class="val">2024-02-15</div></div>
+    </div>
+  </div>
+</div>
+
+<div class="pick-banner">
+  👈 أخبرني الآن: <b>الخيار A</b> (عدّادات داخل بطاقة الفلاتر) أم <b>الخيار B</b> (شريط إحصائيات فوقها)؟
+  وإن أردت تعديل أي لون أو نصّ أو موضع، قُل ذلك أيضاً.
+</div>
+
+<script>
+  // Tiny demo: AI pills filter the mock table rows
+  const pills = document.querySelectorAll(".demo-pill");
+  const rows = document.querySelectorAll("#demoRows tr");
+  pills.forEach(p => p.addEventListener("click", () => {
+    pills.forEach(q => {
+      const c = q.dataset.f === "pending" ? "var(--olive)" : "var(--ai)";
+      q.style.background = "transparent"; q.style.color = c; q.style.borderColor = "var(--divider)";
+    });
+    p.style.background = "var(--ai)"; p.style.color = "var(--paper)"; p.style.borderColor = "var(--ai)";
+    rows.forEach(r => {
+      r.style.display = (p.dataset.f === "all" || r.dataset.ai === p.dataset.f) ? "" : "none";
+    });
+  }));
+</script>
+
+</body>
+</html>

@@ -7,6 +7,35 @@ in the commit message and the dated spec/plan files under
 
 ---
 
+## 2026-06-10
+
+### (uncommitted) — feat(ai-verify): AI date-verification track + admin portal filters/counters
+
+New **second verification dimension**, independent of the human workflow:
+`dbo.martyrs` gains `ai_verified` (BIT), `ai_verified_at`, `ai_note`
+(migration: `scripts/migrate_add_ai_verify.sql`). The AI batch
+(`scripts/ai_verify.py pending|apply` + Claude reading the OCR frames)
+checks **birth/martyrdom dates only** against the memorial cards, fixes
+day/month swaps into strict `yyyy-mm-dd`, fills NULLs the card answers, and
+flags `ai_verified=1` with an audit note. Human `verification_status`,
+`verified_*` and `ocr_*` columns are never touched; exporter allowlist keeps
+the AI columns out of the published JSON.
+
+Admin portal (Option B from `webui/_preview_ai_verify.html`, user-picked):
+4-cell stats strip (human ✓ / rest / AI ✓ / rest), second "تحقق AI" pills
+row ANDed with the status filter, sortable AI column whose 🤖✓ badge
+tooltips the audit note, and a teal AI panel in the edit form. New `--ai`
+design tokens in `styles.css`.
+
+**Pilot applied (msg 114–217, 50 rows): 26 match · 11 corrections (9
+day/month swaps, 1 year misread 1931→1981, 1 day misread) · 15 NULL fills ·
+0 unreadable.** Row-by-row: `docs/ai-verify-report-2026-06-10.md`. Remaining
+462 rows resume via `docs/ai-verify-resume-prompt.md`. Tests: 100 pytest +
+38 browser, all green. Spec/plan: `docs/superpowers/specs/2026-06-10-ai-verify-design.md`,
+`docs/superpowers/plans/2026-06-10-ai-verify.md`.
+
+---
+
 ## 2026-05-23
 
 ### [`bc82895`](https://github.com/mohamedkhamis/AQMAR/commit/bc82895) — feat(webui): signed +/− delta badge + hide dev banner on production
