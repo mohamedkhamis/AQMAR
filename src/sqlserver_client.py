@@ -312,8 +312,20 @@ def get_by_status(conn, status: str) -> list:
 
 
 def get_verified_for_export(conn) -> list:
-    """Only verified rows. Used by export_to_json.py."""
-    return get_by_status(conn, "verified")
+    """Publishable rows for export_to_json: human-verified OR AI-verified
+    (widened 2026-06-11 — before the AI run only the ~50 human-verified rows
+    ever published, leaving the public site at 52 rows while the registry
+    held 569). Rejected rows and rows the AI flagged needs-human
+    (ai_verified = 0, e.g. cards whose printed dates are typos) stay off
+    the site until the admin reviews them."""
+    cur = conn.cursor()
+    cur.execute(
+        "SELECT * FROM dbo.martyrs "
+        "WHERE verification_status <> 'rejected' "
+        "AND (verification_status = 'verified' OR ai_verified = 1) "
+        "ORDER BY posted_date DESC"
+    )
+    return _rows_to_dicts(cur)
 
 
 def get_by_msg_id(conn, msg_id: int) -> dict:

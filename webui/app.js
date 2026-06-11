@@ -877,34 +877,27 @@ function aqmar() {
       }
     },
 
-    // Download a JSON audit of every row whose DATES the AI changed (the
-    // ai_verify batch writes notes starting "fixed …" / "filled …"; exact
-    // matches say "match (…)" and are excluded). Pure client-side download —
-    // rows are already in memory with the ai_* fields; nothing touches the
-    // server or the published snapshot.
-    exportAiModified() {
-      const rows = this.all
-        .filter(m => m.aiVerified && /fixed|filled/.test(m.aiNote || ''))
-        .map(m => ({
-          msg_id: m.id,
-          name: m.name,
-          birth_date: m.birth || null,
-          martyrdom_date: m.martyrdom || null,
-          ai_note: m.aiNote,
-          ai_verified_at: m.aiVerifiedAt,
-        }));
-      if (!rows.length) {
-        alert(this.lang === 'ar'
-          ? 'لا توجد سجلات عدَّل الذكاء الاصطناعي تواريخها.'
-          : 'No AI-modified rows to export.');
-        return;
+    // Regenerate data/martyrs.json — the file GitHub Pages serves — through
+    // the standard publish flow (same valid envelope: version/generated_at/
+    // channel/note/martyrs[]). Since 2026-06-11 the publish rule includes
+    // AI-verified rows, so this is how the AI run's corrected dates reach
+    // the public site. The admin then git-pushes the file manually.
+    // Differs from publishNow() only in skipping the note prompt.
+    async exportAiModified() {
+      if (!window.AQMAR_API) return;
+      const ok = confirm(this.lang === 'ar'
+        ? 'سيُحدِّث هذا data/martyrs.json بكل السجلات المحقَّقة (بشرياً أو بالذكاء الاصطناعي) وبنسخة جديدة. متابعة؟'
+        : 'This rewrites data/martyrs.json with all verified rows (human or AI) as a new version. Continue?');
+      if (!ok) return;
+      try {
+        const result = await window.AQMAR_API.post('/publish', { note: 'AI-verified export (admin AI button)' });
+        const msg = this.lang === 'ar'
+          ? `تم التصدير! النسخة ${result.version} — ${result.row_count} سجلاً في:\n${result.path}\n\nالخطوة التالية: git add data/martyrs.json && git commit && git push`
+          : `Exported! Version ${result.version} — ${result.row_count} rows in:\n${result.path}\n\nNext: git add data/martyrs.json && git commit && git push`;
+        alert(msg);
+      } catch (e) {
+        alert((this.lang === 'ar' ? 'فشل التصدير:\n' : 'Export failed:\n') + e.message);
       }
-      const stamp = new Date().toISOString().slice(0, 10);
-      downloadJson(`aqmar-ai-modified-${stamp}.json`, {
-        exported_at: new Date().toISOString(),
-        count: rows.length,
-        rows,
-      });
     },
 
     // Mark a row 'rejected' (won't be included in published JSON).
@@ -1297,21 +1290,6 @@ function birthDelta(userIso, birthIso) {
 }
 
 function pad(n) { return String(n).padStart(2, '0'); }
-
-// Client-side "save as" for a JSON object — used by the admin's
-// "Export AI edits" button. Object URL is revoked after the click so
-// repeated exports don't leak blobs.
-function downloadJson(filename, obj) {
-  const blob = new Blob([JSON.stringify(obj, null, 2)], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
-}
 
 function esc(s) {
   return String(s).replace(/[&<>"']/g, c => ({

@@ -915,11 +915,13 @@
           <div class="text-[11px] opacity-75 tracking-wide"
                x-text="lang === 'ar' ? 'تعديلٌ في هذه الجلسة' : 'edits this session'"></div>
         </div>
-        <!-- Export AI edits: downloads a JSON audit of every row whose dates
-             the AI batch changed (ai_note "fixed …"/"filled …"). Pure
-             client-side download — does not publish or touch the server. -->
+        <!-- Export AI: regenerates data/martyrs.json (the GitHub Pages data
+             file) via the standard publish flow, which since 2026-06-11
+             includes AI-verified rows. The admin then git-pushes manually.
+             Same backend as Publish — this button just skips the note
+             prompt and labels the version for the audit trail. -->
         <button @click="exportAiModified()" class="btn btn-text" style="color: rgba(255,255,255,0.9); border: 1px solid rgba(255,255,255,0.25);"
-                :title="lang === 'ar' ? 'تنزيل JSON بالسجلات التي عدَّل الذكاء الاصطناعي تواريخها' : 'Download a JSON audit of rows whose dates the AI changed'">
+                :title="lang === 'ar' ? 'تحديث data/martyrs.json بكل السجلات المحقَّقة (بشرياً أو AI) — ثم ادفعه يدوياً إلى GitHub' : 'Rewrite data/martyrs.json with all verified rows (human or AI) — then commit & push manually'">
           🤖 <span x-text="lang === 'ar' ? 'تصدير تعديلات AI' : 'Export AI edits'"></span>
         </button>
         <!-- Publish: writes a new versioned snapshot to data/martyrs.json from

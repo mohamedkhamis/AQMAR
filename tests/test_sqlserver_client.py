@@ -318,6 +318,24 @@ def test_get_by_status_returns_list_of_dicts():
     assert "WHERE verification_status = ?" in sql
 
 
+def test_get_verified_for_export_includes_ai_verified_excludes_rejected():
+    """The publish rule (widened 2026-06-11): a row reaches data/martyrs.json
+    when a human verified it OR the AI verified it; rejected rows and
+    needs-human rows (ai_verified = 0, status unverified) never publish."""
+    from src.sqlserver_client import get_verified_for_export
+    mock_cur = MagicMock()
+    mock_cur.description = [("msg_id",), ("name",)]
+    mock_cur.fetchall.return_value = [(20, "Foo")]
+    mock_conn = MagicMock(cursor=MagicMock(return_value=mock_cur))
+
+    rows = get_verified_for_export(mock_conn)
+
+    assert rows == [{"msg_id": 20, "name": "Foo"}]
+    sql = mock_cur.execute.call_args.args[0]
+    assert "verification_status <> 'rejected'" in sql
+    assert "verification_status = 'verified' OR ai_verified = 1" in sql
+
+
 def test_get_all_returns_every_row_regardless_of_status():
     mock_cur = MagicMock()
     mock_cur.description = [("msg_id",), ("name",)]
