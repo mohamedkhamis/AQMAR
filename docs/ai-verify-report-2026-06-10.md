@@ -583,6 +583,33 @@ or msg 1198 whose poster genuinely prints no birth date.
 | 1125 | Not a martyr post — spokesman speech still (02 Jun 2026); row has no name, both dates NULL. Consider rejecting. |
 | 1200 | No frames/photo extracted; nothing to read. Re-scrape or manual entry. |
 
+## Cycle 011 — cross-check of the 54 human-verified rows (applied 2026-06-10)
+
+At the user's request the AI also cross-checked the 54 human-verified rows so
+the `ai_verified` flag covers every checkable row ("fill the gap"). Mode:
+**flag-only** — the AI never edits dates on human-verified rows; agreement
+sets `ai_verified = 1` with a `cross-check:` note, disagreement is a
+note-only flag for the human.
+
+**Result: 53 of 54 confirmed · 1 disagreement flagged**
+
+| msg | finding |
+|---|---|
+| 98 | Card prints birth **1992-06-02** but the human-verified DB has **1992-02-06** (day/month swap that slipped through review). Martyrdom matches. Dates left untouched — note flags it for re-check via the edit form. |
+| 29 | Confirmed incl. pre-war martyrdom: card itself prints يونيو - 2023 (June 2023, month-only = DB's 2023-06-15). |
+| 940, 942 | Posters print only the martyrdom date (both match); the human-verified births came from the captions and are unchallenged by the card. |
+
+### DB state after the cross-check
+
+```
+ai_verified 1: 557
+ai_verified 0:  16  (= 14 needs-human + 1 rejected + msg 98 disagreement)
+```
+
+Every row with `ai_verified = 0` (except the rejected row) carries an
+`ai_note` explaining exactly why, so the portal's بانتظار filter is the
+complete human worklist.
+
 ### Method note (full run)
 
 The full run upgraded the pilot's single-reader procedure: every row was read
@@ -592,3 +619,29 @@ agreed on both dates and passed sanity bounds (martyrdom within the war era,
 age 15–70), and every disagreement, low-confidence reading, sanity violation
 and terminal needs-human judgment was re-read by the orchestrator directly.
 Results files: `data/ai_batches/results_002 … results_011.json`.
+
+## Update 2026-06-11 — needs-human list movement + msg 1200 resolved
+
+Admin deleted 5 rows from the DB: the rejected row (1062) and the four
+"consider rejecting / unfixable" entries **380, 386, 710, 1125**.
+
+**msg 1200 is resolved**: a full re-scrape (`scripts/reprocess.py --msg-id
+1200 --update`) recovered its frames, photo and OCR fields, and the card was
+then AI-verified — birth 1976-07-20 / martyrdom 2023-12-08, both matching the
+fresh OCR (`results_photo_recovery_2026-06-11.json`). Removed from
+`noted_ids.json`. The new daily row 1252 was verified in the same pass.
+
+Remaining needs-human (9): **233, 772, 926, 928, 930, 932, 934, 936, 938** —
+the two card-typo confirmations and the seven martyrdom-only posters with
+unconfirmable births.
+
+```
+ai_verified 1: 559
+ai_verified 0:  10  (= 9 needs-human + msg 98 disagreement)
+total        : 569
+```
+
+Side observation from the photo-recovery pass (2026-06-11): for msg 1035 the
+portrait *poster* prints martyrdom 22-12-2023 while the video card prints
+25-12-2023 (= DB, AI-verified). Cards remain the canonical date source; noted
+here in case the admin ever wants to chase the 3-day discrepancy.

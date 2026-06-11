@@ -7,9 +7,41 @@ in the commit message and the dated spec/plan files under
 
 ---
 
+## 2026-06-11
+
+### (uncommitted) — feat(photos): recover the 39 missing portrait photos
+
+Every row in `dbo.martyrs` now has a photo (`photo_path IS NULL` count:
+**39 → 0**). Root cause of the gap: the daily scraper pairs each video with
+its portrait by **exact caption-name match**, but the channel's video
+captions usually append the fighter's kunya in quotes (`محمد كمال منصور
+"أبو كمال"`) while the photo caption carries the plain name — plus a few
+channel-side typos (`أمجد`/`أحمد` msg 118, `الشمباري`/`الشنباري` msg 311)
+and spacing variants. Those rows could therefore never pair, from day one.
+
+New `scripts/recover_missing_photos.py` (dry-run capable, photo-only — the
+single DB write is `UPDATE … SET photo_path`): re-queries Telegram ±10
+messages around each video and matches in three tiers — exact name,
+normalized name, then *name-overlap* (≥2 shared normalized tokens and ≥half
+the target's tokens) restricted to offsets −1/−2 where the channel
+conventionally posts the portrait. All 39 matched at offset −1; identity
+spot-checked visually (recovered portrait vs the portrait inside the video's
+own card) for the typo cases. `reprocess.py --update` was deliberately NOT
+used for the 38 rows with data — it would have overwritten the AI-corrected
+dates with raw OCR.
+
+msg 1200 (the empty needs-human row: no frames, no dates, 0-byte photo from
+a failed 2026-06-08 download) was fully re-scraped, then AI-verified from
+its new frames (1976-07-20 / 2023-12-08, card matches OCR), as was the new
+daily row 1252. `docs/ai-verify-report-2026-06-10.md` gained an Update
+2026-06-11 section: admin deleted 5 unfixable rows; needs-human is down to
+9; counters now 559 AI-verified / 569 total.
+
+---
+
 ## 2026-06-10
 
-### (uncommitted) — feat(ai-verify): AI date-verification track + admin portal filters/counters
+### [`7c5734b`](https://github.com/mohamedkhamis/AQMAR/commit/7c5734b) — feat(ai-verify): AI date-verification track + admin portal filters/counters
 
 New **second verification dimension**, independent of the human workflow:
 `dbo.martyrs` gains `ai_verified` (BIT), `ai_verified_at`, `ai_note`
