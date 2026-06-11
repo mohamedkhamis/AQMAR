@@ -420,6 +420,10 @@ html[data-theme="dark"] body::before { mix-blend-mode: screen; opacity: 0.4; }
    so the table never breaks the page layout on a phone. */
 .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
 .table-scroll > table { min-width: 720px; }
+/* Slimmer inline padding than Tailwind's p-3.5 (14px): with 11 columns the
+   28px-per-cell padding alone ate ~300px, crushing the auto-width name
+   column. Class+element selector outruns the single-class utility. (2026-06-11) */
+.table-scroll th, .table-scroll td { padding-inline: 10px; }
 .table-scroll::-webkit-scrollbar { height: 8px; }
 .table-scroll::-webkit-scrollbar-track { background: transparent; }
 .table-scroll::-webkit-scrollbar-thumb { background: var(--faint); border-radius: 999px; }

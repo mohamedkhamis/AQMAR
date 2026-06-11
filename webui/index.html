@@ -915,6 +915,13 @@
           <div class="text-[11px] opacity-75 tracking-wide"
                x-text="lang === 'ar' ? 'تعديلٌ في هذه الجلسة' : 'edits this session'"></div>
         </div>
+        <!-- Export AI edits: downloads a JSON audit of every row whose dates
+             the AI batch changed (ai_note "fixed …"/"filled …"). Pure
+             client-side download — does not publish or touch the server. -->
+        <button @click="exportAiModified()" class="btn btn-text" style="color: rgba(255,255,255,0.9); border: 1px solid rgba(255,255,255,0.25);"
+                :title="lang === 'ar' ? 'تنزيل JSON بالسجلات التي عدَّل الذكاء الاصطناعي تواريخها' : 'Download a JSON audit of rows whose dates the AI changed'">
+          🤖 <span x-text="lang === 'ar' ? 'تصدير تعديلات AI' : 'Export AI edits'"></span>
+        </button>
         <!-- Publish: writes a new versioned snapshot to data/martyrs.json from
              verified rows. Confirms via window.confirm because it bumps the
              version number whether or not there's anything new. -->
@@ -1349,7 +1356,7 @@
                 </button>
               </th>
             </template>
-            <th style="width: 90px;"></th><!-- Edit button column, no sort -->
+            <th style="width: 80px;"></th><!-- Edit button column, no sort -->
           </tr>
           <!-- Per-column filter inputs (skipped for id + status which are filtered elsewhere).
                Uses :value + @input instead of x-model because x-model can't take a dynamic
@@ -1388,10 +1395,11 @@
                   </div>
                 </div>
               </td>
-              <!-- Born -->
-              <td class="p-3.5 tabular-nums text-ink-2" x-text="m.birth || '—'"></td>
-              <!-- Martyrdom -->
-              <td class="p-3.5 tabular-nums text-ink-2" x-text="m.martyrdom || '—'"></td>
+              <!-- Born / Martyrdom — whitespace-nowrap because the RTL bidi
+                   context happily line-breaks "1989-04-06" after a hyphen
+                   when the column gets tight, splitting the date in two. -->
+              <td class="p-3.5 tabular-nums text-ink-2 whitespace-nowrap" x-text="m.birth || '—'"></td>
+              <td class="p-3.5 tabular-nums text-ink-2 whitespace-nowrap" x-text="m.martyrdom || '—'"></td>
               <!-- City -->
               <td class="p-3.5" x-text="m.city || '—'"></td>
               <!-- Battalion -->
@@ -1400,16 +1408,17 @@
                    didn't capture it from the video frame / caption) -->
               <td class="p-3.5 text-[13px] text-muted" x-text="m.brigade || '—'"></td>
               <!-- AI verification (2026-06-10): ✓ badge with ai_note tooltip;
-                   '⚠' = AI looked but couldn't verify (note explains why);
-                   '—' = not yet checked / skipped (human-verified rows are
-                   skipped by the AI batch by design). -->
+                   '⚠' = AI looked but couldn't verify — shown whenever an
+                   ai_note exists, INCLUDING human-verified rows (the
+                   cross-check can flag a card/DB disagreement, e.g. msg 98);
+                   '—' = not yet checked. -->
               <td class="p-3.5">
                 <span x-show="m.aiVerified" class="ai-badge" :title="m.aiNote || ''">🤖 ✓</span>
                 <span x-show="!m.aiVerified" class="text-[12px] text-muted" style="cursor: help;"
-                      :title="m.verification === 'verified'
+                      :title="m.aiNote || (m.verification === 'verified'
                         ? (lang === 'ar' ? 'تم تخطيه — محقق بشرياً' : 'skipped — human verified')
-                        : (m.aiNote || '')"
-                      x-text="m.aiNote && m.verification !== 'verified' ? '⚠' : '—'"></span>
+                        : '')"
+                      x-text="m.aiNote ? '⚠' : '—'"></span>
               </td>
               <!-- STATUS (verification_status with color coding, plus session-edit marker) -->
               <td class="p-3.5">

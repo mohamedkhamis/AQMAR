@@ -515,28 +515,33 @@ function aqmar() {
     // for the verification workflow — kept rightmost as the visual anchor.
     get adminCols() {
       const ar = this.lang === 'ar';
+      // Width budget (2026-06-11): the table lives in a ~1176px container
+      // (max-w-[1240px] minus px-8). Fixed widths below + the 80px edit
+      // column sum to ~1007px so the auto name column keeps ≥160px — when
+      // they exceeded the container (pre-fix: 1250px) the browser crushed
+      // the name to one word per line and wrapped the ISO dates mid-value.
       return [
-        { id: 'id',           label: '#',                          width: '80px',  sortable: true,  filterable: false },
+        { id: 'id',           label: '#',                          width: '52px',  sortable: true,  filterable: false },
         // "Added" — UTC timestamp when the scraper inserted the row. Sortable so
         // the admin can jump straight to the newest arrivals; not filterable
         // (date range filtering would need a calendar picker, not in scope).
-        { id: 'addedAt',      label: ar ? 'تاريخ الإضافة' : 'Added', width: '160px', sortable: true,  filterable: false },
+        { id: 'addedAt',      label: ar ? 'تاريخ الإضافة' : 'Added', width: '150px', sortable: true,  filterable: false },
         { id: 'name',         label: ar ? 'الاسم' : 'Name',         width: 'auto',  sortable: true,  filterable: true  },
-        { id: 'born',         label: ar ? 'الميلاد' : 'Born',       width: '130px', sortable: true,  filterable: true  },
-        { id: 'martyrdom',    label: ar ? 'الاستشهاد' : 'Martyrdom', width: '130px', sortable: true,  filterable: true  },
-        { id: 'city',         label: ar ? 'المدينة' : 'City',       width: '120px', sortable: true,  filterable: true  },
-        { id: 'battalion',    label: ar ? 'الكتيبة' : 'Battalion',  width: '160px', sortable: true,  filterable: true  },
+        { id: 'born',         label: ar ? 'الميلاد' : 'Born',       width: '100px', sortable: true,  filterable: true  },
+        { id: 'martyrdom',    label: ar ? 'الاستشهاد' : 'Martyrdom', width: '100px', sortable: true,  filterable: true  },
+        { id: 'city',         label: ar ? 'المدينة' : 'City',       width: '90px',  sortable: true,  filterable: true  },
+        { id: 'battalion',    label: ar ? 'الكتيبة' : 'Battalion',  width: '150px', sortable: true,  filterable: true  },
         // Brigade (اللواء) — military unit above the battalion. Optional in
         // OCR output (sometimes the video frame doesn't show it, sometimes
         // the caption omits it). Admin can fill it in from the source video.
-        { id: 'brigade',      label: ar ? 'اللواء' : 'Brigade',     width: '150px', sortable: true,  filterable: true  },
+        { id: 'brigade',      label: ar ? 'اللواء' : 'Brigade',     width: '110px', sortable: true,  filterable: true  },
         // AI verification flag (2026-06-10). Sortable; tooltip shows ai_note.
-        { id: 'aiVerified',   label: 'AI',                          width: '90px',  sortable: true,  filterable: false },
+        { id: 'aiVerified',   label: 'AI',                          width: '60px',  sortable: true,  filterable: false },
         // Status column header sorts by the `isVerified` boolean (false first
         // by default, so unverified + rejected rows bubble to the top of the
         // verification queue). The pill itself still displays the full 3-state
         // verification_status (unverified / verified / rejected).
-        { id: 'isVerified',   label: ar ? 'الحالة' : 'Status',     width: '140px', sortable: true,  filterable: false },
+        { id: 'isVerified',   label: ar ? 'الحالة' : 'Status',     width: '115px', sortable: true,  filterable: false },
       ];
     },
     // Status pills above the table — drives the headline filter.
@@ -870,6 +875,36 @@ function aqmar() {
       } catch (e) {
         alert((this.lang === 'ar' ? 'فشل النشر:\n' : 'Publish failed:\n') + e.message);
       }
+    },
+
+    // Download a JSON audit of every row whose DATES the AI changed (the
+    // ai_verify batch writes notes starting "fixed …" / "filled …"; exact
+    // matches say "match (…)" and are excluded). Pure client-side download —
+    // rows are already in memory with the ai_* fields; nothing touches the
+    // server or the published snapshot.
+    exportAiModified() {
+      const rows = this.all
+        .filter(m => m.aiVerified && /fixed|filled/.test(m.aiNote || ''))
+        .map(m => ({
+          msg_id: m.id,
+          name: m.name,
+          birth_date: m.birth || null,
+          martyrdom_date: m.martyrdom || null,
+          ai_note: m.aiNote,
+          ai_verified_at: m.aiVerifiedAt,
+        }));
+      if (!rows.length) {
+        alert(this.lang === 'ar'
+          ? 'لا توجد سجلات عدَّل الذكاء الاصطناعي تواريخها.'
+          : 'No AI-modified rows to export.');
+        return;
+      }
+      const stamp = new Date().toISOString().slice(0, 10);
+      downloadJson(`aqmar-ai-modified-${stamp}.json`, {
+        exported_at: new Date().toISOString(),
+        count: rows.length,
+        rows,
+      });
     },
 
     // Mark a row 'rejected' (won't be included in published JSON).
@@ -1262,6 +1297,21 @@ function birthDelta(userIso, birthIso) {
 }
 
 function pad(n) { return String(n).padStart(2, '0'); }
+
+// Client-side "save as" for a JSON object — used by the admin's
+// "Export AI edits" button. Object URL is revoked after the click so
+// repeated exports don't leak blobs.
+function downloadJson(filename, obj) {
+  const blob = new Blob([JSON.stringify(obj, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
 
 function esc(s) {
   return String(s).replace(/[&<>"']/g, c => ({
