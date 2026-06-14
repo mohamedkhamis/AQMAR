@@ -1,9 +1,57 @@
 {
-  "version": 5,
-  "generated_at": "2026-06-14T12:25:54Z",
+  "version": 6,
+  "generated_at": "2026-06-14T14:44:30Z",
   "channel": "AqmarTofan",
   "note": "AI-verified export (admin AI button)",
   "martyrs": [
+    {
+      "msg_id": 1299,
+      "name": "أيمن صلاح الأغا",
+      "name_normalized": "ايمن صلاح الاغا",
+      "birth_date": "1997-07-21",
+      "martyrdom_date": "2023-12-22",
+      "city": null,
+      "military_rank": "مجاهد قسامي",
+      "weapon": null,
+      "battalion": "كتيبة مصعب بن عمير",
+      "brigade": "لواء خانيونس",
+      "photo_path": "data/photos\\1299.jpg",
+      "frame_paths": "data/frames\\1299_28.jpg;data/frames\\1299_30.jpg;data/frames\\1299_32.jpg",
+      "featured_frame_path": null,
+      "posted_date": "2026-06-14T12:11:00",
+      "message_link": "https://t.me/AqmarTofan/1299",
+      "extraction_status": "complete",
+      "ocr_name": "أيمن صلاح الأغا",
+      "ocr_birth_date": "1997-07-21",
+      "ocr_martyrdom_date": "2023-12-22",
+      "created_at": "2026-06-14T12:59:50",
+      "updated_at": "2026-06-14T13:57:26",
+      "archive_org_id": null
+    },
+    {
+      "msg_id": 1297,
+      "name": "أحمد نبيل البيرم",
+      "name_normalized": "احمد نبيل البيرم",
+      "birth_date": "1999-09-05",
+      "martyrdom_date": "2025-05-05",
+      "city": null,
+      "military_rank": "قائد مجموعة",
+      "weapon": null,
+      "battalion": "كتيبة مصعب بن عمير",
+      "brigade": "لواء خانيونس",
+      "photo_path": "data/photos\\1297.jpg",
+      "frame_paths": "data/frames\\1297_28.jpg;data/frames\\1297_30.jpg;data/frames\\1297_32.jpg",
+      "featured_frame_path": null,
+      "posted_date": "2026-06-14T10:28:00",
+      "message_link": "https://t.me/AqmarTofan/1297",
+      "extraction_status": "complete",
+      "ocr_name": "أحمد نبيل البيرم",
+      "ocr_birth_date": "1999-09-05",
+      "ocr_martyrdom_date": "2025-05-05",
+      "created_at": "2026-06-14T12:52:27",
+      "updated_at": "2026-06-14T13:57:26",
+      "archive_org_id": null
+    },
     {
       "msg_id": 1295,
       "name": "أنس عايش أبو خاطر",
@@ -11,7 +59,7 @@
       "birth_date": "1994-04-28",
       "martyrdom_date": "2023-11-09",
       "city": null,
-      "military_rank": "مجاهد _ قسامي",
+      "military_rank": "مجاهد قسامي",
       "weapon": null,
       "battalion": "كتيبة الصحابي أسد الله حمزة",
       "brigade": "لواء خانيونس",
@@ -25,7 +73,7 @@
       "ocr_birth_date": "1994-04-28",
       "ocr_martyrdom_date": "2023-11-09",
       "created_at": "2026-06-14T11:07:56",
-      "updated_at": "2026-06-14T12:14:55",
+      "updated_at": "2026-06-14T12:52:38",
       "archive_org_id": null
     },
     {
@@ -35,7 +83,7 @@
       "birth_date": "1999-04-21",
       "martyrdom_date": "2025-01-24",
       "city": null,
-      "military_rank": "مجاهد قسا امي",
+      "military_rank": "مجاهد قسامي",
       "weapon": null,
       "battalion": "كتيبة الصحابي حذيفة بن اليمان",
       "brigade": "لواء خانيونس",
@@ -49,7 +97,7 @@
       "ocr_birth_date": "1999-04-21",
       "ocr_martyrdom_date": "2025-01-24",
       "created_at": "2026-06-14T10:06:13",
-      "updated_at": "2026-06-14T10:26:00",
+      "updated_at": "2026-06-14T12:52:38",
       "archive_org_id": null
     },
     {
@@ -107,7 +155,7 @@
       "birth_date": "1987-02-07",
       "martyrdom_date": "2023-10-07",
       "city": null,
-      "military_rank": "قائدفصيل",
+      "military_rank": "قائد فصيل",
       "weapon": null,
       "battalion": "كتيبة الخليل",
       "brigade": "لواء الوسطى",
@@ -121,7 +169,7 @@
       "ocr_birth_date": "1987-02-07",
       "ocr_martyrdom_date": "29",
       "created_at": "2026-06-14T09:33:29",
-      "updated_at": "2026-06-14T10:26:00",
+      "updated_at": "2026-06-14T12:51:27",
       "archive_org_id": null
     },
     {
@@ -131,7 +179,7 @@
       "birth_date": "1991-11-28",
       "martyrdom_date": "2024-01-07",
       "city": null,
-      "military_rank": "قائدفصيل",
+      "military_rank": "قائد فصيل",
       "weapon": null,
       "battalion": "كتيبة الخليل",
       "brigade": "لواء الوسطى",
@@ -145,7 +193,7 @@
       "ocr_birth_date": "1991-11-28",
       "ocr_martyrdom_date": "2024-01-07",
       "created_at": "2026-06-14T09:24:50",
-      "updated_at": "2026-06-14T09:27:00",
+      "updated_at": "2026-06-14T12:51:27",
       "archive_org_id": null
     },
     {
@@ -203,7 +251,7 @@
       "birth_date": "2002-06-17",
       "martyrdom_date": "2025-06-12",
       "city": null,
-      "military_rank": "مجاهد قسامى",
+      "military_rank": "مجاهد قسامي",
       "weapon": null,
       "battalion": "كتيبة حطين",
       "brigade": "لواء الوسطى",
@@ -217,7 +265,7 @@
       "ocr_birth_date": "2002-06-17",
       "ocr_martyrdom_date": "2025-12-06",
       "created_at": "2026-06-13T09:05:32",
-      "updated_at": "2026-06-14T09:23:35",
+      "updated_at": "2026-06-14T12:52:38",
       "archive_org_id": null
     },
     {
@@ -323,7 +371,7 @@
       "birth_date": "1995-12-31",
       "martyrdom_date": "2024-05-21",
       "city": null,
-      "military_rank": "قائسد فصيل",
+      "military_rank": "قائد فصيل",
       "weapon": null,
       "battalion": "كتيبة الشهيد عبد الرؤوف نبهان",
       "brigade": "لواء الشمال",
@@ -337,7 +385,7 @@
       "ocr_birth_date": "1995-12-31",
       "ocr_martyrdom_date": "2024-05-21",
       "created_at": "2026-06-11T17:19:41",
-      "updated_at": "2026-06-11T17:52:50",
+      "updated_at": "2026-06-14T12:51:27",
       "archive_org_id": null
     },
     {
@@ -347,7 +395,7 @@
       "birth_date": "1997-12-24",
       "martyrdom_date": "2023-10-28",
       "city": null,
-      "military_rank": "قائسد مجموعة",
+      "military_rank": "قائد مجموعة",
       "weapon": null,
       "battalion": "كتيبة الشهيد عماد عقل",
       "brigade": "لواء الشمال",
@@ -361,7 +409,7 @@
       "ocr_birth_date": "1997",
       "ocr_martyrdom_date": "2023",
       "created_at": "2026-06-11T17:14:40",
-      "updated_at": "2026-06-11T17:52:50",
+      "updated_at": "2026-06-14T12:49:25",
       "archive_org_id": null
     },
     {
@@ -419,7 +467,7 @@
       "birth_date": "2004-03-27",
       "martyrdom_date": "2023-11-01",
       "city": null,
-      "military_rank": "مجاهد قسا مي",
+      "military_rank": "مجاهد قسامي",
       "weapon": null,
       "battalion": "كتيبة الشهيد فوزي أبو القرع",
       "brigade": "لواء الشمال",
@@ -433,7 +481,7 @@
       "ocr_birth_date": "2004-03-27",
       "ocr_martyrdom_date": "2023-11-01",
       "created_at": "2026-06-11T09:11:15",
-      "updated_at": "2026-06-14T12:13:28",
+      "updated_at": "2026-06-14T12:52:38",
       "archive_org_id": null
     },
     {
@@ -539,7 +587,7 @@
       "birth_date": "1989-10-03",
       "martyrdom_date": "2023-10-07",
       "city": null,
-      "military_rank": "مجاد _ قسامي",
+      "military_rank": "مجاهد قسامي",
       "weapon": null,
       "battalion": "كتيبة الشهيد محمد أبو حرب",
       "brigade": "لواء رفح",
@@ -553,7 +601,7 @@
       "ocr_birth_date": "1989-03-10",
       "ocr_martyrdom_date": "2023-10-07",
       "created_at": "2026-06-10T15:11:07",
-      "updated_at": "2026-06-10T19:25:43",
+      "updated_at": "2026-06-14T12:52:38",
       "archive_org_id": null
     },
     {
@@ -587,7 +635,7 @@
       "birth_date": "1993-06-19",
       "martyrdom_date": "2023-10-07",
       "city": null,
-      "military_rank": "مجاهد قسا م",
+      "military_rank": "مجاهد قسامي",
       "weapon": null,
       "battalion": "كتيبة الشهيد محمد أبو حرب",
       "brigade": "لواء رفح",
@@ -601,7 +649,7 @@
       "ocr_birth_date": "1993-06-19",
       "ocr_martyrdom_date": "2023-10-07",
       "created_at": "2026-06-10T13:08:36",
-      "updated_at": "2026-06-10T19:25:43",
+      "updated_at": "2026-06-14T12:52:38",
       "archive_org_id": null
     },
     {
@@ -635,7 +683,7 @@
       "birth_date": "1989-10-09",
       "martyrdom_date": "2024-06-07",
       "city": null,
-      "military_rank": "قائسد فصيل",
+      "military_rank": "قائد فصيل",
       "weapon": null,
       "battalion": "كتيبة الشهيد محمد أبو شمالة",
       "brigade": "لواء رفح",
@@ -649,7 +697,7 @@
       "ocr_birth_date": "1989-10-09",
       "ocr_martyrdom_date": "2024-06-15",
       "created_at": "2026-06-10T10:00:51",
-      "updated_at": "2026-06-10T19:36:03",
+      "updated_at": "2026-06-14T12:51:27",
       "archive_org_id": null
     },
     {
@@ -659,7 +707,7 @@
       "birth_date": "1980-03-03",
       "martyrdom_date": "2025-09-18",
       "city": null,
-      "military_rank": "قائدفصيل",
+      "military_rank": "قائد فصيل",
       "weapon": null,
       "battalion": "كتيبة الرضوان",
       "brigade": "لواء غزة",
@@ -673,7 +721,7 @@
       "ocr_birth_date": "1980-03-03",
       "ocr_martyrdom_date": "2025-09-18",
       "created_at": "2026-06-10T09:52:20",
-      "updated_at": "2026-06-10T19:25:43",
+      "updated_at": "2026-06-14T12:51:27",
       "archive_org_id": null
     },
     {
@@ -755,7 +803,7 @@
       "birth_date": "1989-01-27",
       "martyrdom_date": "2024-09-01",
       "city": null,
-      "military_rank": "قائدسرية",
+      "military_rank": "قائد سرية",
       "weapon": null,
       "battalion": "كتيبة التفاح والدرج",
       "brigade": "لواء غزة",
@@ -769,7 +817,7 @@
       "ocr_birth_date": "1989-01-27",
       "ocr_martyrdom_date": "2024-01-09",
       "created_at": "2026-06-09T15:07:13",
-      "updated_at": "2026-06-10T19:25:43",
+      "updated_at": "2026-06-14T12:50:45",
       "archive_org_id": null
     },
     {
@@ -779,7 +827,7 @@
       "birth_date": "1984-01-01",
       "martyrdom_date": "2024-12-26",
       "city": null,
-      "military_rank": "قائدسرية",
+      "military_rank": "قائد سرية",
       "weapon": null,
       "battalion": "كتيبة التفاح والدرج",
       "brigade": "لواء غزة",
@@ -793,7 +841,7 @@
       "ocr_birth_date": "1984-01-01",
       "ocr_martyrdom_date": "2024-12-26",
       "created_at": "2026-06-09T13:07:09",
-      "updated_at": "2026-06-10T19:25:43",
+      "updated_at": "2026-06-14T12:50:45",
       "archive_org_id": null
     },
     {
@@ -827,7 +875,7 @@
       "birth_date": "1994-11-12",
       "martyrdom_date": "2026-05-07",
       "city": null,
-      "military_rank": "قائد سريسة",
+      "military_rank": "قائد سرية",
       "weapon": null,
       "battalion": null,
       "brigade": "لواء غزة",
@@ -841,7 +889,7 @@
       "ocr_birth_date": "1994-11-12",
       "ocr_martyrdom_date": "2026-05-07",
       "created_at": "2026-06-09T10:09:48",
-      "updated_at": "2026-06-10T19:25:43",
+      "updated_at": "2026-06-14T12:50:45",
       "archive_org_id": null
     },
     {
@@ -851,7 +899,7 @@
       "birth_date": "1999-07-12",
       "martyrdom_date": "2024-02-28",
       "city": null,
-      "military_rank": "مجاهد قسا م",
+      "military_rank": "مجاهد قسامي",
       "weapon": null,
       "battalion": "كتيبة المدفعية",
       "brigade": "لواء خانيونس",
@@ -865,7 +913,7 @@
       "ocr_birth_date": "1999-07-12",
       "ocr_martyrdom_date": "2024-02-28",
       "created_at": "2026-06-09T10:03:53",
-      "updated_at": "2026-06-10T19:25:43",
+      "updated_at": "2026-06-14T12:52:38",
       "archive_org_id": null
     },
     {
@@ -875,7 +923,7 @@
       "birth_date": "2001-05-03",
       "martyrdom_date": "2023-12-04",
       "city": null,
-      "military_rank": "مجاهد قسا مو",
+      "military_rank": "مجاهد قسامي",
       "weapon": null,
       "battalion": "كتيبة المدفعية",
       "brigade": "لواء خانيونس",
@@ -889,7 +937,7 @@
       "ocr_birth_date": "2001-05-03",
       "ocr_martyrdom_date": "2023-12-04",
       "created_at": "2026-06-09T09:56:26",
-      "updated_at": "2026-06-10T19:25:43",
+      "updated_at": "2026-06-14T12:52:38",
       "archive_org_id": null
     },
     {
@@ -995,7 +1043,7 @@
       "birth_date": "1982-12-23",
       "martyrdom_date": "2025-04-13",
       "city": null,
-      "military_rank": "مجاهد قسا م",
+      "military_rank": "مجاهد قسامي",
       "weapon": null,
       "battalion": "كتيبة المدفعية",
       "brigade": "لواء خانيونس",
@@ -1009,7 +1057,7 @@
       "ocr_birth_date": "1982-12-23",
       "ocr_martyrdom_date": "2025-04-13",
       "created_at": "2026-06-09T09:16:43",
-      "updated_at": "2026-06-10T19:25:43",
+      "updated_at": "2026-06-14T12:52:38",
       "archive_org_id": null
     },
     {
@@ -1064,7 +1112,7 @@
       "msg_id": 1198,
       "name": "منصور صبحي قشطة",
       "name_normalized": "منصور صبحي قشطه",
-      "birth_date": null,
+      "birth_date": "1992-12-05",
       "martyrdom_date": "2025-03-22",
       "city": null,
       "military_rank": null,
@@ -1081,7 +1129,7 @@
       "ocr_birth_date": null,
       "ocr_martyrdom_date": "2025-03-22",
       "created_at": "2026-06-08T07:54:32",
-      "updated_at": "2026-06-10T19:25:43",
+      "updated_at": "2026-06-14T12:54:44",
       "archive_org_id": null
     },
     {
@@ -1091,7 +1139,7 @@
       "birth_date": "1982-06-11",
       "martyrdom_date": "2023-11-13",
       "city": null,
-      "military_rank": "قاند سرية",
+      "military_rank": "قائد سرية",
       "weapon": null,
       "battalion": "كتيبة بيت لاهيا",
       "brigade": "لواء الشمال",
@@ -1105,7 +1153,7 @@
       "ocr_birth_date": "1982-06-11",
       "ocr_martyrdom_date": "2023-11-13",
       "created_at": "2026-06-08T07:36:51",
-      "updated_at": "2026-06-10T19:25:43",
+      "updated_at": "2026-06-14T12:50:45",
       "archive_org_id": null
     },
     {
@@ -1139,7 +1187,7 @@
       "birth_date": "1999-06-29",
       "martyrdom_date": "2023-10-07",
       "city": null,
-      "military_rank": "مجاهد قسا مي",
+      "military_rank": "مجاهد قسامي",
       "weapon": null,
       "battalion": "كتيبة مصعب بن عمير",
       "brigade": "لواء خانيونس",
@@ -1153,7 +1201,7 @@
       "ocr_birth_date": "1999-06-29",
       "ocr_martyrdom_date": "2023-10-07",
       "created_at": "2026-06-07T15:15:20",
-      "updated_at": "2026-06-10T19:18:20",
+      "updated_at": "2026-06-14T12:52:38",
       "archive_org_id": null
     },
     {
@@ -1187,7 +1235,7 @@
       "birth_date": "2000-09-21",
       "martyrdom_date": "2025-05-28",
       "city": null,
-      "military_rank": "مجاهد قسا مي",
+      "military_rank": "مجاهد قسامي",
       "weapon": null,
       "battalion": "كتيبة الصحابي أسامة بن زيد",
       "brigade": "لواء خانيونس",
@@ -1201,7 +1249,7 @@
       "ocr_birth_date": "2000-09-21",
       "ocr_martyrdom_date": "م م 202 الشهيد القسامي المجا ٠",
       "created_at": "2026-06-07T11:10:39",
-      "updated_at": "2026-06-10T19:36:29",
+      "updated_at": "2026-06-14T12:52:38",
       "archive_org_id": null
     },
     {
@@ -1403,7 +1451,7 @@
       "birth_date": "2005-10-29",
       "martyrdom_date": "2024-05-24",
       "city": null,
-      "military_rank": "مجاهد قسا مي",
+      "military_rank": "مجاهد قسامي",
       "weapon": null,
       "battalion": "كتيبة الشهيد فوزي أبو القرع",
       "brigade": "لواء الشمال",
@@ -1417,7 +1465,7 @@
       "ocr_birth_date": "2005-10-29",
       "ocr_martyrdom_date": "204",
       "created_at": "2026-06-06T19:20:18",
-      "updated_at": "2026-06-10T19:18:20",
+      "updated_at": "2026-06-14T12:52:38",
       "archive_org_id": null
     },
     {
@@ -1451,7 +1499,7 @@
       "birth_date": "2000-03-03",
       "martyrdom_date": "2024-09-21",
       "city": null,
-      "military_rank": "مجاهد قسا مي",
+      "military_rank": "مجاهد قسامي",
       "weapon": null,
       "battalion": "كتيبة المدفعية",
       "brigade": "لواء رفح",
@@ -1465,7 +1513,7 @@
       "ocr_birth_date": "2000-03-03",
       "ocr_martyrdom_date": "2024-09-21",
       "created_at": "2026-06-05T03:14:27",
-      "updated_at": "2026-06-10T19:18:20",
+      "updated_at": "2026-06-14T12:52:38",
       "archive_org_id": null
     },
     {
@@ -1547,7 +1595,7 @@
       "birth_date": "1980-07-24",
       "martyrdom_date": "2024-07-06",
       "city": null,
-      "military_rank": "مجاهد قسا مي",
+      "military_rank": "مجاهد قسامي",
       "weapon": null,
       "battalion": "كتيبة الشهيد محمد أبو شمالة",
       "brigade": "لواء رفح",
@@ -1561,7 +1609,7 @@
       "ocr_birth_date": "1980-07-24",
       "ocr_martyrdom_date": "2024-07-15",
       "created_at": "2026-06-04T15:07:06",
-      "updated_at": "2026-06-10T19:18:20",
+      "updated_at": "2026-06-14T12:52:38",
       "archive_org_id": null
     },
     {
@@ -1619,7 +1667,7 @@
       "birth_date": "1957-01-28",
       "martyrdom_date": "2023-10-29",
       "city": null,
-      "military_rank": "مجاهد قسا مي",
+      "military_rank": "مجاهد قسامي",
       "weapon": null,
       "battalion": "كتيبة الشهيد محمد أبو شمالة",
       "brigade": "لواء رفح",
@@ -1633,7 +1681,7 @@
       "ocr_birth_date": "1957-01-28",
       "ocr_martyrdom_date": "2023-10-15",
       "created_at": "2026-06-04T09:06:36",
-      "updated_at": "2026-06-10T19:18:20",
+      "updated_at": "2026-06-14T12:52:38",
       "archive_org_id": null
     },
     {
@@ -1667,7 +1715,7 @@
       "birth_date": "1986-01-09",
       "martyrdom_date": "2025-06-25",
       "city": null,
-      "military_rank": "قائدسرية",
+      "military_rank": "قائد سرية",
       "weapon": null,
       "battalion": "كتيبة الصبرة وتل الإسلام",
       "brigade": "لواء غزة",
@@ -1681,7 +1729,7 @@
       "ocr_birth_date": "1986-09-01",
       "ocr_martyrdom_date": "2025-06-25",
       "created_at": "2026-06-04T07:09:29",
-      "updated_at": "2026-06-10T19:18:20",
+      "updated_at": "2026-06-14T12:50:45",
       "archive_org_id": null
     },
     {
@@ -1691,7 +1739,7 @@
       "birth_date": "1988-04-23",
       "martyrdom_date": "2025-06-14",
       "city": null,
-      "military_rank": "قائدفصيل",
+      "military_rank": "قائد فصيل",
       "weapon": null,
       "battalion": "كتيبة الزيتون",
       "brigade": "لواء غزة",
@@ -1705,7 +1753,7 @@
       "ocr_birth_date": "1988-04-23",
       "ocr_martyrdom_date": "2025-06-14",
       "created_at": "2026-06-03T17:13:18",
-      "updated_at": "2026-06-10T19:18:20",
+      "updated_at": "2026-06-14T12:51:27",
       "archive_org_id": null
     },
     {
@@ -1715,7 +1763,7 @@
       "birth_date": "1982-05-07",
       "martyrdom_date": "2025-04-17",
       "city": null,
-      "military_rank": "قائدسرية",
+      "military_rank": "قائد سرية",
       "weapon": null,
       "battalion": "كتيبة التفاح والدرج",
       "brigade": "لواء غزة",
@@ -1729,7 +1777,7 @@
       "ocr_birth_date": "1982-05-07",
       "ocr_martyrdom_date": "2025-04-17",
       "created_at": "2026-06-03T17:07:12",
-      "updated_at": "2026-06-10T19:18:20",
+      "updated_at": "2026-06-14T12:50:45",
       "archive_org_id": null
     },
     {
@@ -1763,7 +1811,7 @@
       "birth_date": "1988-11-26",
       "martyrdom_date": "2025-09-01",
       "city": null,
-      "military_rank": "قائدسريحة",
+      "military_rank": "قائد سرية",
       "weapon": null,
       "battalion": "كتيبة الرضوان",
       "brigade": "لواء غزة",
@@ -1777,7 +1825,7 @@
       "ocr_birth_date": "1988-11-26",
       "ocr_martyrdom_date": "2025-01-09",
       "created_at": "2026-06-03T11:05:55",
-      "updated_at": "2026-06-10T19:18:20",
+      "updated_at": "2026-06-14T12:50:45",
       "archive_org_id": null
     },
     {
@@ -1787,7 +1835,7 @@
       "birth_date": "1967-06-21",
       "martyrdom_date": "2024-12-01",
       "city": null,
-      "military_rank": "قائدفصيل",
+      "military_rank": "قائد فصيل",
       "weapon": null,
       "battalion": "كتيبة بدر الكبرى",
       "brigade": "لواء غزة",
@@ -1801,7 +1849,7 @@
       "ocr_birth_date": "1967-06-21",
       "ocr_martyrdom_date": "2024-01-12",
       "created_at": "2026-06-03T09:09:19",
-      "updated_at": "2026-06-10T19:18:20",
+      "updated_at": "2026-06-14T12:51:27",
       "archive_org_id": null
     },
     {
@@ -1835,7 +1883,7 @@
       "birth_date": "1999-04-20",
       "martyrdom_date": "2023-12-01",
       "city": null,
-      "military_rank": "مجاهد قسا مي",
+      "military_rank": "مجاهد قسامي",
       "weapon": null,
       "battalion": "كتيبة مصعب بن عمير",
       "brigade": "لواء خانيونس",
@@ -1849,7 +1897,7 @@
       "ocr_birth_date": "1999-04-20",
       "ocr_martyrdom_date": "2023-01-12",
       "created_at": "2026-06-02T21:38:08",
-      "updated_at": "2026-06-10T19:18:20",
+      "updated_at": "2026-06-14T12:52:38",
       "archive_org_id": null
     },
     {
@@ -1859,7 +1907,7 @@
       "birth_date": "1998-11-19",
       "martyrdom_date": "2023-10-07",
       "city": null,
-      "military_rank": "قائد قصيل",
+      "military_rank": "قائد فصيل",
       "weapon": null,
       "battalion": "كتيبة مصعب بن عمير",
       "brigade": "لواء خانيونس",
@@ -1873,7 +1921,7 @@
       "ocr_birth_date": "1998-11-19",
       "ocr_martyrdom_date": "2023-10-07",
       "created_at": "2026-06-02T21:30:05",
-      "updated_at": "2026-06-10T19:18:20",
+      "updated_at": "2026-06-14T12:51:27",
       "archive_org_id": null
     },
     {
@@ -1931,7 +1979,7 @@
       "birth_date": "1988-08-03",
       "martyrdom_date": "2025-07-13",
       "city": null,
-      "military_rank": "قائدفصيل",
+      "military_rank": "قائد فصيل",
       "weapon": null,
       "battalion": null,
       "brigade": "لواء خانيونس",
@@ -1945,7 +1993,7 @@
       "ocr_birth_date": "1988-03-08",
       "ocr_martyrdom_date": "2025-07-13",
       "created_at": "2026-06-02T11:16:25",
-      "updated_at": "2026-06-10T19:18:20",
+      "updated_at": "2026-06-14T12:51:27",
       "archive_org_id": null
     },
     {
@@ -1979,7 +2027,7 @@
       "birth_date": "2000-11-22",
       "martyrdom_date": "2025-10-03",
       "city": null,
-      "military_rank": "قائ ل مجموعة",
+      "military_rank": "قائد مجموعة",
       "weapon": null,
       "battalion": "كتيبة الصحابي حذيفة بن اليمان",
       "brigade": "لواء خانيونس",
@@ -1993,7 +2041,7 @@
       "ocr_birth_date": "2000-11-22",
       "ocr_martyrdom_date": "2025-10-03",
       "created_at": "2026-06-02T09:09:52",
-      "updated_at": "2026-06-10T19:18:20",
+      "updated_at": "2026-06-14T12:49:25",
       "archive_org_id": null
     },
     {
