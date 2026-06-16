@@ -622,3 +622,64 @@ html[data-theme="dark"] body::before { mix-blend-mode: screen; opacity: 0.4; }
   background: var(--bg-2);
   color: var(--ink);
 }
+
+/* ===== Boot spinner (offline-cache first load) =====
+   Full-screen overlay shown from the first paint until app.js init() has
+   loaded the registry and written the cache version. Lives outside the Alpine
+   root, so it does not depend on Alpine being ready. */
+#boot-spinner {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  background: var(--bg);
+  transition: opacity 0.35s ease;
+}
+#boot-spinner.boot-hide {
+  opacity: 0;
+  pointer-events: none;
+}
+.boot-ring {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  border: 3px solid var(--divider);
+  border-top-color: var(--forest);
+  animation: boot-spin 0.8s linear infinite;
+}
+.boot-label {
+  font-family: var(--font-body);
+  color: var(--muted);
+  font-size: var(--text-sm);
+  letter-spacing: 0.05em;
+}
+@keyframes boot-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) {
+  .boot-ring { animation-duration: 2s; }
+}
+
+/* ===== Combined search page — locked secondary filters (F1) =====
+   Until the user picks a birthday OR clicks "browse the full registry", the
+   secondary filters are dimmed + inert and a dashed hint row explains how to
+   unlock them. Toggled by the `filtersUnlocked` Alpine flag. */
+.filters-locked .lockable {
+  opacity: 0.4;
+  filter: grayscale(0.4);
+  pointer-events: none;
+  user-select: none;
+}
+.lock-hint {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  border: 1px dashed var(--divider);
+  border-radius: 10px;
+  padding: 18px 22px;
+  background: rgba(251, 191, 36, 0.05);
+}

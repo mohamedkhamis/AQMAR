@@ -14,6 +14,14 @@ window.AQMAR_CONFIG = {
   // The admin ADMIN_TOKEN is captured by the login flow + stashed in
   // sessionStorage — never embedded here (which is public-by-design).
   apiBase: "",      // empty = same origin; api-client.js prepends /api itself
+
+  // Master switch for the admin portal UI (login button, admin nav, edit
+  // buttons). Effective visibility is `adminEnabled && isLocalDev` (see
+  // app.js `adminAllowed`), so on the public GitHub Pages deployment the
+  // hostname gate hides admin no matter what — admin can't function there
+  // anyway (no ADMIN_TOKEN / API). Flip this to false locally to preview
+  // the public experience. This is UI hygiene; the real lock is the API.
+  adminEnabled: true,
 };
 
 // ============================================================

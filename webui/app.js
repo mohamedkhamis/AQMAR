@@ -39,6 +39,7 @@ function aqmar() {
     adminSortDir: 'desc',   // 'asc' | 'desc' — DESC = newest first for addedAt
     adminLimit: 30,           // pagination cap for the admin table — bumped by "Show more"
     mobileNavOpen: false,
+    _initialized: false,      // guards init() against Alpine's double-invoke (auto init() + x-init)
     loading: true,            // true until the initial loadData() resolves (or errors out)
     loadError: null,          // set to an i18n error string when all 3 data sources fail — drives the retry UI
     lastSyncIso: null,        // most recent posted_date across all rows — drives the footer "Last sync"
@@ -56,7 +57,6 @@ function aqmar() {
     // ----- nav config -----
     nav: [
       { id: 'home',   ar: 'الرئيسية',  en: 'Home' },
-      { id: 'browse', ar: 'السجلّ',   en: 'Registry' },
       { id: 'about',  ar: 'عن الموقع', en: 'About' },
     ],
 
@@ -98,6 +98,11 @@ function aqmar() {
     bday: { day: new Date().getDate(), month: new Date().getMonth() + 1, year: null, window: 365 },
     _birthdayPicker: null,
     matchFilter: null,
+    // Combined search page (F1): the secondary filters + results start locked.
+    // Unlocked by picking a birthday (runBirthdaySearch) OR clicking "browse
+    // the full registry" (browseAll). Stays unlocked for the rest of the
+    // session once opened.
+    filtersUnlocked: false,
 
     // ----- browse filters -----
     filters: { q: '', city: '', rank: '', batt: '', age: '' },
@@ -118,6 +123,16 @@ function aqmar() {
     // INIT
     // ============================================================
     async init() {
+      // Idempotency guard: Alpine 3 auto-invokes a data method named init(),
+      // AND index.html also has x-init="init()" — so without this guard the
+      // whole body runs twice (double data fetch, watchers registered twice,
+      // SW registered twice). Run once.
+      if (this._initialized) return;
+      this._initialized = true;
+
+      // Register the offline-cache Service Worker (lazy photo cache + JSON
+      // snapshot). Non-blocking and a no-op where unsupported.
+      this.registerServiceWorker();
       await this.checkSession();
       // Apply lang/dir
       this.$watch('lang', (l) => {
@@ -157,6 +172,12 @@ function aqmar() {
       // Load martyrs from the priority chain (Supabase → local JSON → sample).
       // Extracted into loadMartyrs() so the Retry button can re-invoke it.
       await this.loadMartyrs();
+
+      // Persist the dataset version ("store ID") and reveal the app — this is
+      // what the boot spinner waits for ("spinner till the store ID is in
+      // localStorage").
+      this.persistCacheVersion();
+      this.revealApp();
 
       // Clamp bday.day whenever the month changes — so picking Feb after day=31
       // doesn't leave an out-of-range value floating around.
@@ -246,9 +267,62 @@ function aqmar() {
     },
 
     // ============================================================
+    // OFFLINE CACHE (Service Worker + version "store ID")
+    // ============================================================
+    // Register the root-scoped Service Worker that lazily caches photos
+    // (cache-first, as viewed) and the martyrs.json snapshot (network-first).
+    // Registered at '../sw.js' with parent scope so it can reach /data/photos/
+    // which lives outside /webui/. Entirely best-effort: unsupported browsers
+    // or a failed registration just mean the site loads online as before.
+    registerServiceWorker() {
+      if (!('serviceWorker' in navigator)) return;
+      try {
+        navigator.serviceWorker.register('../sw.js', { scope: '../' })
+          .catch((e) => console.warn('SW registration failed (offline cache off):', e.message));
+      } catch (e) {
+        console.warn('SW registration threw (offline cache off):', e.message);
+      }
+    },
+
+    // The "store ID" is the published dataset version (already carried in
+    // data/martyrs.json → publishedVersion). We both READ and WRITE it:
+    //   · read the previously-stored version,
+    //   · if the published version changed, purge the cache-first PHOTO cache
+    //     so a corrected/replaced photo at an existing <id>.jpg reaches
+    //     returning visitors ("refresh once per version" — the chosen F2
+    //     behavior). The JSON cache is network-first, so it refreshes on its
+    //     own; photos re-cache lazily as they're viewed again.
+    //   · write the new version as the store ID.
+    // Skipped entirely in live-API mode (no published version to key on).
+    persistCacheVersion() {
+      if (this.publishedVersion == null) return;
+      const KEY = 'aqmar.cacheVersion';
+      const next = String(this.publishedVersion);
+      let prev = null;
+      try { prev = localStorage.getItem(KEY); } catch (e) {}
+      if (prev !== next && 'caches' in window) {
+        caches.delete('aqmar-photos').catch(() => {});
+      }
+      try { localStorage.setItem(KEY, next); } catch (e) {}
+    },
+
+    // Fade out + remove the first-paint boot spinner (#boot-spinner lives
+    // outside the Alpine root so it shows before Alpine initializes). Called
+    // once the data has loaded and the store ID is written.
+    revealApp() {
+      const el = document.getElementById('boot-spinner');
+      if (!el) return;
+      el.classList.add('boot-hide');
+      setTimeout(() => { el.remove(); }, 400);
+    },
+
+    // ============================================================
     // NAVIGATION
     // ============================================================
     goto(v) {
+      // Admin is only reachable where allowed; bounce to the search page
+      // otherwise (defensive — the nav button that calls this is also gated).
+      if (v === 'admin' && !this.adminAllowed) v = 'home';
       this.view = v;
       this.matchFilter = null;
       this.selectedId = null;
@@ -263,23 +337,11 @@ function aqmar() {
     },
 
     // ============================================================
-    // DERIVED — birthday match preview & on-this-day
+    // DERIVED — on-this-day
     // ============================================================
-    get previewMatches() {
-      // Home "Nearest birthdays" cards. Empty until the user picks a full birth
-      // date (year set) — the section then shows a prompt rather than arbitrary
-      // names. birthDelta is signed (+ younger / − older); rows whose birth date
-      // is missing/unparseable (non-finite delta) are dropped, the rest sorted by
-      // proximity (closest first) and capped at 12 large cards. "View all
-      // results" (runBirthdaySearch) opens the full sorted list in browse.
-      const iso = isoDate(this.bday.year, this.bday.month, this.bday.day);
-      if (!iso) return [];
-      return this.all
-        .map(m => ({ ...m, delta: birthDelta(iso, m.birth) }))
-        .filter(m => Number.isFinite(m.delta))
-        .sort((a, b) => Math.abs(a.delta) - Math.abs(b.delta))
-        .slice(0, 12);
-    },
+    // (The old `previewMatches` getter was removed 2026-06-15 when the home
+    // "Nearest birthdays" preview was folded into the unified results grid —
+    // `filtered` now renders birthday matches directly when matchFilter is set.)
     get onThisDay() {
       const t = new Date();
       const tM = t.getMonth() + 1;
@@ -314,6 +376,17 @@ function aqmar() {
       return h === 'localhost' || h === '127.0.0.1' || h === '';
     },
 
+    // Whether the admin portal UI may be shown AT ALL. Gates every admin
+    // entry point (login button, admin nav, edit buttons, the admin view).
+    // = the config master switch AND a local-dev host. On GitHub Pages
+    // isLocalDev is false, so admin never renders there regardless of the
+    // flag — and login couldn't work anyway (no API). Distinct from
+    // `isAdmin`, which means "a valid token is currently loaded".
+    get adminAllowed() {
+      const cfg = window.AQMAR_CONFIG || {};
+      return cfg.adminEnabled !== false && this.isLocalDev;
+    },
+
     // Compact label for the birthday-match delta badge.
     //   signed delta in days: positive → "+" (younger), negative → "−" (older)
     //   0 → "نفس اليوم" / "SAME DAY"
@@ -341,11 +414,27 @@ function aqmar() {
     // BROWSE — filtered list
     // ============================================================
     runBirthdaySearch() {
-      // Snapshot bday + custom-days at search time so subsequent home-view
-      // edits don't retroactively change the active browse filter.
+      // Snapshot bday + custom-days at search time so subsequent edits don't
+      // retroactively change the active match filter. Unlocks the secondary
+      // filters + results on the combined page (no view switch — everything is
+      // on one page now) and scrolls the results into view.
       this.matchFilter = { ...this.bday, customDays: this.bdayCustomDays };
-      this.view = 'browse';
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      this.filtersUnlocked = true;
+      this.scrollToResults();
+    },
+    // "Browse the full registry" — unlock the filters without a birthday match.
+    browseAll() {
+      this.filtersUnlocked = true;
+      this.matchFilter = null;
+      this.scrollToResults();
+    },
+    // Smooth-scroll the results section into view after Alpine has revealed it
+    // (it's behind x-show="filtersUnlocked", so wait a tick for the DOM).
+    scrollToResults() {
+      setTimeout(() => {
+        const el = document.getElementById('results');
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 60);
     },
     clearFilters() {
       this.filters = { q: '', city: '', rank: '', batt: '', age: '' };
@@ -456,6 +545,9 @@ function aqmar() {
     // there from a previous login on this tab). Probes a write-protected
     // endpoint to confirm the token is still valid against the running API.
     async checkSession() {
+      // Never surface admin on a host where it isn't allowed, even if a token
+      // is left over in sessionStorage from a previous local session.
+      if (!this.adminAllowed) return;
       if (!window.AQMAR_API || !window.AQMAR_API.hasToken()) return;
       try {
         await window.AQMAR_API.get('/martyrs/unverified');
@@ -698,6 +790,7 @@ function aqmar() {
     },
 
     editMartyr(id) {
+      if (!this.adminAllowed) return;
       this.editingId = id;
       const m = this.all.find(x => x.id === id);
       const e = this.edits[id] || {};
@@ -941,7 +1034,7 @@ function aqmar() {
           { text: ar ? 'الكود المصدري' : 'Source', href: 'https://github.com/mohamedkhamis/AQMAR', external: true },
         ]},
         { title: ar ? 'السجلّ' : 'Registry', links: [
-          { text: ar ? 'كل الأسماء' : 'All names',     go: 'browse' },
+          { text: ar ? 'كل الأسماء' : 'All names',     go: 'home', browseAll: true },
           { text: ar ? 'في مثل هذا اليوم' : 'On this day', go: 'home' },
         ]},
         { title: ar ? 'تواصل' : 'Contact', links: [
@@ -1017,6 +1110,10 @@ function aqmar() {
             self.bday.year = d.getFullYear();
             self.bday.month = d.getMonth() + 1;
             self.bday.day = d.getDate();
+            // Picking a birthday unlocks the secondary filters and shows the
+            // nearest-birthday results immediately (no extra click), matching
+            // the user decision "unlock on birthday picked OR browse all".
+            self.runBirthdaySearch();
           });
         },
       });

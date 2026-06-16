@@ -32,11 +32,13 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/litepicker/dist/css/litepicker.css">
 <script src="https://cdn.jsdelivr.net/npm/litepicker/dist/litepicker.js"></script>
 
-<!-- Design tokens + components -->
-<link rel="stylesheet" href="styles.css">
+<!-- Design tokens + components. ?v bumped 2026-06-15 (combined filters,
+     offline cache, admin flag) so returning visitors don't run a stale
+     app.js against the new markup. -->
+<link rel="stylesheet" href="styles.css?v=20260615">
 
 <!-- Site config -->
-<script src="config.js"></script>
+<script src="config.js?v=20260615"></script>
 <!-- Local admin API client (fetch wrapper with sessionStorage admin token). -->
 <script src="api-client.js"></script>
 
@@ -52,6 +54,22 @@
 </head>
 
 <body>
+<!-- Boot spinner — visible from the first paint (sits OUTSIDE #root so the
+     app's x-cloak can't hide it). app.js init() removes it once the registry
+     has loaded and the cache version ("store ID") is written to localStorage.
+     The inline safety timer hides it after 20s no matter what, so a failed
+     boot can never leave the spinner hanging forever. -->
+<div id="boot-spinner" role="status" aria-live="polite">
+  <div class="boot-ring" aria-hidden="true"></div>
+  <div class="boot-label">جارٍ تحميل السجلّ…</div>
+</div>
+<script>
+  setTimeout(function () {
+    var b = document.getElementById('boot-spinner');
+    if (b) b.classList.add('boot-hide');
+  }, 20000);
+</script>
+
 <div id="root" x-data="aqmar()" x-init="init()" x-cloak>
   <!-- Skip link points to the CURRENTLY ACTIVE main, not the hidden home view. -->
   <a :href="'#main-content' + (view === 'home' ? '' : '-' + view)" class="skip-link" x-text="lang === 'ar' ? 'تخطي إلى المحتوى' : 'Skip to content'"></a>
@@ -141,13 +159,16 @@
         <span x-text="lang === 'ar' ? 'EN' : 'ع'"></span>
       </button>
 
-      <template x-if="isAdmin">
+      <!-- Admin entry points only render where admin is allowed (local dev +
+           config flag). On the public GitHub Pages site adminAllowed is false,
+           so neither button appears. -->
+      <template x-if="adminAllowed && isAdmin">
         <button @click="goto('admin')" class="btn btn-ghost">
           <span class="w-1.5 h-1.5 rounded-full bg-forest"></span>
           <span x-text="lang === 'ar' ? 'لوحة التحرير' : 'Admin'"></span>
         </button>
       </template>
-      <template x-if="!isAdmin">
+      <template x-if="adminAllowed && !isAdmin">
         <button @click="showLogin = true" class="btn btn-text">
           <span x-text="lang === 'ar' ? 'دخول المحرّر' : 'Editor login'"></span>
         </button>
@@ -239,7 +260,7 @@
             <div class="field-label" x-text="lang === 'ar' ? 'نطاق البحث' : 'Window'"></div>
             <div class="flex gap-1.5 flex-wrap items-center">
               <template x-for="opt in windowOptions" :key="opt.v">
-                <button @click="bday.window = opt.v" type="button"
+                <button @click="bday.window = opt.v; if (matchFilter) runBirthdaySearch()" type="button"
                         :aria-pressed="bday.window === opt.v ? 'true' : 'false'"
                         :class="bday.window === opt.v ? 'bg-ink text-paper' : 'bg-transparent text-muted'"
                         class="btn"
@@ -254,6 +275,7 @@
               <div x-show="bday.window === 'custom'" class="flex items-center gap-1.5">
                 <span class="text-[12px] text-muted" x-text="lang === 'ar' ? '±' : '±'"></span>
                 <input type="number" min="1" max="365" x-model.number="bdayCustomDays"
+                       @input.debounce.300ms="if (matchFilter) runBirthdaySearch()"
                        class="input" style="width: 80px; padding: 6px 10px; font-size: 13px;">
                 <span class="text-[12px] text-muted" x-text="lang === 'ar' ? 'يوماً' : 'days'"></span>
               </div>
@@ -269,70 +291,337 @@
 
       </div>
 
-      <!-- Nearest birthdays — large registry-style cards shown inline as soon as
-           a birthday is picked (no extra click). Mirrors the browse-grid card.
-           Empty until a date is chosen → previewMatches returns [] and the
-           prompt below shows instead of arbitrary names. -->
-      <section class="mt-14" aria-labelledby="nb-heading">
-        <div class="flex items-baseline justify-between mb-5 flex-wrap gap-2">
-          <div>
-            <div class="font-latin-sans text-[11px] tracking-[0.25em] text-olive uppercase"
-                 x-text="lang === 'ar' ? 'مواليد قريبة' : 'Near in birth'"></div>
-            <h3 id="nb-heading" class="font-display text-[28px] font-medium m-0 mt-1.5">
-              <span x-text="lang === 'ar' ? 'أقربُ الأسماءِ مولداً ليومك' : 'Nearest birthdays to your date'"></span>
-              <span x-show="bday.year" class="text-forest"
-                    x-text="' · ' + formatDate(isoDate(bday.year, bday.month, bday.day))"></span>
-            </h3>
+      <!-- ===== Secondary filters — combined onto this page (F1, 2026-06-15).
+           Locked until the user picks a birthday (runBirthdaySearch) OR clicks
+           "browse the full registry" (browseAll). `filters-locked` dims + the
+           `inert` attribute makes the block non-interactive while locked. The
+           old "Nearest birthdays" preview is gone — the unified results grid
+           below shows birthday matches when a birthday is active. ===== -->
+      <section class="mt-12" :class="{ 'filters-locked': !filtersUnlocked }"
+               aria-labelledby="filters-heading">
+        <div class="flex items-center gap-3 mb-3">
+          <div id="filters-heading" class="font-latin-sans text-[11px] tracking-[0.25em] text-olive uppercase"
+               x-text="lang === 'ar' ? 'فلاتر إضافية' : 'More filters'"></div>
+          <div class="flex-1 h-px bg-divider"></div>
+        </div>
+
+        <!-- Lock hint — only while locked -->
+        <div class="lock-hint mb-4" x-show="!filtersUnlocked" x-cloak>
+          <span style="font-size: 22px;" aria-hidden="true">🔒</span>
+          <div class="text-right flex-1" style="min-width: 200px;">
+            <div class="font-display text-ink text-[17px]"
+                 x-text="lang === 'ar' ? 'الفلاتر الإضافية مقفلة' : 'Extra filters are locked'"></div>
+            <div class="text-muted text-[13px]"
+                 x-text="lang === 'ar'
+                   ? 'اختر تاريخ ميلادك أعلاه أولاً، أو تصفّح السجلّ كاملاً للفلترة بالاسم والمدينة والكتيبة والتاريخ.'
+                   : 'Pick your birthday above first, or browse the full registry to filter by name, city, battalion and date.'"></div>
           </div>
-          <button x-show="previewMatches.length" @click="runBirthdaySearch()" class="btn btn-text"
-                  x-text="lang === 'ar' ? 'عرض كل النتائج ←' : 'View all results ←'"></button>
+          <button @click="browseAll()" class="btn btn-ghost"
+                  x-text="lang === 'ar' ? 'تصفّح السجلّ كاملاً ←' : 'Browse the full registry ←'"></button>
         </div>
 
-        <!-- Empty state — before a birthday is picked -->
-        <div x-show="!previewMatches.length"
-             class="border border-divider rounded-lg text-center"
-             style="border-style: dashed; padding: 48px 24px; background: rgba(31,61,43,0.05);">
-          <div style="font-size: 34px; opacity: .5;" aria-hidden="true">🕊️</div>
-          <div class="font-display text-ink mt-2.5" style="font-size: 20px;"
-               x-text="lang === 'ar' ? 'اختر تاريخ ميلادك أعلاه' : 'Pick your birthday above'"></div>
-          <div class="text-muted font-body mt-1.5" style="font-size: 14px;"
-               x-text="lang === 'ar' ? 'لعرض أقرب الأسماء مولداً ليومك، مرتّبةً حسب القرب.' : 'to see the names closest to your birthday, sorted by proximity.'"></div>
+        <!-- The filters — dimmed + inert while locked. Set the `inert` DOM
+             property directly (Alpine doesn't treat `inert` as a boolean
+             attribute, so :inert="false" would wrongly stay inert). Falls back
+             to the CSS pointer-events:none on browsers without inert support. -->
+        <div class="lockable" x-effect="$el.inert = !filtersUnlocked">
+          <!-- Primary filter row -->
+          <div class="grid-filters bg-paper border border-divider rounded-md p-5 mb-4 grid gap-3">
+            <label>
+              <div class="field-label" x-text="lang === 'ar' ? 'بحث بالاسم أو المدينة' : 'Search name or city'"></div>
+              <input type="text" class="input" x-model="filters.q"
+                     :placeholder="lang === 'ar' ? 'اكتب اسماً…' : 'Type a name…'">
+            </label>
+            <label>
+              <div class="field-label" x-text="lang === 'ar' ? 'المدينة' : 'City'"></div>
+              <select class="select" x-model="filters.city">
+                <option value="" x-text="lang === 'ar' ? 'كل المدن' : 'All cities'"></option>
+                <template x-for="c in cities" :key="c"><option :value="c" x-text="c"></option></template>
+              </select>
+            </label>
+            <label>
+              <div class="field-label" x-text="lang === 'ar' ? 'الرتبة' : 'Rank'"></div>
+              <select class="select" x-model="filters.rank">
+                <option value="" x-text="lang === 'ar' ? 'أي رتبة' : 'Any'"></option>
+                <template x-for="r in ranks" :key="r"><option :value="r" x-text="r"></option></template>
+              </select>
+            </label>
+            <label>
+              <div class="field-label" x-text="lang === 'ar' ? 'الكتيبة' : 'Battalion'"></div>
+              <select class="select" x-model="filters.batt">
+                <option value="" x-text="lang === 'ar' ? 'كل الكتائب' : 'All'"></option>
+                <template x-for="b in battalions" :key="b"><option :value="b" x-text="b"></option></template>
+              </select>
+            </label>
+            <label>
+              <div class="field-label" x-text="lang === 'ar' ? 'الفئة العمرية' : 'Age'"></div>
+              <select class="select" x-model="filters.age">
+                <option value="" x-text="lang === 'ar' ? 'كل الأعمار' : 'All ages'"></option>
+                <option value="u20" x-text="lang === 'ar' ? 'أقل من ٢٠' : 'Under 20'"></option>
+                <option value="20-30" x-text="lang === 'ar' ? '٢٠ – ٣٠' : '20 – 30'"></option>
+                <option value="30-40" x-text="lang === 'ar' ? '٣٠ – ٤٠' : '30 – 40'"></option>
+                <option value="o40" x-text="lang === 'ar' ? 'أكثر من ٤٠' : 'Over 40'"></option>
+              </select>
+            </label>
+            <div class="pb-1 flex items-end">
+              <button @click="clearFilters()" class="btn btn-ghost"
+                      x-text="lang === 'ar' ? 'مسح' : 'Clear'"></button>
+            </div>
+          </div>
+
+          <!-- Advanced filters — martyrdom date range + age range, shown inline
+               (no toggle on the combined page). -->
+          <div class="bg-paper border border-divider rounded-md p-5">
+            <div class="font-display text-[12px] tracking-[0.2em] uppercase text-olive mb-3"
+                 x-text="lang === 'ar' ? 'تاريخ الاستشهاد' : 'Martyrdom date range'"></div>
+            <div class="grid-pair grid gap-3 mb-5">
+              <label class="block">
+                <div class="field-label" x-text="lang === 'ar' ? 'من' : 'From'"></div>
+                <div class="input flex items-center gap-2" style="padding-inline-start: 12px;">
+                  <span aria-hidden="true">📅</span>
+                  <input type="text" x-ref="martyrdomFromInput" readonly
+                         x-init="initDatePicker($refs.martyrdomFromInput, 'martyrdomFrom')"
+                         :placeholder="lang === 'ar' ? 'انقر للتحديد' : 'Click to set'"
+                         class="bg-transparent flex-1 ltr focus:outline-none cursor-pointer"
+                         style="border: 0; padding: 0; min-width: 0;">
+                  <button x-show="martyrdomFrom" @click="clearDateField('martyrdomFrom', $refs.martyrdomFromInput)" type="button"
+                          :title="lang === 'ar' ? 'مسح' : 'Clear'"
+                          class="text-muted hover:text-crimson text-lg"
+                          style="background: transparent; border: 0; padding: 0 4px;">✕</button>
+                </div>
+              </label>
+              <label class="block">
+                <div class="field-label" x-text="lang === 'ar' ? 'إلى' : 'To'"></div>
+                <div class="input flex items-center gap-2" style="padding-inline-start: 12px;">
+                  <span aria-hidden="true">📅</span>
+                  <input type="text" x-ref="martyrdomToInput" readonly
+                         x-init="initDatePicker($refs.martyrdomToInput, 'martyrdomTo')"
+                         :placeholder="lang === 'ar' ? 'انقر للتحديد' : 'Click to set'"
+                         class="bg-transparent flex-1 ltr focus:outline-none cursor-pointer"
+                         style="border: 0; padding: 0; min-width: 0;">
+                  <button x-show="martyrdomTo" @click="clearDateField('martyrdomTo', $refs.martyrdomToInput)" type="button"
+                          :title="lang === 'ar' ? 'مسح' : 'Clear'"
+                          class="text-muted hover:text-crimson text-lg"
+                          style="background: transparent; border: 0; padding: 0 4px;">✕</button>
+                </div>
+              </label>
+            </div>
+
+            <div class="font-display text-[12px] tracking-[0.2em] uppercase text-olive mb-3"
+                 x-text="lang === 'ar' ? 'العمر عند الاستشهاد' : 'Age at martyrdom'"></div>
+            <div class="grid-pair grid gap-3">
+              <label class="block">
+                <div class="field-label" x-text="lang === 'ar' ? 'الحد الأدنى' : 'Min age'"></div>
+                <input type="number" min="0" max="120" x-model.number="ageMin" class="input"
+                       :placeholder="lang === 'ar' ? 'أي' : 'Any'">
+              </label>
+              <label class="block">
+                <div class="field-label" x-text="lang === 'ar' ? 'الحد الأقصى' : 'Max age'"></div>
+                <input type="number" min="0" max="120" x-model.number="ageMax" class="input"
+                       :placeholder="lang === 'ar' ? 'أي' : 'Any'">
+              </label>
+            </div>
+
+            <div class="flex justify-end mt-3 pt-4" style="border-top: 1px dashed var(--divider);">
+              <button @click="clearAdvancedFilters()" class="btn btn-ghost"
+                      x-text="lang === 'ar' ? 'مسح الفلاتر المتقدمة' : 'Clear advanced filters'"></button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== Results — shown once filters are unlocked ===== -->
+      <section id="results" class="mt-12" x-show="filtersUnlocked" x-cloak aria-labelledby="results-heading">
+        <h3 id="results-heading" class="sr-only" x-text="lang === 'ar' ? 'النتائج' : 'Results'"></h3>
+
+        <!-- Birthday match banner -->
+        <div x-show="matchFilter"
+             class="mb-7 px-5 py-4 rounded-md flex items-center justify-between gap-4 flex-wrap"
+             style="background: linear-gradient(110deg, rgba(31,61,43,0.06), rgba(138,109,59,0.04));
+                    border: 1px solid var(--divider); border-inline-start: 3px solid var(--forest);">
+          <div>
+            <div class="font-display text-[17px] text-ink">
+              <span x-show="lang === 'ar'">عرضُ الأسماءِ المولودةِ حولَ <b class="text-forest" x-text="`${matchFilter?.day}/${matchFilter?.month}`"></b>، ضمنَ نطاق ±<span x-text="matchFilter?.window"></span> يوماً</span>
+              <span x-show="lang === 'en'">Showing names born around <b class="text-forest" x-text="`${matchFilter?.day}/${matchFilter?.month}`"></b>, within ±<span x-text="matchFilter?.window"></span> days</span>
+            </div>
+            <div class="text-[13px] text-muted mt-1">
+              <span x-text="filtered.length"></span>
+              <span x-text="lang === 'ar' ? 'نتيجة مرتّبةً حسب القرب' : 'results, sorted by closeness'"></span>
+            </div>
+          </div>
+          <button @click="matchFilter = null" class="btn btn-text"
+                  x-text="lang === 'ar' ? 'إزالة بحث الميلاد ✕' : 'Clear birthday match ✕'"></button>
         </div>
 
-        <!-- Results grid — large cards identical to the registry grid -->
-        <div x-show="previewMatches.length" class="grid gap-3.5"
-             style="grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));">
-          <template x-for="m in previewMatches" :key="m.id">
-            <button @click="openMartyr(m.id)" class="card card-hover text-right cursor-pointer relative overflow-hidden flex flex-col">
-              <div class="relative" style="aspect-ratio: 4/5; background: var(--bg-3);">
-                <div x-html="renderPortrait(m, 0, false, 'fill')"></div>
-                <div x-show="Number.isFinite(m.delta)"
-                     class="absolute top-3 start-3 font-latin-sans text-[11px] tracking-[0.12em] px-2 py-0.5 rounded-full"
-                     :style="m.delta === 0
-                       ? 'color: var(--paper); background: rgba(31,61,43,0.85); backdrop-filter: blur(4px);'
-                       : 'color: var(--paper); background: rgba(138,109,59,0.85); backdrop-filter: blur(4px);'"
-                     x-text="deltaLabel(m.delta)"></div>
-              </div>
+        <!-- Count + sort + view-mode row -->
+        <div class="flex items-center justify-between mb-4 px-1 gap-3 flex-wrap">
+          <div class="text-[13px] text-muted" aria-live="polite" aria-atomic="true">
+            <span x-text="filtered.length"></span>
+            <span x-text="lang === 'ar' ? `من ${all.length} اسماً` : `of ${all.length} names`"></span>
+          </div>
+
+          <div class="flex items-center gap-3 flex-wrap">
+            <label class="flex items-center gap-2" x-show="!matchFilter">
+              <span class="text-[12px] text-muted" x-text="lang === 'ar' ? 'الترتيب' : 'Sort'"></span>
+              <select class="select" style="padding: 6px 32px 6px 12px; font-size: 13px; min-width: 200px;" x-model="sort">
+                <template x-for="opt in sortOptions" :key="opt.id">
+                  <option :value="opt.id" x-text="lang === 'ar' ? opt.ar : opt.en"></option>
+                </template>
+              </select>
+            </label>
+
+            <div role="group" :aria-label="lang === 'ar' ? 'نمط العرض' : 'View mode'"
+                 class="inline-flex bg-page-2 border border-divider rounded-full p-0.5">
+              <button @click="viewMode = 'grid'"
+                      :aria-pressed="viewMode === 'grid' ? 'true' : 'false'"
+                      :class="viewMode === 'grid' ? 'bg-ink text-paper' : 'text-muted'"
+                      class="rounded-full px-3 py-1.5 text-[12px] font-body flex items-center gap-1.5 border-0"
+                      :title="lang === 'ar' ? 'عرض شبكي' : 'Grid view'">
+                <span aria-hidden="true">▦</span>
+                <span x-text="lang === 'ar' ? 'شبكة' : 'Grid'"></span>
+              </button>
+              <button @click="viewMode = 'list'"
+                      :aria-pressed="viewMode === 'list' ? 'true' : 'false'"
+                      :class="viewMode === 'list' ? 'bg-ink text-paper' : 'text-muted'"
+                      class="rounded-full px-3 py-1.5 text-[12px] font-body flex items-center gap-1.5 border-0"
+                      :title="lang === 'ar' ? 'عرض قائمة' : 'List view'">
+                <span aria-hidden="true">≡</span>
+                <span x-text="lang === 'ar' ? 'قائمة' : 'List'"></span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Loading skeleton -->
+        <div x-show="loading && filtered.length === 0"
+             class="grid gap-4"
+             :style="viewMode === 'list'
+               ? 'grid-template-columns: 1fr;'
+               : 'grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));'"
+             aria-busy="true" aria-live="polite">
+          <span class="sr-only" x-text="lang === 'ar' ? 'جاري تحميل السجلّ…' : 'Loading registry…'"></span>
+          <template x-for="i in 12" :key="i">
+            <div class="card overflow-hidden flex flex-col">
+              <div class="skeleton" style="aspect-ratio: 4/5; border-radius: 0;"></div>
               <div class="flex-1 flex flex-col gap-2.5" style="padding: 14px 16px;">
-                <div>
-                  <div class="font-body text-[18px] font-bold text-ink leading-tight" x-text="m.name"></div>
-                  <div class="font-body text-[12px] text-muted mt-1">
-                    <span x-text="m.city || '—'"></span>
-                    <span x-show="m.city"> · </span>
-                    <span x-text="ageLabel(m)"></span>
+                <div class="skeleton" style="height: 18px; width: 75%;"></div>
+                <div class="skeleton" style="height: 12px; width: 45%;"></div>
+                <div class="grid" style="grid-template-columns: 60px 1fr; row-gap: 6px; column-gap: 10px;">
+                  <div class="skeleton" style="height: 11px;"></div>
+                  <div class="skeleton" style="height: 11px; width: 80%;"></div>
+                  <div class="skeleton" style="height: 11px;"></div>
+                  <div class="skeleton" style="height: 11px; width: 80%;"></div>
+                </div>
+              </div>
+            </div>
+          </template>
+        </div>
+
+        <!-- Error state -->
+        <div x-show="!loading && loadError" role="alert"
+             class="text-center py-12 px-6 rounded-lg"
+             style="background: rgba(122,42,42,0.06); border: 1px dashed var(--crimson);">
+          <div class="text-3xl mb-2" aria-hidden="true">⚠️</div>
+          <h3 class="font-display text-[20px] mt-3 mb-4" style="color: var(--crimson);" x-text="loadError"></h3>
+          <button @click="retryLoad()" class="btn btn-primary mt-2">
+            🔄 <span x-text="lang === 'ar' ? 'إعادة المحاولة' : 'Retry'"></span>
+          </button>
+        </div>
+
+        <!-- Empty state -->
+        <div x-show="!loading && !loadError && filtered.length === 0" class="text-center py-16 px-6 bg-page-2 rounded-lg" style="border: 1px dashed var(--divider);">
+          <svg width="64" height="64" viewBox="0 0 60 60" style="opacity:.5; margin: 0 auto; display: block;">
+            <g fill="none" stroke="var(--olive)" stroke-width="0.9">
+              <circle cx="30" cy="30" r="20"/><circle cx="30" cy="30" r="14"/>
+              <path d="M30 10 L30 50 M10 30 L50 30 M16 16 L44 44 M44 16 L16 44"/>
+              <path d="M30 14 L44 30 L30 46 L16 30 Z"/>
+            </g>
+          </svg>
+          <h3 class="font-display text-[22px] mt-3.5 mb-2"
+              x-text="lang === 'ar' ? 'لا توجد نتائج تطابق بحثك' : 'No matching names'"></h3>
+          <p class="text-muted max-w-md mx-auto"
+             x-text="lang === 'ar'
+               ? 'جرّبْ توسيعَ النطاق أو إزالةَ بعض الفلاتر — السجلّ قيدُ النموّ المستمر.'
+               : 'Try widening the window or removing filters. The registry keeps growing.'"></p>
+        </div>
+
+        <!-- Cards grid (grid + list modes) -->
+        <div class="grid gap-4"
+             :style="viewMode === 'list'
+               ? 'grid-template-columns: 1fr;'
+               : 'grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));'">
+          <template x-for="m in filtered" :key="m.id">
+            <button @click="openMartyr(m.id)" class="card card-hover text-right cursor-pointer relative overflow-hidden flex"
+                    :class="viewMode === 'grid' ? 'flex-col' : 'flex-row gap-3.5 items-stretch'"
+                    :style="viewMode === 'grid' ? '' : 'padding: 14px;'">
+
+              <!-- ===== GRID MODE ===== -->
+              <template x-if="viewMode === 'grid'">
+                <div class="contents">
+                  <div class="relative" style="aspect-ratio: 4/5; background: var(--bg-3);">
+                    <div x-html="renderPortrait(m, 0, false, 'fill')"></div>
+                    <div x-show="Number.isFinite(m.delta)"
+                         class="absolute top-3 start-3 font-latin-sans text-[11px] tracking-[0.12em] px-2 py-0.5 rounded-full"
+                         :style="m.delta === 0
+                           ? 'color: var(--paper); background: rgba(31,61,43,0.85); backdrop-filter: blur(4px);'
+                           : 'color: var(--paper); background: rgba(138,109,59,0.85); backdrop-filter: blur(4px);'"
+                         x-text="deltaLabel(m.delta)"></div>
+                  </div>
+                  <div class="p-4 flex-1 flex flex-col gap-2.5" style="padding: 14px 16px;">
+                    <div>
+                      <div class="font-body text-[18px] font-bold text-ink leading-tight" x-text="m.name"></div>
+                      <div class="font-body text-[12px] text-muted mt-1">
+                        <span x-text="m.city || '—'"></span>
+                        <span x-show="m.city"> · </span>
+                        <span x-text="ageLabel(m)"></span>
+                      </div>
+                    </div>
+                    <div class="grid text-[12px]" style="grid-template-columns: auto 1fr; row-gap: 4px; column-gap: 10px;">
+                      <div class="text-muted" x-text="lang === 'ar' ? 'الميلاد' : 'Born'"></div>
+                      <div class="text-ink-2 tabular-nums" x-text="formatDate(m.birth)"></div>
+                      <div class="text-muted" x-text="lang === 'ar' ? 'الاستشهاد' : 'Martyrdom'"></div>
+                      <div class="text-ink-2 tabular-nums" x-text="formatDate(m.martyrdom)"></div>
+                    </div>
+                    <div class="flex flex-wrap gap-1.5">
+                      <span x-show="m.rank" class="badge badge-forest" x-text="m.rank"></span>
+                      <span x-show="m.battalion" class="badge" x-text="m.battalion"></span>
+                    </div>
                   </div>
                 </div>
-                <div class="grid text-[12px]" style="grid-template-columns: auto 1fr; row-gap: 4px; column-gap: 10px;">
-                  <div class="text-muted" x-text="lang === 'ar' ? 'الميلاد' : 'Born'"></div>
-                  <div class="text-ink-2 tabular-nums" x-text="formatDate(m.birth)"></div>
-                  <div class="text-muted" x-text="lang === 'ar' ? 'الاستشهاد' : 'Martyrdom'"></div>
-                  <div class="text-ink-2 tabular-nums" x-text="formatDate(m.martyrdom)"></div>
+              </template>
+
+              <!-- ===== LIST MODE ===== -->
+              <template x-if="viewMode === 'list'">
+                <div class="contents">
+                  <div x-show="Number.isFinite(m.delta)"
+                       class="absolute top-3.5 start-3.5 font-latin-sans text-[11px] tracking-[0.12em] px-2 py-0.5 rounded-full"
+                       :style="m.delta === 0
+                         ? 'color: var(--forest); background: rgba(31,61,43,0.10);'
+                         : 'color: var(--olive); background: rgba(138,109,59,0.10);'"
+                       x-text="deltaLabel(m.delta)"></div>
+                  <div x-html="renderPortrait(m, 72, true)" class="flex-shrink-0"></div>
+                  <div class="flex-1 min-w-0 flex flex-col gap-2">
+                    <div>
+                      <div class="font-body text-[18px] font-bold text-ink leading-tight" x-text="m.name"></div>
+                      <div class="font-body text-[13px] text-muted mt-1">
+                        <span x-text="m.city || '—'"></span>
+                        <span x-show="m.city"> · </span>
+                        <span x-text="ageLabel(m)"></span>
+                        <span> · </span>
+                        <span class="tabular-nums" x-text="formatDate(m.birth)"></span>
+                        <span> → </span>
+                        <span class="tabular-nums" x-text="formatDate(m.martyrdom)"></span>
+                      </div>
+                    </div>
+                    <div class="flex flex-wrap gap-1.5">
+                      <span x-show="m.rank" class="badge badge-forest" x-text="m.rank"></span>
+                      <span x-show="m.weapon" class="badge badge-olive" x-text="m.weapon"></span>
+                      <span x-show="m.battalion" class="badge" x-text="m.battalion"></span>
+                    </div>
+                  </div>
                 </div>
-                <div class="flex flex-wrap gap-1.5">
-                  <span x-show="m.rank" class="badge badge-forest" x-text="m.rank"></span>
-                  <span x-show="m.battalion" class="badge" x-text="m.battalion"></span>
-                </div>
-              </div>
+              </template>
+
             </button>
           </template>
         </div>
@@ -378,343 +667,10 @@
     </div>
   </section>
 
-  <!-- ===================== BROWSE ===================== -->
-  <section id="main-content-browse" x-show="view === 'browse'" :aria-hidden="view !== 'browse'" class="max-w-[1240px] mx-auto px-8 py-12">
-    <!-- Birthday match banner -->
-    <div x-show="matchFilter"
-         class="mb-7 px-5 py-4 rounded-md flex items-center justify-between gap-4 flex-wrap"
-         style="background: linear-gradient(110deg, rgba(31,61,43,0.06), rgba(138,109,59,0.04));
-                border: 1px solid var(--divider); border-inline-start: 3px solid var(--forest);">
-      <div>
-        <div class="font-display text-[17px] text-ink">
-          <span x-show="lang === 'ar'">عرضُ الأسماءِ المولودةِ حولَ <b class="text-forest" x-text="`${matchFilter?.day}/${matchFilter?.month}`"></b>، ضمنَ نطاق ±<span x-text="matchFilter?.window"></span> يوماً</span>
-          <span x-show="lang === 'en'">Showing names born around <b class="text-forest" x-text="`${matchFilter?.day}/${matchFilter?.month}`"></b>, within ±<span x-text="matchFilter?.window"></span> days</span>
-        </div>
-        <div class="text-[13px] text-muted mt-1">
-          <span x-text="filtered.length"></span>
-          <span x-text="lang === 'ar' ? 'نتيجة مرتّبةً حسب القرب' : 'results, sorted by closeness'"></span>
-        </div>
-      </div>
-      <button @click="matchFilter = null" class="btn btn-text"
-              x-text="lang === 'ar' ? 'إزالة بحث الميلاد ✕' : 'Clear birthday match ✕'"></button>
-    </div>
-
-    <div class="mb-7">
-      <div class="section-kicker" x-text="lang === 'ar' ? 'السجلّ الكامل' : 'The full registry'"></div>
-      <h2 class="section-title" x-text="lang === 'ar' ? 'أَسْمَاءٌ لا تُنسَى' : 'Names not forgotten'"></h2>
-      <p class="section-sub" x-text="lang === 'ar'
-        ? 'تصفّحْ، ابحثْ، وَرَشِّحْ. كلّ اسم مدخلٌ مفتوحٌ يقبل التصحيح والإضافة.'
-        : 'Browse, search and filter. Every entry remains open for correction and addition.'"></p>
-    </div>
-
-    <!-- Filters -->
-    <div class="grid-filters bg-paper border border-divider rounded-md p-5 mb-6 grid gap-3">
-      <label>
-        <div class="field-label" x-text="lang === 'ar' ? 'بحث بالاسم أو المدينة' : 'Search name or city'"></div>
-        <input type="text" class="input" x-model="filters.q"
-               :placeholder="lang === 'ar' ? 'اكتب اسماً…' : 'Type a name…'">
-      </label>
-      <label>
-        <div class="field-label" x-text="lang === 'ar' ? 'المدينة' : 'City'"></div>
-        <select class="select" x-model="filters.city">
-          <option value="" x-text="lang === 'ar' ? 'كل المدن' : 'All cities'"></option>
-          <template x-for="c in cities" :key="c"><option :value="c" x-text="c"></option></template>
-        </select>
-      </label>
-      <label>
-        <div class="field-label" x-text="lang === 'ar' ? 'الرتبة' : 'Rank'"></div>
-        <select class="select" x-model="filters.rank">
-          <option value="" x-text="lang === 'ar' ? 'أي رتبة' : 'Any'"></option>
-          <template x-for="r in ranks" :key="r"><option :value="r" x-text="r"></option></template>
-        </select>
-      </label>
-      <label>
-        <div class="field-label" x-text="lang === 'ar' ? 'الكتيبة' : 'Battalion'"></div>
-        <select class="select" x-model="filters.batt">
-          <option value="" x-text="lang === 'ar' ? 'كل الكتائب' : 'All'"></option>
-          <template x-for="b in battalions" :key="b"><option :value="b" x-text="b"></option></template>
-        </select>
-      </label>
-      <label>
-        <div class="field-label" x-text="lang === 'ar' ? 'الفئة العمرية' : 'Age'"></div>
-        <select class="select" x-model="filters.age">
-          <option value="" x-text="lang === 'ar' ? 'كل الأعمار' : 'All ages'"></option>
-          <option value="u20" x-text="lang === 'ar' ? 'أقل من ٢٠' : 'Under 20'"></option>
-          <option value="20-30" x-text="lang === 'ar' ? '٢٠ – ٣٠' : '20 – 30'"></option>
-          <option value="30-40" x-text="lang === 'ar' ? '٣٠ – ٤٠' : '30 – 40'"></option>
-          <option value="o40" x-text="lang === 'ar' ? 'أكثر من ٤٠' : 'Over 40'"></option>
-        </select>
-      </label>
-      <div class="pb-1">
-        <button @click="clearFilters()" class="btn btn-ghost"
-                x-text="lang === 'ar' ? 'مسح' : 'Clear'"></button>
-      </div>
-    </div>
-
-    <!-- Advanced filters toggle row — outside .grid-filters so it stretches full-width on mobile. -->
-    <div class="flex justify-end mb-4">
-      <button @click="showAdvancedFilters = !showAdvancedFilters" type="button"
-              :class="showAdvancedFilters ? 'btn-primary' : 'btn-ghost'"
-              :aria-expanded="showAdvancedFilters ? 'true' : 'false'"
-              class="btn">
-        <span aria-hidden="true">⚙</span>
-        <span x-text="lang === 'ar' ? 'فلاتر متقدمة' : 'Advanced filters'"></span>
-        <span x-show="advancedFilterCount() > 0" class="badge badge-olive"
-              style="padding: 1px 8px;" x-text="advancedFilterCount()"></span>
-        <span :style="showAdvancedFilters ? 'transform: rotate(180deg)' : ''"
-              style="transition: transform 0.15s; display: inline-block;">▾</span>
-      </button>
-    </div>
-
-    <!-- Advanced filters panel — martyrdom date range + age range. Toggleable. -->
-    <div x-show="showAdvancedFilters" x-cloak x-transition.opacity.duration.150ms
-         class="bg-paper border border-divider rounded-md p-5 mb-6">
-      <!-- Martyrdom date range -->
-      <div class="mb-5">
-        <div class="font-display text-[12px] tracking-[0.2em] uppercase text-olive mb-3"
-             x-text="lang === 'ar' ? 'تاريخ الاستشهاد' : 'Martyrdom date range'"></div>
-        <div class="grid-pair grid gap-3">
-          <label class="block">
-            <div class="field-label" x-text="lang === 'ar' ? 'من' : 'From'"></div>
-            <div class="input flex items-center gap-2" style="padding-inline-start: 12px;">
-              <span aria-hidden="true">📅</span>
-              <input type="text" x-ref="martyrdomFromInput" readonly
-                     x-init="initDatePicker($refs.martyrdomFromInput, 'martyrdomFrom')"
-                     :placeholder="lang === 'ar' ? 'انقر للتحديد' : 'Click to set'"
-                     class="bg-transparent flex-1 ltr focus:outline-none cursor-pointer"
-                     style="border: 0; padding: 0; min-width: 0;">
-              <button x-show="martyrdomFrom" @click="clearDateField('martyrdomFrom', $refs.martyrdomFromInput)" type="button"
-                      :title="lang === 'ar' ? 'مسح' : 'Clear'"
-                      class="text-muted hover:text-crimson text-lg"
-                      style="background: transparent; border: 0; padding: 0 4px;">✕</button>
-            </div>
-          </label>
-          <label class="block">
-            <div class="field-label" x-text="lang === 'ar' ? 'إلى' : 'To'"></div>
-            <div class="input flex items-center gap-2" style="padding-inline-start: 12px;">
-              <span aria-hidden="true">📅</span>
-              <input type="text" x-ref="martyrdomToInput" readonly
-                     x-init="initDatePicker($refs.martyrdomToInput, 'martyrdomTo')"
-                     :placeholder="lang === 'ar' ? 'انقر للتحديد' : 'Click to set'"
-                     class="bg-transparent flex-1 ltr focus:outline-none cursor-pointer"
-                     style="border: 0; padding: 0; min-width: 0;">
-              <button x-show="martyrdomTo" @click="clearDateField('martyrdomTo', $refs.martyrdomToInput)" type="button"
-                      :title="lang === 'ar' ? 'مسح' : 'Clear'"
-                      class="text-muted hover:text-crimson text-lg"
-                      style="background: transparent; border: 0; padding: 0 4px;">✕</button>
-            </div>
-          </label>
-        </div>
-      </div>
-
-      <!-- Age range -->
-      <div class="mb-2">
-        <div class="font-display text-[12px] tracking-[0.2em] uppercase text-olive mb-3"
-             x-text="lang === 'ar' ? 'العمر عند الاستشهاد' : 'Age at martyrdom'"></div>
-        <div class="grid-pair grid gap-3">
-          <label class="block">
-            <div class="field-label" x-text="lang === 'ar' ? 'الحد الأدنى' : 'Min age'"></div>
-            <input type="number" min="0" max="120" x-model.number="ageMin" class="input"
-                   :placeholder="lang === 'ar' ? 'أي' : 'Any'">
-          </label>
-          <label class="block">
-            <div class="field-label" x-text="lang === 'ar' ? 'الحد الأقصى' : 'Max age'"></div>
-            <input type="number" min="0" max="120" x-model.number="ageMax" class="input"
-                   :placeholder="lang === 'ar' ? 'أي' : 'Any'">
-          </label>
-        </div>
-      </div>
-
-      <div class="flex justify-end mt-3 pt-4" style="border-top: 1px dashed var(--divider);">
-        <button @click="clearAdvancedFilters()" class="btn btn-ghost"
-                x-text="lang === 'ar' ? 'مسح الفلاتر المتقدمة' : 'Clear advanced filters'"></button>
-      </div>
-    </div>
-
-    <!-- Sort + view-mode row. Sort hidden when birthday-match is active (always sorts by closeness). -->
-    <div class="flex items-center justify-between mb-4 px-1 gap-3 flex-wrap">
-      <div class="text-[13px] text-muted" aria-live="polite" aria-atomic="true">
-        <span x-text="filtered.length"></span>
-        <span x-text="lang === 'ar' ? `من ${all.length} اسماً` : `of ${all.length} names`"></span>
-      </div>
-
-      <div class="flex items-center gap-3 flex-wrap">
-        <!-- Sort dropdown — 6 modes (martyrdom/birth ↑↓, age ↑, name A→Z) -->
-        <label class="flex items-center gap-2" x-show="!matchFilter">
-          <span class="text-[12px] text-muted" x-text="lang === 'ar' ? 'الترتيب' : 'Sort'"></span>
-          <select class="select" style="padding: 6px 32px 6px 12px; font-size: 13px; min-width: 200px;" x-model="sort">
-            <template x-for="opt in sortOptions" :key="opt.id">
-              <option :value="opt.id" x-text="lang === 'ar' ? opt.ar : opt.en"></option>
-            </template>
-          </select>
-        </label>
-
-        <!-- View-mode toggle (grid ↔ list) -->
-        <div role="group" :aria-label="lang === 'ar' ? 'نمط العرض' : 'View mode'"
-             class="inline-flex bg-page-2 border border-divider rounded-full p-0.5">
-          <button @click="viewMode = 'grid'"
-                  :aria-pressed="viewMode === 'grid' ? 'true' : 'false'"
-                  :class="viewMode === 'grid' ? 'bg-ink text-paper' : 'text-muted'"
-                  class="rounded-full px-3 py-1.5 text-[12px] font-body flex items-center gap-1.5 border-0"
-                  :title="lang === 'ar' ? 'عرض شبكي' : 'Grid view'">
-            <span aria-hidden="true">▦</span>
-            <span x-text="lang === 'ar' ? 'شبكة' : 'Grid'"></span>
-          </button>
-          <button @click="viewMode = 'list'"
-                  :aria-pressed="viewMode === 'list' ? 'true' : 'false'"
-                  :class="viewMode === 'list' ? 'bg-ink text-paper' : 'text-muted'"
-                  class="rounded-full px-3 py-1.5 text-[12px] font-body flex items-center gap-1.5 border-0"
-                  :title="lang === 'ar' ? 'عرض قائمة' : 'List view'">
-            <span aria-hidden="true">≡</span>
-            <span x-text="lang === 'ar' ? 'قائمة' : 'List'"></span>
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Loading skeleton — 12 placeholder cards with shimmer animation. Matches
-         the photo-dominant grid card shape so the layout doesn't jump when
-         real cards arrive. -->
-    <div x-show="loading && filtered.length === 0"
-         class="grid gap-4"
-         :style="viewMode === 'list'
-           ? 'grid-template-columns: 1fr;'
-           : 'grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));'"
-         aria-busy="true" aria-live="polite">
-      <span class="sr-only" x-text="lang === 'ar' ? 'جاري تحميل السجلّ…' : 'Loading registry…'"></span>
-      <template x-for="i in 12" :key="i">
-        <div class="card overflow-hidden flex flex-col">
-          <!-- Photo area (aspect 4:5) — the biggest visual chunk that shimmers -->
-          <div class="skeleton" style="aspect-ratio: 4/5; border-radius: 0;"></div>
-          <div class="flex-1 flex flex-col gap-2.5" style="padding: 14px 16px;">
-            <div class="skeleton" style="height: 18px; width: 75%;"></div>
-            <div class="skeleton" style="height: 12px; width: 45%;"></div>
-            <div class="grid" style="grid-template-columns: 60px 1fr; row-gap: 6px; column-gap: 10px;">
-              <div class="skeleton" style="height: 11px;"></div>
-              <div class="skeleton" style="height: 11px; width: 80%;"></div>
-              <div class="skeleton" style="height: 11px;"></div>
-              <div class="skeleton" style="height: 11px; width: 80%;"></div>
-            </div>
-          </div>
-        </div>
-      </template>
-    </div>
-
-    <!-- Error state — only fires when all 3 data sources (Supabase, local JSON,
-         sample data) fail. Offers a single-click retry that re-runs loadMartyrs(). -->
-    <div x-show="!loading && loadError" role="alert"
-         class="text-center py-12 px-6 rounded-lg"
-         style="background: rgba(122,42,42,0.06); border: 1px dashed var(--crimson);">
-      <div class="text-3xl mb-2" aria-hidden="true">⚠️</div>
-      <h3 class="font-display text-[20px] mt-3 mb-4" style="color: var(--crimson);" x-text="loadError"></h3>
-      <button @click="retryLoad()" class="btn btn-primary mt-2">
-        🔄 <span x-text="lang === 'ar' ? 'إعادة المحاولة' : 'Retry'"></span>
-      </button>
-    </div>
-
-    <!-- Empty state — shows once loading is done, no error, and the filter still has no matches. -->
-    <div x-show="!loading && !loadError && filtered.length === 0" class="text-center py-16 px-6 bg-page-2 rounded-lg" style="border: 1px dashed var(--divider);">
-      <svg width="64" height="64" viewBox="0 0 60 60" style="opacity:.5; margin: 0 auto; display: block;">
-        <g fill="none" stroke="var(--olive)" stroke-width="0.9">
-          <circle cx="30" cy="30" r="20"/><circle cx="30" cy="30" r="14"/>
-          <path d="M30 10 L30 50 M10 30 L50 30 M16 16 L44 44 M44 16 L16 44"/>
-          <path d="M30 14 L44 30 L30 46 L16 30 Z"/>
-        </g>
-      </svg>
-      <h3 class="font-display text-[22px] mt-3.5 mb-2"
-          x-text="lang === 'ar' ? 'لا توجد نتائج تطابق بحثك' : 'No matching names'"></h3>
-      <p class="text-muted max-w-md mx-auto"
-         x-text="lang === 'ar'
-           ? 'جرّبْ توسيعَ النطاق أو إزالةَ بعض الفلاتر — السجلّ قيدُ النموّ المستمر.'
-           : 'Try widening the window or removing filters. The registry keeps growing.'"></p>
-    </div>
-
-    <!-- Cards grid. Grid mode = photo-dominant cards (aspect 4:5 photo on top,
-         info below, v1 style). List mode = compact horizontal layout. -->
-    <div class="grid gap-4"
-         :style="viewMode === 'list'
-           ? 'grid-template-columns: 1fr;'
-           : 'grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));'">
-      <template x-for="m in filtered" :key="m.id">
-        <button @click="openMartyr(m.id)" class="card card-hover text-right cursor-pointer relative overflow-hidden flex"
-                :class="viewMode === 'grid' ? 'flex-col' : 'flex-row gap-3.5 items-stretch'"
-                :style="viewMode === 'grid' ? '' : 'padding: 14px;'">
-
-          <!-- ===== GRID MODE — large photo, info below ===== -->
-          <template x-if="viewMode === 'grid'">
-            <div class="contents">
-              <!-- Photo area, aspect 4:5, fills card width -->
-              <div class="relative" style="aspect-ratio: 4/5; background: var(--bg-3);">
-                <div x-html="renderPortrait(m, 0, false, 'fill')"></div>
-                <!-- Delta badge overlay -->
-                <div x-show="Number.isFinite(m.delta)"
-                     class="absolute top-3 start-3 font-latin-sans text-[11px] tracking-[0.12em] px-2 py-0.5 rounded-full"
-                     :style="m.delta === 0
-                       ? 'color: var(--paper); background: rgba(31,61,43,0.85); backdrop-filter: blur(4px);'
-                       : 'color: var(--paper); background: rgba(138,109,59,0.85); backdrop-filter: blur(4px);'"
-                     x-text="deltaLabel(m.delta)"></div>
-              </div>
-              <!-- Info section below photo -->
-              <div class="p-4 flex-1 flex flex-col gap-2.5" style="padding: 14px 16px;">
-                <div>
-                  <div class="font-body text-[18px] font-bold text-ink leading-tight" x-text="m.name"></div>
-                  <div class="font-body text-[12px] text-muted mt-1">
-                    <span x-text="m.city || '—'"></span>
-                    <span x-show="m.city"> · </span>
-                    <span x-text="ageLabel(m)"></span>
-                  </div>
-                </div>
-                <div class="grid text-[12px]" style="grid-template-columns: auto 1fr; row-gap: 4px; column-gap: 10px;">
-                  <div class="text-muted" x-text="lang === 'ar' ? 'الميلاد' : 'Born'"></div>
-                  <div class="text-ink-2 tabular-nums" x-text="formatDate(m.birth)"></div>
-                  <div class="text-muted" x-text="lang === 'ar' ? 'الاستشهاد' : 'Martyrdom'"></div>
-                  <div class="text-ink-2 tabular-nums" x-text="formatDate(m.martyrdom)"></div>
-                </div>
-                <div class="flex flex-wrap gap-1.5">
-                  <span x-show="m.rank" class="badge badge-forest" x-text="m.rank"></span>
-                  <span x-show="m.battalion" class="badge" x-text="m.battalion"></span>
-                </div>
-              </div>
-            </div>
-          </template>
-
-          <!-- ===== LIST MODE — compact horizontal, small portrait left ===== -->
-          <template x-if="viewMode === 'list'">
-            <div class="contents">
-              <!-- Delta badge -->
-              <div x-show="Number.isFinite(m.delta)"
-                   class="absolute top-3.5 start-3.5 font-latin-sans text-[11px] tracking-[0.12em] px-2 py-0.5 rounded-full"
-                   :style="m.delta === 0
-                     ? 'color: var(--forest); background: rgba(31,61,43,0.10);'
-                     : 'color: var(--olive); background: rgba(138,109,59,0.10);'"
-                   x-text="deltaLabel(m.delta)"></div>
-              <div x-html="renderPortrait(m, 72, true)" class="flex-shrink-0"></div>
-              <div class="flex-1 min-w-0 flex flex-col gap-2">
-                <div>
-                  <div class="font-body text-[18px] font-bold text-ink leading-tight" x-text="m.name"></div>
-                  <div class="font-body text-[13px] text-muted mt-1">
-                    <span x-text="m.city || '—'"></span>
-                    <span x-show="m.city"> · </span>
-                    <span x-text="ageLabel(m)"></span>
-                    <span> · </span>
-                    <span class="tabular-nums" x-text="formatDate(m.birth)"></span>
-                    <span> → </span>
-                    <span class="tabular-nums" x-text="formatDate(m.martyrdom)"></span>
-                  </div>
-                </div>
-                <div class="flex flex-wrap gap-1.5">
-                  <span x-show="m.rank" class="badge badge-forest" x-text="m.rank"></span>
-                  <span x-show="m.weapon" class="badge badge-olive" x-text="m.weapon"></span>
-                  <span x-show="m.battalion" class="badge" x-text="m.battalion"></span>
-                </div>
-              </div>
-            </div>
-          </template>
-
-        </button>
-      </template>
-    </div>
-  </section>
+  <!-- BROWSE view removed 2026-06-15 (F1): its filters + results grid were
+       folded into the single combined search page above (view === 'home').
+       `runBirthdaySearch()` / `browseAll()` unlock the filters in place; there
+       is no separate registry view anymore. -->
 
   <!-- ===================== DETAIL ===================== -->
   <section id="main-content-detail" x-show="view === 'detail' && current" :aria-hidden="view !== 'detail'" class="max-w-[1100px] mx-auto px-8 pt-8 pb-20" x-cloak>
@@ -723,7 +679,7 @@
         <!-- Breadcrumb: only emits each dot+text pair when the field is populated.
              Old version produced naked dots ("· · ") for rows missing battalion or city. -->
         <div class="flex items-center gap-2 text-[13px] text-muted mb-7">
-          <button @click="view = 'browse'" class="btn btn-text" style="padding:0;"
+          <button @click="goto('home'); browseAll()" class="btn btn-text" style="padding:0;"
                   x-text="lang === 'ar' ? '← العودة إلى السجلّ' : '← Back to registry'"></button>
           <template x-if="current.battalion"><span>·</span></template>
           <template x-if="current.battalion"><span x-text="current.battalion"></span></template>
@@ -765,7 +721,7 @@
                 </div>
               </div>
 
-              <div x-show="isAdmin" class="mt-6 flex gap-2.5">
+              <div x-show="isAdmin && adminAllowed" class="mt-6 flex gap-2.5">
                 <button @click="editMartyr(current.id)" class="btn btn-primary">
                   ✎ <span x-text="lang === 'ar' ? 'تحرير البيانات' : 'Edit record'"></span>
                 </button>
@@ -1489,7 +1445,7 @@
   <!-- /single-main-wrapper -->
 
   <!-- ===================== LOGIN MODAL ===================== -->
-  <div x-show="showLogin" @click.self="showLogin = false; loginError = ''"
+  <div x-show="showLogin && adminAllowed" @click.self="showLogin = false; loginError = ''"
        @keydown.escape.window="showLogin = false; loginError = ''"
        x-trap.inert.noscroll="showLogin"
        x-effect="if (showLogin) $nextTick(() => $el.querySelector('input[type=password]')?.focus())"
@@ -1587,9 +1543,10 @@
           <ul class="list-none p-0 m-0">
             <template x-for="l in col.links" :key="l.text">
               <li class="mb-1.5">
-                <!-- Internal view-switch (go: 'browse' | 'home' | 'about' | ...) -->
+                <!-- Internal view-switch (go: 'home' | 'about' | ...). The
+                     `browseAll` flag also unlocks the registry filters. -->
                 <template x-if="l.go">
-                  <button @click="goto(l.go)"
+                  <button @click="goto(l.go); if (l.browseAll) browseAll()"
                           class="text-[13px] text-ink-2 bg-transparent border-0 p-0 cursor-pointer hover:text-forest transition-colors"
                           x-text="l.text"></button>
                 </template>
@@ -1615,6 +1572,6 @@
 </div>
 
 <style>[x-cloak]{display:none!important}</style>
-<script src="app.js"></script>
+<script src="app.js?v=20260615b"></script>
 </body>
 </html>
