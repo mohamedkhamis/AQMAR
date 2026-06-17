@@ -89,8 +89,15 @@ never block a row.
 ## Birthday search (subtle, easy to break)
 
 - `bday.window` is a **number** (7 / 30 / 60 / 365) **or** the string
-  `'custom'`. Default is `365` ("السنة كاملة") because the search uses
-  full-date proximity — narrow windows would return almost nothing.
+  `'custom'`. Default is `30` ("شهر") per the user's request (2026-06-17).
+  Caveat: matching is **full-date proximity** (year included), so a 1-month
+  default is deliberately narrow — most picks return only a handful. The user
+  chose this over month/day-anniversary matching after seeing the counts.
+- **Shareable search:** the active birthday search is mirrored to the URL
+  query string (`?b=YYYY-MM-DD&w=30`, or `w=custom&d=21`). `syncBirthdayUrl()`
+  writes it (replaceState) from `matchFilter`; `applyBirthdayFromUrl()` reads it
+  on load and re-runs the search. Pure encode/decode lives in `filter-logic.js`
+  (`buildBirthdayParams` / `parseBirthdayQuery`).
 - `birthDelta(userIso, birthIso)` (in `app.js`) returns the **signed** day
   delta. Positive ⇒ martyr younger than the picked date; negative ⇒ older;
   Infinity for missing/unparseable birth dates (so they sort last and stay

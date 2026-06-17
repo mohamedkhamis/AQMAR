@@ -27,6 +27,20 @@
 <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=El+Messiri:wght@400;500;600;700&family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
 
 <!-- Tailwind (Play CDN — no build step, matches your existing setup) -->
+<!-- The Play CDN logs a "should not be used in production" warning. We use it
+     deliberately (no build step). Filter out only that one line so the console
+     stays clean; every other console.warn passes through untouched. Must run
+     BEFORE the CDN script so the patch is in place when it warns. -->
+<script>
+  (function () {
+    var orig = console.warn.bind(console);
+    console.warn = function () {
+      var first = arguments[0];
+      if (typeof first === "string" && first.indexOf("cdn.tailwindcss.com") !== -1) return;
+      orig.apply(null, arguments);
+    };
+  })();
+</script>
 <script src="https://cdn.tailwindcss.com"></script>
 
 <!-- Litepicker — birth-date input with year + month dropdowns -->
@@ -46,7 +60,7 @@
 <!-- Preserved helpers from v1: schema adapter, search predicate, admin diff logic.
      Load BEFORE Alpine + app.js so their globals are available at init time. -->
 <script src="data-loader.js?v=20260617b"></script>
-<script src="filter-logic.js"></script>
+<script src="filter-logic.js?v=20260617c"></script>
 <script src="admin-edit.js"></script>
 
 <!-- Alpine + focus plugin (plugin must load BEFORE the core). -->
@@ -1621,6 +1635,6 @@
 </div>
 
 <style>[x-cloak]{display:none!important}</style>
-<script src="app.js?v=20260617"></script>
+<script src="app.js?v=20260617c"></script>
 </body>
 </html>

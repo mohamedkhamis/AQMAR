@@ -93,9 +93,10 @@ function aqmar() {
     // is picked the search matches on the whole date (year + month + day);
     // before that, the home "Nearest birthdays" section is empty and shows a
     // "pick your birthday" prompt instead of arbitrary names.
-    // Default window is 365 ("السنة كاملة"): with full-date matching a narrow
-    // window often yields almost nothing, so default to a year-wide cohort.
-    bday: { day: new Date().getDate(), month: new Date().getMonth() + 1, year: null, window: 365 },
+    // Default window is 30 ("شهر") per user request (2026-06-17). NOTE: matching
+    // is full-date (year included), so a 1-month window is deliberately narrow —
+    // see the birthday-search notes in CLAUDE.md.
+    bday: { day: new Date().getDate(), month: new Date().getMonth() + 1, year: null, window: 30 },
     _birthdayPicker: null,
     matchFilter: null,
     // Combined search page (F1): the secondary filters + results start locked.
@@ -184,6 +185,10 @@ function aqmar() {
       // localStorage").
       this.persistCacheVersion();
       this.revealApp();
+
+      // Shareable birthday search: if the URL has ?b=…&w=…, restore + run it so
+      // a copied link opens the same results for whoever clicks it.
+      this.applyBirthdayFromUrl();
 
       // Clamp bday.day whenever the month changes — so picking Feb after day=31
       // doesn't leave an out-of-range value floating around.
@@ -426,13 +431,51 @@ function aqmar() {
       // on one page now) and scrolls the results into view.
       this.matchFilter = { ...this.bday, customDays: this.bdayCustomDays };
       this.filtersUnlocked = true;
+      this.syncBirthdayUrl();
       this.scrollToResults();
     },
     // "Browse the full registry" — unlock the filters without a birthday match.
     browseAll() {
       this.filtersUnlocked = true;
       this.matchFilter = null;
+      this.syncBirthdayUrl();   // clears any ?b/?w/?d from the address bar
       this.scrollToResults();
+    },
+    // Mirror the active birthday search into the URL query string so the link
+    // can be copied and reopened (applyBirthdayFromUrl reads it on load). Uses
+    // replaceState so it doesn't pile up history entries; preserves any other
+    // query params (e.g. ?demo). Clears b/w/d when no birthday match is active.
+    syncBirthdayUrl() {
+      try {
+        const params = new URLSearchParams(window.location.search);
+        ['b', 'w', 'd'].forEach(k => params.delete(k));
+        const bp = buildBirthdayParams(this.matchFilter);
+        if (bp) Object.keys(bp).forEach(k => params.set(k, bp[k]));
+        const qs = params.toString();
+        const url = window.location.pathname + (qs ? '?' + qs : '') + window.location.hash;
+        history.replaceState(null, '', url);
+      } catch (e) {}
+    },
+    // On load: if the URL carries a birthday search, restore the picker + window
+    // and run the same search so a shared link opens the same results.
+    applyBirthdayFromUrl() {
+      const parsed = parseBirthdayQuery(window.location.search);
+      if (!parsed) return;
+      this.bday.year = parsed.year;
+      this.bday.month = parsed.month;
+      this.bday.day = parsed.day;
+      this.bday.window = parsed.window;
+      if (parsed.window === 'custom') this.bdayCustomDays = parsed.customDays;
+      const pad = (n) => String(n).padStart(2, '0');
+      const iso = `${parsed.year}-${pad(parsed.month)}-${pad(parsed.day)}`;
+      this.$nextTick(() => {
+        try {
+          if (this._birthdayPicker) this._birthdayPicker.setDate(new Date(parsed.year, parsed.month - 1, parsed.day));
+          const el = this.$refs && this.$refs.birthdate;
+          if (el) el.value = iso;
+        } catch (e) {}
+        this.runBirthdaySearch();
+      });
     },
     // Smooth-scroll the results section into view after Alpine has revealed it
     // (it's behind x-show="filtersUnlocked", so wait a tick for the DOM).

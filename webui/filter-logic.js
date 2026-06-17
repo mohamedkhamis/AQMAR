@@ -166,7 +166,47 @@
     return haystack.includes(q);
   }
 
+  // ---- Shareable birthday-search URL (2026-06-17) ----
+  // Encode/decode the primary birthday search (full date + window) in the query
+  // string so a search can be copied and reopened by anyone. Pure: no DOM.
+
+  // Parse "?b=YYYY-MM-DD&w=30" (or w=custom&d=21) → match-filter fields, or null.
+  function parseBirthdayQuery(search) {
+    const p = new URLSearchParams(search || "");
+    const b = p.get("b");
+    if (!b) return null;
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(b);
+    if (!m) return null;
+    const year = +m[1], month = +m[2], day = +m[3];
+    if (month < 1 || month > 12 || day < 1 || day > 31) return null;
+    const wRaw = p.get("w");
+    let window = 30, customDays = 14;
+    if (wRaw === "custom") {
+      window = "custom";
+      const d = parseInt(p.get("d"), 10);
+      if (Number.isFinite(d)) customDays = Math.max(1, Math.min(365, d));
+    } else if (wRaw !== null) {
+      const wn = parseInt(wRaw, 10);
+      if ([7, 30, 60, 365].includes(wn)) window = wn;
+    }
+    return { year, month, day, window, customDays };
+  }
+
+  // Build the {b, w, [d]} params from an active match filter, or null if it has
+  // no full date. Caller merges these onto the existing query string.
+  function buildBirthdayParams(mf) {
+    if (!mf || !mf.year || !mf.month || !mf.day) return null;
+    const pad = (n) => String(n).padStart(2, "0");
+    const params = { b: `${mf.year}-${pad(mf.month)}-${pad(mf.day)}`, w: String(mf.window) };
+    if (mf.window === "custom") {
+      params.d = String(Math.max(1, Math.min(365, Number(mf.customDays) || 14)));
+    }
+    return params;
+  }
+
   global.daysBetween = daysBetween;
+  global.parseBirthdayQuery = parseBirthdayQuery;
+  global.buildBirthdayParams = buildBirthdayParams;
   global.windowDaysFromMode = windowDaysFromMode;
   global.filterByProximity = filterByProximity;
   global.describeDelta = describeDelta;

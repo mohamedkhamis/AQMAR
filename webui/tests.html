@@ -47,7 +47,7 @@
 
   <!-- Modules under test — order matters: dependencies first -->
   <script src="config.js?v=4" charset="UTF-8"></script>
-  <script src="filter-logic.js?v=4" charset="UTF-8"></script>
+  <script src="filter-logic.js?v=5" charset="UTF-8"></script>
   <script src="data-loader.js?v=7" charset="UTF-8"></script>
   <script src="admin-edit.js?v=4" charset="UTF-8"></script>
   <script src="app.js?v=4" charset="UTF-8"></script>
@@ -332,6 +332,57 @@
       assertEq(localApiPossible("mohamedkhamis.github.io"), false);
       assertEq(localApiPossible(""), false);           // file://
       assertEq(localApiPossible("example.com"), false);
+    });
+
+    // ===== shareable birthday-search URL (2026-06-17) =====
+
+    test("parseBirthdayQuery: full date + numeric window", () => {
+      assertEq(parseBirthdayQuery("?b=1995-05-15&w=30"),
+               { year: 1995, month: 5, day: 15, window: 30, customDays: 14 });
+    });
+
+    test("parseBirthdayQuery: custom window carries days", () => {
+      const r = parseBirthdayQuery("?b=2000-01-02&w=custom&d=21");
+      assertEq(r.window, "custom");
+      assertEq(r.customDays, 21);
+    });
+
+    test("parseBirthdayQuery: null when no b param", () => {
+      assertEq(parseBirthdayQuery("?w=30"), null);
+      assertEq(parseBirthdayQuery(""), null);
+    });
+
+    test("parseBirthdayQuery: rejects malformed date", () => {
+      assertEq(parseBirthdayQuery("?b=1995-13-40"), null);
+      assertEq(parseBirthdayQuery("?b=garbage"), null);
+    });
+
+    test("parseBirthdayQuery: unknown window falls back to 30", () => {
+      assertEq(parseBirthdayQuery("?b=1995-05-15&w=999").window, 30);
+    });
+
+    test("buildBirthdayParams: round-trips a match filter", () => {
+      assertEq(buildBirthdayParams({ year: 1995, month: 5, day: 15, window: 30 }),
+               { b: "1995-05-15", w: "30" });
+    });
+
+    test("buildBirthdayParams: custom includes d, zero-pads date", () => {
+      assertEq(buildBirthdayParams({ year: 1995, month: 5, day: 9, window: "custom", customDays: 21 }),
+               { b: "1995-05-09", w: "custom", d: "21" });
+    });
+
+    test("buildBirthdayParams: null without a full date", () => {
+      assertEq(buildBirthdayParams(null), null);
+      assertEq(buildBirthdayParams({ window: 30 }), null);
+    });
+
+    test("birthday URL round-trips parse(build())", () => {
+      const mf = { year: 1988, month: 12, day: 1, window: 60 };
+      const p = buildBirthdayParams(mf);
+      const qs = new URLSearchParams(p).toString();
+      const back = parseBirthdayQuery("?" + qs);
+      assertEq(back.year, 1988); assertEq(back.month, 12);
+      assertEq(back.day, 1); assertEq(back.window, 60);
     });
 
     test("adaptMartyrToNewSchema returns null for rows without msg_id", () => {
