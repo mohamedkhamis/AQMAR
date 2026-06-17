@@ -319,6 +319,21 @@
       assertEq(out.selectedFrame, null);
     });
 
+    test("localApiPossible: true only for loopback hosts (admin API is local-only)", () => {
+      assertEq(localApiPossible("localhost"), true);
+      assertEq(localApiPossible("127.0.0.1"), true);
+      assertEq(localApiPossible("::1"), true);
+    });
+
+    test("localApiPossible: false for deployed/static hosts (no /api 404 on GitHub Pages)", () => {
+      // 2026-06-17: the public site tried /api/martyrs and the browser logged a
+      // 404 before falling back to the static JSON. On non-loopback hosts we now
+      // skip the API entirely.
+      assertEq(localApiPossible("mohamedkhamis.github.io"), false);
+      assertEq(localApiPossible(""), false);           // file://
+      assertEq(localApiPossible("example.com"), false);
+    });
+
     test("adaptMartyrToNewSchema returns null for rows without msg_id", () => {
       assertEq(adaptMartyrToNewSchema({ name: "بلا معرّف" }), null);
       assertEq(adaptMartyrToNewSchema(null), null);

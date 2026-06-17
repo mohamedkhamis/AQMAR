@@ -9,9 +9,21 @@
 (function (global) {
   "use strict";
 
-  // Try the local admin API first; fall back to the on-disk JSON snapshot.
+  // The FastAPI admin API only ever runs on the local machine (localhost). On
+  // any deployed/static host — GitHub Pages, the IIS portal, a plain file
+  // server — there is no /api, so attempting it just makes the browser log a
+  // confusing `GET /api/martyrs 404` before the static-JSON fallback kicks in.
+  // Gate the API attempt on a loopback hostname. Pure + exported so tests can
+  // check it. (Empty hostname = file://, also no server → false.)
+  function localApiPossible(hostname) {
+    return hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1";
+  }
+
+  // Try the local admin API first (localhost only); fall back to the on-disk
+  // JSON snapshot everywhere else.
   async function loadData() {
-    if (global.AQMAR_API) {
+    const host = (global.location && global.location.hostname) || "";
+    if (global.AQMAR_API && localApiPossible(host)) {
       try {
         const rows = await global.AQMAR_API.get("/martyrs");
         return {
@@ -163,6 +175,7 @@
   }
 
   global.loadData = loadData;
+  global.localApiPossible = localApiPossible;
   global.adaptMartyrToNewSchema = adaptMartyrToNewSchema;
   global.adaptOverridesToNewSchema = adaptOverridesToNewSchema;
 })(window);
