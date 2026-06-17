@@ -416,6 +416,67 @@ html[data-theme="dark"] body::before { mix-blend-mode: screen; opacity: 0.4; }
 .footer-grid     { grid-template-columns: 1.5fr 1fr 1fr 1fr; }
 .grid-pair       { grid-template-columns: 1fr 1fr; }
 
+/* ===== Person-detail "Media & source" block (2026-06-16) =====
+   Selected video-card frame as the lead image + portrait photo beside it +
+   "Watch on Telegram" button (Option B). Flex (not grid) so the layout
+   collapses cleanly when a row has only a photo or only a frame: a lone
+   .media-side keeps its own width instead of stretching to full width. */
+.media-block { display: flex; gap: 18px; align-items: flex-start; flex-wrap: wrap; }
+.media-figure {
+  margin: 0;
+  background: var(--paper);
+  border: 1px solid var(--divider);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.media-figure-lead { flex: 0 1 380px; max-width: 420px; }
+.media-side { flex: 0 1 240px; display: flex; flex-direction: column; gap: 14px; }
+.media-side .media-figure { width: 100%; }
+.media-imgbox { width: 100%; aspect-ratio: 4 / 5; overflow: hidden; background: var(--bg); }
+.media-imgbox img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.media-cap {
+  padding: 9px 12px;
+  font-size: var(--text-xs);
+  color: var(--muted);
+  text-align: center;
+  border-top: 1px solid var(--divider);
+}
+
+/* "Watch on Telegram" button — dark-forest gradient card with a gold ▶ disc,
+   two-line label, ↗ tail. Tokens only; the gold disc tint is mixed from
+   --forest so it tracks the brand color. */
+.tg-watch {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: linear-gradient(110deg, var(--bg-3), var(--bg-2));
+  border: 1px solid var(--divider);
+  text-decoration: none;
+  color: var(--ink);
+  transition: transform .2s, box-shadow .2s, border-color .2s;
+  box-shadow: 0 6px 18px -10px rgba(0, 0, 0, .6);
+}
+.tg-watch:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 26px -10px rgba(0, 0, 0, .7);
+  border-color: var(--forest-2);
+}
+.tg-watch-ic {
+  flex: 0 0 auto;
+  width: 42px; height: 42px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px;
+  color: var(--forest);
+  background: color-mix(in srgb, var(--forest) 16%, transparent);
+}
+.tg-watch-txt { display: flex; flex-direction: column; min-width: 0; }
+.tg-watch-title { font-size: var(--text-sm); font-weight: 700; line-height: 1.25; }
+.tg-watch-sub { font-size: var(--text-xs); color: var(--muted); margin-top: 2px; }
+.tg-watch-tail { margin-inline-start: auto; color: var(--faint); font-size: 15px; }
+
 /* Admin registry table — scrolls sideways on screens too narrow for its columns,
    so the table never breaks the page layout on a phone. */
 .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
@@ -506,6 +567,9 @@ html[data-theme="dark"] body::before { mix-blend-mode: screen; opacity: 0.4; }
   .grid-bday > .grid-bday-submit { grid-column: 1 / -1; }
   .grid-filters { grid-template-columns: 1fr 1fr; }
   .grid-2col { grid-template-columns: 1fr; }
+  /* Media block stacks: frame, then photo + Telegram button, each full width. */
+  .media-block { flex-direction: column; }
+  .media-figure-lead, .media-side { flex: 1 1 auto; width: 100%; max-width: 100%; }
   .stats-strip { grid-template-columns: 1fr 1fr; }
   /* AI stats strip folds 4 cells into 2×2; the 3rd cell starts a new visual
      row so it loses its start-border and gains a top one. */
@@ -683,3 +747,21 @@ html[data-theme="dark"] body::before { mix-blend-mode: screen; opacity: 0.4; }
   padding: 18px 22px;
   background: rgba(251, 191, 36, 0.05);
 }
+
+/* "More filters" collapse toggle (2026-06-17): the heading row is a button.
+   The caret points right when collapsed, down when expanded. */
+.filters-toggle {
+  background: transparent;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  text-align: start;
+}
+.filters-chevron {
+  display: inline-block;
+  font-size: 11px;
+  line-height: 1;
+  transform: rotate(-90deg);
+  transition: transform .2s ease;
+}
+.filters-chevron.is-open { transform: rotate(0deg); }

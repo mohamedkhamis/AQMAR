@@ -103,6 +103,12 @@ function aqmar() {
     // the full registry" (browseAll). Stays unlocked for the rest of the
     // session once opened.
     filtersUnlocked: false,
+    // Secondary-filters panel starts COLLAPSED on every load (2026-06-17) so the
+    // landing page stays clean — the heading row toggles it. Independent of
+    // filtersUnlocked (lock = whether filters are usable; expanded = whether the
+    // panel is open). browseAll() lives in the nav too, so collapsing this panel
+    // never hides the only way in.
+    filtersExpanded: false,
 
     // ----- browse filters -----
     filters: { q: '', city: '', rank: '', batt: '', age: '' },

@@ -253,6 +253,7 @@
         photo: "../data/photos/20.jpg",
         frames: [],
         featuredFrame: null,
+        selectedFrame: null,
         source: "https://t.me/AqmarTofan/20",
         tgEmbed: "https://t.me/AqmarTofan/20?embed=1&mode=tme",
         archiveOrgId: "",
@@ -301,6 +302,21 @@
       assertEq(out.aiVerified, true);
       assertEq(out.aiNote, "match");
       assertEq(out.aiVerifiedAt, "2026-06-10T12:00:00");
+    });
+
+    test("adaptMartyrToNewSchema derives selectedFrame (normalized) from featured_frame_path, keeps featuredFrame raw", () => {
+      // The detail-page media block (2026-06-16) shows the picked cover frame.
+      // selectedFrame is the browser-resolvable copy ("../data/..."); featuredFrame
+      // stays RAW (no "../") so admin-edit buildEditDiff still compares 1:1.
+      const out = adaptMartyrToNewSchema({ msg_id: 11, name: "Z",
+        featured_frame_path: "data/frames/11_28.jpg" });
+      assertEq(out.featuredFrame, "data/frames/11_28.jpg");
+      assertEq(out.selectedFrame, "../data/frames/11_28.jpg");
+    });
+
+    test("adaptMartyrToNewSchema selectedFrame is null when no frame picked", () => {
+      const out = adaptMartyrToNewSchema({ msg_id: 12, name: "W", photo_path: "data/photos/12.jpg" });
+      assertEq(out.selectedFrame, null);
     });
 
     test("adaptMartyrToNewSchema returns null for rows without msg_id", () => {

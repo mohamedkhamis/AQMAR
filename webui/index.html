@@ -35,7 +35,7 @@
 <!-- Design tokens + components. ?v bumped 2026-06-15 (combined filters,
      offline cache, admin flag) so returning visitors don't run a stale
      app.js against the new markup. -->
-<link rel="stylesheet" href="styles.css?v=20260615">
+<link rel="stylesheet" href="styles.css?v=20260617">
 
 <!-- Site config -->
 <script src="config.js?v=20260615"></script>
@@ -44,7 +44,7 @@
 
 <!-- Preserved helpers from v1: schema adapter, search predicate, admin diff logic.
      Load BEFORE Alpine + app.js so their globals are available at init time. -->
-<script src="data-loader.js"></script>
+<script src="data-loader.js?v=20260617"></script>
 <script src="filter-logic.js"></script>
 <script src="admin-edit.js"></script>
 
@@ -299,11 +299,23 @@
            below shows birthday matches when a birthday is active. ===== -->
       <section class="mt-12" :class="{ 'filters-locked': !filtersUnlocked }"
                aria-labelledby="filters-heading">
-        <div class="flex items-center gap-3 mb-3">
-          <div id="filters-heading" class="font-latin-sans text-[11px] tracking-[0.25em] text-olive uppercase"
-               x-text="lang === 'ar' ? 'فلاتر إضافية' : 'More filters'"></div>
-          <div class="flex-1 h-px bg-divider"></div>
-        </div>
+        <!-- Heading row doubles as the collapse toggle. Collapsed by default
+             (filtersExpanded=false) so the page stays clean on load; click to
+             reveal the lock hint / filter controls below. -->
+        <button type="button"
+                @click="filtersExpanded = !filtersExpanded"
+                :aria-expanded="filtersExpanded ? 'true' : 'false'"
+                aria-controls="more-filters-body"
+                class="filters-toggle flex items-center gap-3 mb-3 w-full">
+          <span id="filters-heading" class="font-latin-sans text-[11px] tracking-[0.25em] text-olive uppercase"
+                x-text="lang === 'ar' ? 'فلاتر إضافية' : 'More filters'"></span>
+          <span class="filters-chevron text-olive" :class="{ 'is-open': filtersExpanded }" aria-hidden="true">▾</span>
+          <span class="flex-1 h-px bg-divider"></span>
+        </button>
+
+        <!-- Collapsible body: lock hint (while locked) + the filter controls. -->
+        <div id="more-filters-body" x-show="filtersExpanded" x-cloak
+             x-transition.opacity.duration.200ms>
 
         <!-- Lock hint — only while locked -->
         <div class="lock-hint mb-4" x-show="!filtersUnlocked" x-cloak>
@@ -428,6 +440,7 @@
             </div>
           </div>
         </div>
+        </div><!-- /#more-filters-body -->
       </section>
 
       <!-- ===== Results — shown once filters are unlocked ===== -->
@@ -742,18 +755,21 @@
           <div x-html="renderTimeline(current)"></div>
         </section>
 
-        <!-- Source video — always-visible inline player. Two modes:
-               1. archiveOrgId set → Archive.org player, plays INLINE on the page
-               2. otherwise        → Telegram post embed: preview only (channel +
-                  blurred thumbnail + caption). Telegram blocks inline play for
-                  large videos, so its built-in "VIEW IN TELEGRAM" button opens
-                  the post. Rows auto-upgrade to mode 1 once mirrored (Phase 2). -->
-        <template x-if="current && (current.archiveOrgId || current.tgEmbed)">
+        <!-- Media & source — the selected video-card frame (lead image) + the
+             portrait photo (smaller, beside it) + a "Watch on Telegram" button.
+             Replaced the old inline Telegram embed preview on 2026-06-16:
+             Telegram refuses inline playback for these large videos, so the
+             button just opens the original post. archiveOrgId (Phase-2 hybrid
+             hosting, currently always null) still plays INLINE above when set. -->
+        <template x-if="current && (current.selectedFrame || current.photo || current.source || current.archiveOrgId)">
           <section class="mt-7">
             <div class="font-display text-[14px] text-olive tracking-[0.2em] uppercase mb-3"
-                 x-text="lang === 'ar' ? 'الفيديو المصدر' : 'Source video'"></div>
+                 x-text="lang === 'ar' ? 'الوسائط والمصدر' : 'Media & source'"></div>
+
+            <!-- Optional inline Archive.org player (dormant unless a row is
+                 mirrored). Genuine inline video, not a preview. -->
             <template x-if="current.archiveOrgId">
-              <div class="rounded-lg overflow-hidden"
+              <div class="rounded-lg overflow-hidden mb-4"
                    style="border:1px solid var(--divider); aspect-ratio:16/9; max-width:760px;">
                 <iframe :src="`https://archive.org/embed/${current.archiveOrgId}`"
                         class="w-full h-full" style="border:0;"
@@ -761,14 +777,52 @@
                         loading="lazy"></iframe>
               </div>
             </template>
-            <template x-if="!current.archiveOrgId && current.tgEmbed">
-              <div class="rounded-lg overflow-hidden"
-                   style="border:1px solid var(--divider); background:#000; max-width:520px;">
-                <iframe :src="current.tgEmbed"
-                        class="w-full" style="border:0; display:block; height:600px;"
-                        scrolling="no" allowfullscreen loading="lazy"></iframe>
+
+            <div class="media-block">
+              <!-- Lead image: the admin-picked cover frame (the video card that
+                   shows name + birth/martyrdom dates). Omitted when none picked
+                   → photo takes over as the only image (no fallback to frame 0). -->
+              <template x-if="current.selectedFrame">
+                <figure class="media-figure media-figure-lead">
+                  <div class="media-imgbox">
+                    <img :src="current.selectedFrame" :alt="current.name"
+                         loading="lazy" decoding="async"
+                         onerror="this.closest('.media-figure').style.display='none'">
+                  </div>
+                  <figcaption class="media-cap"
+                              x-text="lang === 'ar' ? 'بطاقة الفيديو' : 'Video card'"></figcaption>
+                </figure>
+              </template>
+
+              <div class="media-side">
+                <!-- Portrait photo (smaller). -->
+                <template x-if="current.photo">
+                  <figure class="media-figure">
+                    <div class="media-imgbox">
+                      <img :src="current.photo" :alt="current.name"
+                           loading="lazy" decoding="async"
+                           onerror="this.closest('.media-figure').style.display='none'">
+                    </div>
+                    <figcaption class="media-cap"
+                                x-text="lang === 'ar' ? 'الصورة الشخصية' : 'Portrait'"></figcaption>
+                  </figure>
+                </template>
+
+                <!-- Watch on Telegram — opens the original post in a new tab. -->
+                <template x-if="current.source">
+                  <a :href="current.source" target="_blank" rel="noopener noreferrer" class="tg-watch">
+                    <span class="tg-watch-ic" aria-hidden="true">▶</span>
+                    <span class="tg-watch-txt">
+                      <span class="tg-watch-title"
+                            x-text="lang === 'ar' ? 'مشاهدة الفيديو على تيليجرام' : 'Watch on Telegram'"></span>
+                      <span class="tg-watch-sub"
+                            x-text="lang === 'ar' ? 'يفتح المنشور الأصلي في القناة' : 'Opens the original post'"></span>
+                    </span>
+                    <span class="tg-watch-tail" aria-hidden="true">↗</span>
+                  </a>
+                </template>
               </div>
-            </template>
+            </div>
           </section>
         </template>
 
@@ -793,15 +847,9 @@
                 <div class="text-ink-2 font-body font-bold" x-text="row.v"></div>
               </div>
             </template>
-            <template x-if="current && current.source">
-              <div class="mt-4 pt-3" style="border-top: 1px dashed var(--divider);">
-                <a :href="current.source" target="_blank" rel="noopener"
-                   class="text-[12px] text-olive inline-flex items-center gap-1.5 hover:text-forest transition-colors">
-                  <span x-text="lang === 'ar' ? 'المصدر على تيليجرام' : 'Source on Telegram'"></span>
-                  <span aria-hidden="true">↗</span>
-                </a>
-              </div>
-            </template>
+            <!-- The old "Source on Telegram" text link was removed 2026-06-16;
+                 the "Watch on Telegram" button in the Media & source section is
+                 now the single source link. -->
           </div>
         </section>
 
@@ -1572,6 +1620,6 @@
 </div>
 
 <style>[x-cloak]{display:none!important}</style>
-<script src="app.js?v=20260615b"></script>
+<script src="app.js?v=20260617"></script>
 </body>
 </html>

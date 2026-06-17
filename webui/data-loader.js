@@ -91,6 +91,12 @@
       // Null until the admin picks one. To compare against a normalized
       // carousel src, strip the leading "../" with denormalizePath().
       featuredFrame: row.featured_frame_path || null,
+      // selectedFrame: DISPLAY-ONLY normalized copy of featured_frame_path for
+      // the public detail media block ("../data/frames/..."). Separate from the
+      // raw featuredFrame above so buildEditDiff's apples-to-apples comparison
+      // stays intact. Null when no cover frame was picked → block shows the
+      // photo only (no fallback to frame 0).
+      selectedFrame: row.featured_frame_path ? normalizePhotoPath(row.featured_frame_path) : null,
       source:    row.message_link || "",
       // Telegram post-embed URL derived from the message link. Renders an
       // inline preview (channel header + blurred video thumbnail + caption +
