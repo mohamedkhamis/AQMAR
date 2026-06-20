@@ -1,9 +1,369 @@
 {
-  "version": 7,
-  "generated_at": "2026-06-17T14:12:57Z",
+  "version": 8,
+  "generated_at": "2026-06-20T11:07:03Z",
   "channel": "AqmarTofan",
-  "note": "v7: 613 rows incl AI-verified 1297-1349 (date/name fixes) + detail media block & collapsible filters",
+  "note": "AI-verified export (admin AI button)",
   "martyrs": [
+    {
+      "msg_id": 1378,
+      "name": "بدر عبد السميع الزقزوق",
+      "name_normalized": "بدر عبد السميع الزقزوق",
+      "birth_date": "2000-05-20",
+      "martyrdom_date": "2025-09-06",
+      "city": null,
+      "military_rank": "قائد مجموعة",
+      "weapon": null,
+      "battalion": "كتيبة الصحابي مصعب بن عمير",
+      "brigade": "لواء خانيونس",
+      "photo_path": "data/photos\\1378.jpg",
+      "frame_paths": "data/frames\\1378_28.jpg;data/frames\\1378_30.jpg;data/frames\\1378_32.jpg",
+      "featured_frame_path": null,
+      "posted_date": "2026-06-20T09:00:00",
+      "message_link": "https://t.me/AqmarTofan/1378",
+      "extraction_status": "complete",
+      "ocr_name": "بدر عبد السميع الزقزوق",
+      "ocr_birth_date": "2000-05-20",
+      "ocr_martyrdom_date": "2025-09-06",
+      "created_at": "2026-06-20T10:38:05",
+      "updated_at": "2026-06-20T10:57:22",
+      "archive_org_id": null
+    },
+    {
+      "msg_id": 1376,
+      "name": "محمد صبحي الغلبان",
+      "name_normalized": "محمد صبحي الغلبان",
+      "birth_date": "1987-03-12",
+      "martyrdom_date": "2025-05-16",
+      "city": null,
+      "military_rank": "قائد فصيل",
+      "weapon": null,
+      "battalion": "كتيبة الصحابي أسامة بن زيد",
+      "brigade": "لواء خانيونس",
+      "photo_path": "data/photos\\1376.jpg",
+      "frame_paths": "data/frames\\1376_28.jpg;data/frames\\1376_30.jpg;data/frames\\1376_32.jpg",
+      "featured_frame_path": null,
+      "posted_date": "2026-06-20T06:58:00",
+      "message_link": "https://t.me/AqmarTofan/1376",
+      "extraction_status": "complete",
+      "ocr_name": "محمد صبحي الغلبان",
+      "ocr_birth_date": "1987-12-03",
+      "ocr_martyrdom_date": "2025-05-16",
+      "created_at": "2026-06-20T10:30:49",
+      "updated_at": "2026-06-20T10:56:25",
+      "archive_org_id": null
+    },
+    {
+      "msg_id": 1373,
+      "name": "باسل أحمد أبو شمالة",
+      "name_normalized": "باسل احمد ابو شماله",
+      "birth_date": "1989-07-25",
+      "martyrdom_date": "2024-02-10",
+      "city": null,
+      "military_rank": "مجاهد قسامي",
+      "weapon": null,
+      "battalion": "كتيبة الأسلحة والخدمات القتالية",
+      "brigade": "لواء خانيونس",
+      "photo_path": "data/photos\\1373.jpg",
+      "frame_paths": "data/frames\\1373_28.jpg;data/frames\\1373_30.jpg;data/frames\\1373_32.jpg",
+      "featured_frame_path": null,
+      "posted_date": "2026-06-18T19:17:00",
+      "message_link": "https://t.me/AqmarTofan/1373",
+      "extraction_status": "complete",
+      "ocr_name": "باسل أحمد أبو شمالة",
+      "ocr_birth_date": "1989-07-25",
+      "ocr_martyrdom_date": "2024-02-10",
+      "created_at": "2026-06-20T10:23:06",
+      "updated_at": "2026-06-20T10:54:14",
+      "archive_org_id": null
+    },
+    {
+      "msg_id": 1371,
+      "name": "وسام إبراهيم أبو شعر",
+      "name_normalized": "وسام ابراهيم ابو شعر",
+      "birth_date": "1987-07-08",
+      "martyrdom_date": "2023-10-08",
+      "city": null,
+      "military_rank": "نائب قائد مجموعة",
+      "weapon": null,
+      "battalion": "كتيبة الشهيد محمد أبو حرب",
+      "brigade": "لواء رفح",
+      "photo_path": "data/photos\\1371.jpg",
+      "frame_paths": "data/frames\\1371_28.jpg;data/frames\\1371_30.jpg;data/frames\\1371_32.jpg",
+      "featured_frame_path": null,
+      "posted_date": "2026-06-18T18:03:00",
+      "message_link": "https://t.me/AqmarTofan/1371",
+      "extraction_status": "complete",
+      "ocr_name": "وسام إبراهيم أبو شعر",
+      "ocr_birth_date": "1987-08-07",
+      "ocr_martyrdom_date": "2023-10-08",
+      "created_at": "2026-06-20T10:11:41",
+      "updated_at": "2026-06-20T10:52:03",
+      "archive_org_id": null
+    },
+    {
+      "msg_id": 1369,
+      "name": "محمد زياد أبو عنزة",
+      "name_normalized": "محمد زياد ابو عنزه",
+      "birth_date": "1994-03-23",
+      "martyrdom_date": "2025-05-18",
+      "city": null,
+      "military_rank": "قائد مجموعة",
+      "weapon": null,
+      "battalion": "كتيبة الصحابي أسد الله حمزة",
+      "brigade": "لواء خانيونس",
+      "photo_path": "data/photos\\1369.jpg",
+      "frame_paths": "data/frames\\1369_28.jpg;data/frames\\1369_30.jpg;data/frames\\1369_32.jpg",
+      "featured_frame_path": null,
+      "posted_date": "2026-06-18T16:21:00",
+      "message_link": "https://t.me/AqmarTofan/1369",
+      "extraction_status": "complete",
+      "ocr_name": "محمد زياد أبو عنزة",
+      "ocr_birth_date": "1994-03-23",
+      "ocr_martyrdom_date": "2025-05-13",
+      "created_at": "2026-06-20T10:03:55",
+      "updated_at": "2026-06-20T10:52:03",
+      "archive_org_id": null
+    },
+    {
+      "msg_id": 1367,
+      "name": "محمد رافع سلامة",
+      "name_normalized": "محمد رافع سلامه",
+      "birth_date": "2001-06-09",
+      "martyrdom_date": "2024-07-13",
+      "city": null,
+      "military_rank": "مجاهد قسامي",
+      "weapon": null,
+      "battalion": "كتيبة الصحابي مصعب بن عمير",
+      "brigade": "لواء خانيونس",
+      "photo_path": "data/photos\\1367.jpg",
+      "frame_paths": "data/frames\\1367_28.jpg;data/frames\\1367_30.jpg;data/frames\\1367_32.jpg",
+      "featured_frame_path": null,
+      "posted_date": "2026-06-18T14:32:00",
+      "message_link": "https://t.me/AqmarTofan/1367",
+      "extraction_status": "complete",
+      "ocr_name": "محمد رافع سلامة",
+      "ocr_birth_date": "2001-09-06",
+      "ocr_martyrdom_date": "2024-07-13",
+      "created_at": "2026-06-20T09:54:36",
+      "updated_at": "2026-06-20T10:57:22",
+      "archive_org_id": null
+    },
+    {
+      "msg_id": 1365,
+      "name": "سعيد خالد عبد الرحمن",
+      "name_normalized": "سعيد خالد عبد الرحمن",
+      "birth_date": "1992-02-26",
+      "martyrdom_date": "2026-02-15",
+      "city": null,
+      "military_rank": "قائد فصيل",
+      "weapon": null,
+      "battalion": "كتيبة حطين",
+      "brigade": "لواء الوسطى",
+      "photo_path": "data/photos\\1365.jpg",
+      "frame_paths": "data/frames\\1365_28.jpg;data/frames\\1365_30.jpg;data/frames\\1365_32.jpg",
+      "featured_frame_path": null,
+      "posted_date": "2026-06-18T12:58:00",
+      "message_link": "https://t.me/AqmarTofan/1365",
+      "extraction_status": "complete",
+      "ocr_name": "سعيد خالد عبد الرحمن",
+      "ocr_birth_date": "1992-02-26",
+      "ocr_martyrdom_date": "ا 15",
+      "created_at": "2026-06-18T13:17:37",
+      "updated_at": "2026-06-20T10:52:03",
+      "archive_org_id": null
+    },
+    {
+      "msg_id": 1363,
+      "name": "عبد الكريم جمعة دويدار",
+      "name_normalized": "عبد الكريم جمعه دويدار",
+      "birth_date": "1991-01-14",
+      "martyrdom_date": "2023-10-07",
+      "city": null,
+      "military_rank": "قائد مجموعة",
+      "weapon": null,
+      "battalion": "كتيبة القدس",
+      "brigade": "لواء الوسطى",
+      "photo_path": "data/photos\\1363.jpg",
+      "frame_paths": "data/frames\\1363_28.jpg;data/frames\\1363_30.jpg;data/frames\\1363_32.jpg",
+      "featured_frame_path": null,
+      "posted_date": "2026-06-18T11:31:00",
+      "message_link": "https://t.me/AqmarTofan/1363",
+      "extraction_status": "partial_martyrdom",
+      "ocr_name": "عبد الكريم جمعة دويدار",
+      "ocr_birth_date": "1991-01-14",
+      "ocr_martyrdom_date": null,
+      "created_at": "2026-06-18T13:09:28",
+      "updated_at": "2026-06-20T10:52:03",
+      "archive_org_id": null
+    },
+    {
+      "msg_id": 1361,
+      "name": "طه يحيى جبريل",
+      "name_normalized": "طه يحيي جبريل",
+      "birth_date": "1995-02-21",
+      "martyrdom_date": "2023-10-07",
+      "city": null,
+      "military_rank": "مجاهد قسامي",
+      "weapon": null,
+      "battalion": "كتيبة القدس",
+      "brigade": "لواء الوسطى",
+      "photo_path": "data/photos\\1361.jpg",
+      "frame_paths": "data/frames\\1361_28.jpg;data/frames\\1361_30.jpg;data/frames\\1361_32.jpg",
+      "featured_frame_path": null,
+      "posted_date": "2026-06-18T09:21:00",
+      "message_link": "https://t.me/AqmarTofan/1361",
+      "extraction_status": "partial_martyrdom",
+      "ocr_name": "طه يحيى جبريل",
+      "ocr_birth_date": "1995-02-21",
+      "ocr_martyrdom_date": null,
+      "created_at": "2026-06-18T11:07:19",
+      "updated_at": "2026-06-20T10:54:14",
+      "archive_org_id": null
+    },
+    {
+      "msg_id": 1359,
+      "name": "عبد الله صالح الفقي",
+      "name_normalized": "عبد الله صالح الفقي",
+      "birth_date": "1986-02-04",
+      "martyrdom_date": "2024-07-16",
+      "city": null,
+      "military_rank": "قائد فصيل",
+      "weapon": null,
+      "battalion": "كتيبة القدس",
+      "brigade": "لواء الوسطى",
+      "photo_path": "data/photos\\1359.jpg",
+      "frame_paths": "data/frames\\1359_28.jpg;data/frames\\1359_30.jpg;data/frames\\1359_32.jpg",
+      "featured_frame_path": null,
+      "posted_date": "2026-06-18T07:16:00",
+      "message_link": "https://t.me/AqmarTofan/1359",
+      "extraction_status": "complete",
+      "ocr_name": "عبد الله صالح الفقي",
+      "ocr_birth_date": "1986-02-04",
+      "ocr_martyrdom_date": "2024-07-16",
+      "created_at": "2026-06-18T07:50:47",
+      "updated_at": "2026-06-20T10:52:03",
+      "archive_org_id": null
+    },
+    {
+      "msg_id": 1357,
+      "name": "أحمد فايز أبو حبل",
+      "name_normalized": "احمد فايز ابو حبل",
+      "birth_date": "1991-07-21",
+      "martyrdom_date": "2023-10-20",
+      "city": null,
+      "military_rank": "قائد فصيل",
+      "weapon": null,
+      "battalion": "كتيبة الشهيد سهيل زيادة",
+      "brigade": "لواء الشمال",
+      "photo_path": "data/photos\\1357.jpg",
+      "frame_paths": "data/frames\\1357_28.jpg;data/frames\\1357_30.jpg;data/frames\\1357_32.jpg",
+      "featured_frame_path": null,
+      "posted_date": "2026-06-17T19:33:00",
+      "message_link": "https://t.me/AqmarTofan/1357",
+      "extraction_status": "complete",
+      "ocr_name": "أحمد فايز أبو حبل",
+      "ocr_birth_date": "1991-07-21",
+      "ocr_martyrdom_date": "2023-10-20",
+      "created_at": "2026-06-17T20:32:09",
+      "updated_at": "2026-06-20T10:53:15",
+      "archive_org_id": null
+    },
+    {
+      "msg_id": 1355,
+      "name": "أحمد عماد الدين العمصي",
+      "name_normalized": "احمد عماد الدين العمصي",
+      "birth_date": "1988-11-22",
+      "martyrdom_date": "2023-12-24",
+      "city": null,
+      "military_rank": "قائد فصيل",
+      "weapon": null,
+      "battalion": "كتيبة الشهيد عبد الرؤوف نبهان",
+      "brigade": "لواء الشمال",
+      "photo_path": "data/photos\\1355.jpg",
+      "frame_paths": "data/frames\\1355_28.jpg;data/frames\\1355_30.jpg;data/frames\\1355_32.jpg",
+      "featured_frame_path": null,
+      "posted_date": "2026-06-17T18:41:00",
+      "message_link": "https://t.me/AqmarTofan/1355",
+      "extraction_status": "complete",
+      "ocr_name": "أحمد عماد الدين العمصي",
+      "ocr_birth_date": "1988-11-22",
+      "ocr_martyrdom_date": "2023-12-24",
+      "created_at": "2026-06-17T20:25:05",
+      "updated_at": "2026-06-20T10:53:15",
+      "archive_org_id": null
+    },
+    {
+      "msg_id": 1353,
+      "name": "نائل بسام البراوي",
+      "name_normalized": "نائل بسام البراوي",
+      "birth_date": "1988-06-25",
+      "martyrdom_date": "2026-03-15",
+      "city": null,
+      "military_rank": "قائد سرية",
+      "weapon": null,
+      "battalion": "كتيبة بيت لاهيا",
+      "brigade": "لواء الشمال",
+      "photo_path": "data/photos\\1353.jpg",
+      "frame_paths": "data/frames\\1353_28.jpg;data/frames\\1353_30.jpg;data/frames\\1353_32.jpg",
+      "featured_frame_path": null,
+      "posted_date": "2026-06-17T17:48:00",
+      "message_link": "https://t.me/AqmarTofan/1353",
+      "extraction_status": "complete",
+      "ocr_name": "نائل بسام البراوي",
+      "ocr_birth_date": "1988-06-25",
+      "ocr_martyrdom_date": "2026-03-15",
+      "created_at": "2026-06-17T19:01:02",
+      "updated_at": "2026-06-18T02:03:53",
+      "archive_org_id": null
+    },
+    {
+      "msg_id": 1351,
+      "name": "عبد الحي يوسف النجار",
+      "name_normalized": "عبد الحي يوسف النجار",
+      "birth_date": "2005-11-29",
+      "martyrdom_date": "2024-05-24",
+      "city": null,
+      "military_rank": "مجاهد قسامي",
+      "weapon": null,
+      "battalion": "كتيبة الشهيد فوزي أبو القرع",
+      "brigade": "لواء الشمال",
+      "photo_path": "data/photos\\1351.jpg",
+      "frame_paths": "data/frames\\1351_28.jpg;data/frames\\1351_30.jpg;data/frames\\1351_32.jpg",
+      "featured_frame_path": null,
+      "posted_date": "2026-06-17T15:41:00",
+      "message_link": "https://t.me/AqmarTofan/1351",
+      "extraction_status": "complete",
+      "ocr_name": "عبد الحي يوسف النجار",
+      "ocr_birth_date": "2005-11-29",
+      "ocr_martyrdom_date": "2024-05-24",
+      "created_at": "2026-06-17T18:51:02",
+      "updated_at": "2026-06-20T10:54:14",
+      "archive_org_id": null
+    },
+    {
+      "msg_id": 1349,
+      "name": "خالد إسماعيل أحمد مسعود",
+      "name_normalized": "خالد اسماعيل احمد مسعود",
+      "birth_date": "1992-11-16",
+      "martyrdom_date": "2023-12-17",
+      "city": null,
+      "military_rank": "قائد مجموعة",
+      "weapon": null,
+      "battalion": "كتيبة المدفعية",
+      "brigade": "لواء الشمال",
+      "photo_path": "data/photos\\1349.jpg",
+      "frame_paths": "data/frames\\1349_28.jpg;data/frames\\1349_30.jpg;data/frames\\1349_32.jpg",
+      "featured_frame_path": null,
+      "posted_date": "2026-06-17T12:59:00",
+      "message_link": "https://t.me/AqmarTofan/1349",
+      "extraction_status": "complete",
+      "ocr_name": "خالد إسماعيل مسعود",
+      "ocr_birth_date": "1992-11-16",
+      "ocr_martyrdom_date": "2023-12-17",
+      "created_at": "2026-06-17T13:07:05",
+      "updated_at": "2026-06-18T02:03:53",
+      "archive_org_id": null
+    },
     {
       "msg_id": 1347,
       "name": "محمد أكرم الكفارنة",
@@ -107,7 +467,7 @@
       "birth_date": "1988-06-08",
       "martyrdom_date": "2024-07-18",
       "city": null,
-      "military_rank": "نائب ٠ قائد فصيل",
+      "military_rank": "نائب قائد فصيل",
       "weapon": null,
       "battalion": "كتيبة الشهيد محمد أبو حرب",
       "brigade": "لواء رفح",
@@ -121,7 +481,7 @@
       "ocr_birth_date": "1988-08-06",
       "ocr_martyrdom_date": "2024-07-18",
       "created_at": "2026-06-16T19:05:46",
-      "updated_at": "2026-06-16T19:16:31",
+      "updated_at": "2026-06-20T10:54:27",
       "archive_org_id": null
     },
     {
@@ -179,7 +539,7 @@
       "birth_date": "1983-04-20",
       "martyrdom_date": "2024-05-12",
       "city": null,
-      "military_rank": "قائدفصيل",
+      "military_rank": "قائد فصيل",
       "weapon": null,
       "battalion": "كتيبة الشهيد محمد أبو شمالة",
       "brigade": "لواء رفح",
@@ -193,7 +553,7 @@
       "ocr_birth_date": "1983-04-20",
       "ocr_martyrdom_date": "2024-05-12",
       "created_at": "2026-06-16T14:13:15",
-      "updated_at": "2026-06-16T14:27:26",
+      "updated_at": "2026-06-20T10:53:04",
       "archive_org_id": null
     },
     {
@@ -205,7 +565,7 @@
       "city": null,
       "military_rank": "قائد فصيل",
       "weapon": null,
-      "battalion": "كتيبة الشهيد محمد الشمالي",
+      "battalion": "كتيبة الشهيد محمد أبو شمالة",
       "brigade": "لواء رفح",
       "photo_path": "data/photos\\1331.jpg",
       "frame_paths": "data/frames\\1331_28.jpg;data/frames\\1331_30.jpg;data/frames\\1331_32.jpg",
@@ -217,7 +577,7 @@
       "ocr_birth_date": "1985-04-14",
       "ocr_martyrdom_date": "2025-03-15",
       "created_at": "2026-06-16T13:07:20",
-      "updated_at": "2026-06-16T14:06:25",
+      "updated_at": "2026-06-20T10:56:52",
       "archive_org_id": null
     },
     {
@@ -227,7 +587,7 @@
       "birth_date": "1996-06-01",
       "martyrdom_date": "2024-10-18",
       "city": null,
-      "military_rank": "مجاهد قسا مي",
+      "military_rank": "مجاهد قسامي",
       "weapon": null,
       "battalion": "كتيبة الشهيد محمد أبو حرب",
       "brigade": "لواء رفح",
@@ -241,7 +601,7 @@
       "ocr_birth_date": "1996-01-06",
       "ocr_martyrdom_date": "2024-10-18",
       "created_at": "2026-06-16T11:06:44",
-      "updated_at": "2026-06-16T13:54:41",
+      "updated_at": "2026-06-20T10:54:14",
       "archive_org_id": null
     },
     {
@@ -299,7 +659,7 @@
       "birth_date": "1989-04-21",
       "martyrdom_date": "2023-10-07",
       "city": null,
-      "military_rank": "قائدفصيل",
+      "military_rank": "قائد فصيل",
       "weapon": null,
       "battalion": "كتيبة الزيتون",
       "brigade": "لواء غزة",
@@ -313,7 +673,7 @@
       "ocr_birth_date": "2104",
       "ocr_martyrdom_date": "2023-10-07",
       "created_at": "2026-06-15T22:48:32",
-      "updated_at": "2026-06-15T22:54:10",
+      "updated_at": "2026-06-20T10:53:04",
       "archive_org_id": null
     },
     {
@@ -347,7 +707,7 @@
       "birth_date": "1987-05-13",
       "martyrdom_date": "2024-12-27",
       "city": null,
-      "military_rank": "قائدفصيل",
+      "military_rank": "قائد فصيل",
       "weapon": null,
       "battalion": "كتيبة بدر الكبرى",
       "brigade": "لواء غزة",
@@ -361,7 +721,7 @@
       "ocr_birth_date": "1987-05-13",
       "ocr_martyrdom_date": "2024-12-27",
       "created_at": "2026-06-15T22:28:50",
-      "updated_at": "2026-06-15T22:54:35",
+      "updated_at": "2026-06-20T10:53:04",
       "archive_org_id": null
     },
     {
@@ -419,7 +779,7 @@
       "birth_date": "1987-08-27",
       "martyrdom_date": "2025-09-29",
       "city": null,
-      "military_rank": "قائدفصيل",
+      "military_rank": "قائد فصيل",
       "weapon": null,
       "battalion": "كتيبة الزيتون",
       "brigade": "لواء غزة",
@@ -433,7 +793,7 @@
       "ocr_birth_date": "1987-08-27",
       "ocr_martyrdom_date": "2025-09-29",
       "created_at": "2026-06-15T11:07:04",
-      "updated_at": "2026-06-15T22:24:20",
+      "updated_at": "2026-06-20T10:53:04",
       "archive_org_id": null
     },
     {
@@ -443,7 +803,7 @@
       "birth_date": "1989-02-01",
       "martyrdom_date": "2023-10-07",
       "city": null,
-      "military_rank": "قائد سريحة",
+      "military_rank": "قائد سرية",
       "weapon": null,
       "battalion": "كتيبة الزيتون",
       "brigade": "لواء غزة",
@@ -457,7 +817,7 @@
       "ocr_birth_date": "1989-02-01",
       "ocr_martyrdom_date": "2023-10-07",
       "created_at": "2026-06-15T09:10:42",
-      "updated_at": "2026-06-15T22:24:20",
+      "updated_at": "2026-06-20T10:52:15",
       "archive_org_id": null
     },
     {
@@ -467,7 +827,7 @@
       "birth_date": "1983-03-10",
       "martyrdom_date": "2023-11-10",
       "city": null,
-      "military_rank": "قائدفصيل",
+      "military_rank": "قائد فصيل",
       "weapon": null,
       "battalion": "كتيبة التفاح والدرج",
       "brigade": "لواء غزة",
@@ -481,7 +841,7 @@
       "ocr_birth_date": "1983-03-10",
       "ocr_martyrdom_date": "2023-11-10",
       "created_at": "2026-06-15T08:41:06",
-      "updated_at": "2026-06-15T22:24:20",
+      "updated_at": "2026-06-20T10:53:04",
       "archive_org_id": null
     },
     {
@@ -491,7 +851,7 @@
       "birth_date": "2002-02-16",
       "martyrdom_date": "2024-01-17",
       "city": null,
-      "military_rank": "مجاهد قسا امي",
+      "military_rank": "مجاهد قسامي",
       "weapon": null,
       "battalion": "كتيبة الصحابي حذيفة بن اليمان",
       "brigade": "لواء خانيونس",
@@ -505,7 +865,7 @@
       "ocr_birth_date": "2002-02-16",
       "ocr_martyrdom_date": "2024-01-17",
       "created_at": "2026-06-15T08:28:51",
-      "updated_at": "2026-06-15T22:47:25",
+      "updated_at": "2026-06-20T10:54:06",
       "archive_org_id": null
     },
     {
@@ -515,9 +875,9 @@
       "birth_date": "2000-04-09",
       "martyrdom_date": "2023-10-07",
       "city": null,
-      "military_rank": "مجاهد قسا مو",
+      "military_rank": "مجاهد قسامي",
       "weapon": null,
-      "battalion": "كتيبة أسامة بن زيد",
+      "battalion": "كتيبة الصحابي أسامة بن زيد",
       "brigade": "لواء خانيونس",
       "photo_path": "data/photos\\1305.jpg",
       "frame_paths": "data/frames\\1305_28.jpg;data/frames\\1305_30.jpg;data/frames\\1305_32.jpg",
@@ -529,7 +889,7 @@
       "ocr_birth_date": "2000-09-04",
       "ocr_martyrdom_date": "2023-07-10",
       "created_at": "2026-06-15T08:18:08",
-      "updated_at": "2026-06-15T22:47:25",
+      "updated_at": "2026-06-20T10:56:25",
       "archive_org_id": null
     },
     {
@@ -563,9 +923,9 @@
       "birth_date": "2003-01-12",
       "martyrdom_date": "2025-09-27",
       "city": null,
-      "military_rank": "مجاهد قسا مو",
+      "military_rank": "مجاهد قسامي",
       "weapon": null,
-      "battalion": "كتيبة أسامة بن زيد",
+      "battalion": "كتيبة الصحابي أسامة بن زيد",
       "brigade": "لواء خانيونس",
       "photo_path": "data/photos\\1301.jpg",
       "frame_paths": "data/frames\\1301_28.jpg;data/frames\\1301_30.jpg;data/frames\\1301_32.jpg",
@@ -577,7 +937,7 @@
       "ocr_birth_date": "2003-12-01",
       "ocr_martyrdom_date": "2025-09-27",
       "created_at": "2026-06-14T15:08:18",
-      "updated_at": "2026-06-15T22:47:25",
+      "updated_at": "2026-06-20T10:56:25",
       "archive_org_id": null
     },
     {
@@ -589,7 +949,7 @@
       "city": null,
       "military_rank": "مجاهد قسامي",
       "weapon": null,
-      "battalion": "كتيبة مصعب بن عمير",
+      "battalion": "كتيبة الصحابي مصعب بن عمير",
       "brigade": "لواء خانيونس",
       "photo_path": "data/photos\\1299.jpg",
       "frame_paths": "data/frames\\1299_28.jpg;data/frames\\1299_30.jpg;data/frames\\1299_32.jpg",
@@ -601,7 +961,7 @@
       "ocr_birth_date": "1997-07-21",
       "ocr_martyrdom_date": "2023-12-22",
       "created_at": "2026-06-14T12:59:50",
-      "updated_at": "2026-06-15T22:47:25",
+      "updated_at": "2026-06-20T10:57:22",
       "archive_org_id": null
     },
     {
@@ -613,7 +973,7 @@
       "city": null,
       "military_rank": "قائد مجموعة",
       "weapon": null,
-      "battalion": "كتيبة مصعب بن عمير",
+      "battalion": "كتيبة الصحابي مصعب بن عمير",
       "brigade": "لواء خانيونس",
       "photo_path": "data/photos\\1297.jpg",
       "frame_paths": "data/frames\\1297_28.jpg;data/frames\\1297_30.jpg;data/frames\\1297_32.jpg",
@@ -625,7 +985,7 @@
       "ocr_birth_date": "1999-09-05",
       "ocr_martyrdom_date": "2025-05-05",
       "created_at": "2026-06-14T12:52:27",
-      "updated_at": "2026-06-15T22:47:25",
+      "updated_at": "2026-06-20T10:57:22",
       "archive_org_id": null
     },
     {
@@ -649,7 +1009,7 @@
       "ocr_birth_date": "1994-04-28",
       "ocr_martyrdom_date": "2023-11-09",
       "created_at": "2026-06-14T11:07:56",
-      "updated_at": "2026-06-14T12:52:38",
+      "updated_at": "2026-06-20T10:54:06",
       "archive_org_id": null
     },
     {
@@ -673,7 +1033,7 @@
       "ocr_birth_date": "1999-04-21",
       "ocr_martyrdom_date": "2025-01-24",
       "created_at": "2026-06-14T10:06:13",
-      "updated_at": "2026-06-14T12:52:38",
+      "updated_at": "2026-06-20T10:54:06",
       "archive_org_id": null
     },
     {
@@ -793,7 +1153,7 @@
       "ocr_birth_date": "1995-03-22",
       "ocr_martyrdom_date": null,
       "created_at": "2026-06-14T09:14:24",
-      "updated_at": "2026-06-14T09:23:35",
+      "updated_at": "2026-06-20T10:54:06",
       "archive_org_id": null
     },
     {
@@ -841,7 +1201,7 @@
       "ocr_birth_date": "2002-06-17",
       "ocr_martyrdom_date": "2025-12-06",
       "created_at": "2026-06-13T09:05:32",
-      "updated_at": "2026-06-14T12:52:38",
+      "updated_at": "2026-06-20T10:54:06",
       "archive_org_id": null
     },
     {
@@ -1057,7 +1417,7 @@
       "ocr_birth_date": "2004-03-27",
       "ocr_martyrdom_date": "2023-11-01",
       "created_at": "2026-06-11T09:11:15",
-      "updated_at": "2026-06-14T12:52:38",
+      "updated_at": "2026-06-20T10:54:06",
       "archive_org_id": null
     },
     {
@@ -1177,7 +1537,7 @@
       "ocr_birth_date": "1989-03-10",
       "ocr_martyrdom_date": "2023-10-07",
       "created_at": "2026-06-10T15:11:07",
-      "updated_at": "2026-06-14T12:52:38",
+      "updated_at": "2026-06-20T10:54:06",
       "archive_org_id": null
     },
     {
@@ -1225,7 +1585,7 @@
       "ocr_birth_date": "1993-06-19",
       "ocr_martyrdom_date": "2023-10-07",
       "created_at": "2026-06-10T13:08:36",
-      "updated_at": "2026-06-14T12:52:38",
+      "updated_at": "2026-06-20T10:54:06",
       "archive_org_id": null
     },
     {
@@ -1489,7 +1849,7 @@
       "ocr_birth_date": "1999-07-12",
       "ocr_martyrdom_date": "2024-02-28",
       "created_at": "2026-06-09T10:03:53",
-      "updated_at": "2026-06-14T12:52:38",
+      "updated_at": "2026-06-20T10:54:06",
       "archive_org_id": null
     },
     {
@@ -1513,7 +1873,7 @@
       "ocr_birth_date": "2001-05-03",
       "ocr_martyrdom_date": "2023-12-04",
       "created_at": "2026-06-09T09:56:26",
-      "updated_at": "2026-06-14T12:52:38",
+      "updated_at": "2026-06-20T10:54:06",
       "archive_org_id": null
     },
     {
@@ -1633,7 +1993,7 @@
       "ocr_birth_date": "1982-12-23",
       "ocr_martyrdom_date": "2025-04-13",
       "created_at": "2026-06-09T09:16:43",
-      "updated_at": "2026-06-14T12:52:38",
+      "updated_at": "2026-06-20T10:54:06",
       "archive_org_id": null
     },
     {
@@ -1741,7 +2101,7 @@
       "city": null,
       "military_rank": "قائد مجموعة",
       "weapon": null,
-      "battalion": "كتيبة مصعب بن عمير",
+      "battalion": "كتيبة الصحابي مصعب بن عمير",
       "brigade": "لواء خانيونس",
       "photo_path": "data/photos\\1194.jpg",
       "frame_paths": "data/frames\\1194_28.jpg;data/frames\\1194_30.jpg;data/frames\\1194_32.jpg",
@@ -1753,7 +2113,7 @@
       "ocr_birth_date": "1999-08-20",
       "ocr_martyrdom_date": "2023-12-19",
       "created_at": "2026-06-08T07:28:35",
-      "updated_at": "2026-06-10T19:18:20",
+      "updated_at": "2026-06-20T10:57:22",
       "archive_org_id": null
     },
     {
@@ -1765,7 +2125,7 @@
       "city": null,
       "military_rank": "مجاهد قسامي",
       "weapon": null,
-      "battalion": "كتيبة مصعب بن عمير",
+      "battalion": "كتيبة الصحابي مصعب بن عمير",
       "brigade": "لواء خانيونس",
       "photo_path": "data/photos\\1192.jpg",
       "frame_paths": "data/frames\\1192_28.jpg;data/frames\\1192_30.jpg;data/frames\\1192_32.jpg",
@@ -1777,7 +2137,7 @@
       "ocr_birth_date": "1999-06-29",
       "ocr_martyrdom_date": "2023-10-07",
       "created_at": "2026-06-07T15:15:20",
-      "updated_at": "2026-06-14T12:52:38",
+      "updated_at": "2026-06-20T10:57:22",
       "archive_org_id": null
     },
     {
@@ -1825,7 +2185,7 @@
       "ocr_birth_date": "2000-09-21",
       "ocr_martyrdom_date": "م م 202 الشهيد القسامي المجا ٠",
       "created_at": "2026-06-07T11:10:39",
-      "updated_at": "2026-06-14T12:52:38",
+      "updated_at": "2026-06-20T10:54:06",
       "archive_org_id": null
     },
     {
@@ -1885,7 +2245,7 @@
       "city": null,
       "military_rank": "قائد فصيل",
       "weapon": null,
-      "battalion": "كتيبة مصعب بن عمير",
+      "battalion": "كتيبة الصحابي مصعب بن عمير",
       "brigade": "لواء خانيونس",
       "photo_path": "data/photos\\1180.jpg",
       "frame_paths": "data/frames\\1180_28.jpg;data/frames\\1180_30.jpg;data/frames\\1180_32.jpg",
@@ -1897,7 +2257,7 @@
       "ocr_birth_date": null,
       "ocr_martyrdom_date": "2024-02-14",
       "created_at": "2026-06-06T21:07:20",
-      "updated_at": "2026-06-10T19:18:20",
+      "updated_at": "2026-06-20T10:57:22",
       "archive_org_id": null
     },
     {
@@ -1909,7 +2269,7 @@
       "city": null,
       "military_rank": "قائد فصيل",
       "weapon": null,
-      "battalion": "كتيبة مصعب بن عمير",
+      "battalion": "كتيبة الصحابي مصعب بن عمير",
       "brigade": "لواء خانيونس",
       "photo_path": "data/photos\\1178.jpg",
       "frame_paths": "data/frames\\1178_28.jpg;data/frames\\1178_30.jpg;data/frames\\1178_32.jpg",
@@ -1921,7 +2281,7 @@
       "ocr_birth_date": "1996-10-28",
       "ocr_martyrdom_date": "2025-05-25",
       "created_at": "2026-06-06T20:05:45",
-      "updated_at": "2026-06-10T19:18:20",
+      "updated_at": "2026-06-20T10:57:22",
       "archive_org_id": null
     },
     {
@@ -2041,7 +2401,7 @@
       "ocr_birth_date": "2005-10-29",
       "ocr_martyrdom_date": "204",
       "created_at": "2026-06-06T19:20:18",
-      "updated_at": "2026-06-14T12:52:38",
+      "updated_at": "2026-06-20T10:54:06",
       "archive_org_id": null
     },
     {
@@ -2089,7 +2449,7 @@
       "ocr_birth_date": "2000-03-03",
       "ocr_martyrdom_date": "2024-09-21",
       "created_at": "2026-06-05T03:14:27",
-      "updated_at": "2026-06-14T12:52:38",
+      "updated_at": "2026-06-20T10:54:06",
       "archive_org_id": null
     },
     {
@@ -2185,7 +2545,7 @@
       "ocr_birth_date": "1980-07-24",
       "ocr_martyrdom_date": "2024-07-15",
       "created_at": "2026-06-04T15:07:06",
-      "updated_at": "2026-06-14T12:52:38",
+      "updated_at": "2026-06-20T10:54:06",
       "archive_org_id": null
     },
     {
@@ -2257,7 +2617,7 @@
       "ocr_birth_date": "1957-01-28",
       "ocr_martyrdom_date": "2023-10-15",
       "created_at": "2026-06-04T09:06:36",
-      "updated_at": "2026-06-14T12:52:38",
+      "updated_at": "2026-06-20T10:54:06",
       "archive_org_id": null
     },
     {
@@ -2269,7 +2629,7 @@
       "city": null,
       "military_rank": "قائد مجموعة",
       "weapon": null,
-      "battalion": "كتيبة مصعب بن عمير",
+      "battalion": "كتيبة الصحابي مصعب بن عمير",
       "brigade": "لواء خانيونس",
       "photo_path": "data/photos\\1148.jpg",
       "frame_paths": "data/frames\\1148_28.jpg;data/frames\\1148_30.jpg;data/frames\\1148_32.jpg",
@@ -2281,7 +2641,7 @@
       "ocr_birth_date": "1991-01-01",
       "ocr_martyrdom_date": "2023-07-10",
       "created_at": "2026-06-04T07:18:37",
-      "updated_at": "2026-06-10T19:18:20",
+      "updated_at": "2026-06-20T10:57:22",
       "archive_org_id": null
     },
     {
@@ -2461,7 +2821,7 @@
       "city": null,
       "military_rank": "مجاهد قسامي",
       "weapon": null,
-      "battalion": "كتيبة مصعب بن عمير",
+      "battalion": "كتيبة الصحابي مصعب بن عمير",
       "brigade": "لواء خانيونس",
       "photo_path": "data/photos\\1130.jpg",
       "frame_paths": "data/frames\\1130_28.jpg;data/frames\\1130_30.jpg;data/frames\\1130_32.jpg",
@@ -2473,7 +2833,7 @@
       "ocr_birth_date": "1999-04-20",
       "ocr_martyrdom_date": "2023-01-12",
       "created_at": "2026-06-02T21:38:08",
-      "updated_at": "2026-06-14T12:52:38",
+      "updated_at": "2026-06-20T10:57:22",
       "archive_org_id": null
     },
     {
@@ -2485,7 +2845,7 @@
       "city": null,
       "military_rank": "قائد فصيل",
       "weapon": null,
-      "battalion": "كتيبة مصعب بن عمير",
+      "battalion": "كتيبة الصحابي مصعب بن عمير",
       "brigade": "لواء خانيونس",
       "photo_path": "data/photos\\1128.jpg",
       "frame_paths": "data/frames\\1128_28.jpg;data/frames\\1128_30.jpg;data/frames\\1128_32.jpg",
@@ -2497,7 +2857,7 @@
       "ocr_birth_date": "1998-11-19",
       "ocr_martyrdom_date": "2023-10-07",
       "created_at": "2026-06-02T21:30:05",
-      "updated_at": "2026-06-14T12:51:27",
+      "updated_at": "2026-06-20T10:57:22",
       "archive_org_id": null
     },
     {
@@ -3001,7 +3361,7 @@
       "ocr_birth_date": "1985-11-06",
       "ocr_martyrdom_date": "2024-08-15",
       "created_at": "2026-05-30T21:13:41",
-      "updated_at": "2026-06-10T19:18:20",
+      "updated_at": "2026-06-20T10:54:06",
       "archive_org_id": null
     },
     {
@@ -3169,7 +3529,7 @@
       "ocr_birth_date": "1995-02-17",
       "ocr_martyrdom_date": "2024-07-03",
       "created_at": "2026-05-26T13:23:30",
-      "updated_at": "2026-06-10T20:39:47",
+      "updated_at": "2026-06-20T10:54:06",
       "archive_org_id": null
     },
     {
@@ -3361,7 +3721,7 @@
       "ocr_birth_date": "1992-01-28",
       "ocr_martyrdom_date": "2023-10-07",
       "created_at": "2026-05-25T05:13:56",
-      "updated_at": "2026-06-10T19:18:20",
+      "updated_at": "2026-06-20T10:54:06",
       "archive_org_id": null
     },
     {
@@ -3457,7 +3817,7 @@
       "ocr_birth_date": "2000-08-28",
       "ocr_martyrdom_date": "2023-10-07",
       "created_at": "2026-05-24T13:06:42",
-      "updated_at": "2026-06-10T20:39:47",
+      "updated_at": "2026-06-20T10:54:06",
       "archive_org_id": null
     },
     {
@@ -3481,7 +3841,7 @@
       "ocr_birth_date": "2002-09-25",
       "ocr_martyrdom_date": "2023-10-07",
       "created_at": "2026-05-24T10:25:07",
-      "updated_at": "2026-06-10T19:18:20",
+      "updated_at": "2026-06-20T10:54:06",
       "archive_org_id": null
     },
     {
@@ -3553,7 +3913,7 @@
       "ocr_birth_date": "2000-05-11",
       "ocr_martyrdom_date": "2025-10-30",
       "created_at": "2026-05-24T09:56:32",
-      "updated_at": "2026-06-10T19:05:38",
+      "updated_at": "2026-06-20T10:54:06",
       "archive_org_id": null
     },
     {
@@ -3745,7 +4105,7 @@
       "ocr_birth_date": "0509",
       "ocr_martyrdom_date": "2025-01-04",
       "created_at": "2026-05-22T16:30:59",
-      "updated_at": "2026-06-10T20:39:47",
+      "updated_at": "2026-06-20T10:54:06",
       "archive_org_id": null
     },
     {
@@ -3865,7 +4225,7 @@
       "ocr_birth_date": "2003-03-18",
       "ocr_martyrdom_date": "2023-10-29",
       "created_at": "2026-05-21T10:21:18",
-      "updated_at": "2026-06-10T19:05:38",
+      "updated_at": "2026-06-20T10:54:06",
       "archive_org_id": null
     },
     {
@@ -3985,7 +4345,7 @@
       "ocr_birth_date": "2001-01-29",
       "ocr_martyrdom_date": "2023-10-15",
       "created_at": "2026-05-20T14:37:45",
-      "updated_at": "2026-06-10T19:05:38",
+      "updated_at": "2026-06-20T10:54:06",
       "archive_org_id": null
     },
     {
@@ -4057,7 +4417,7 @@
       "ocr_birth_date": "1999-03-24",
       "ocr_martyrdom_date": "2023-10-07",
       "created_at": "2026-05-20T07:31:35",
-      "updated_at": "2026-06-10T20:39:47",
+      "updated_at": "2026-06-20T10:54:06",
       "archive_org_id": null
     },
     {
@@ -4321,7 +4681,7 @@
       "ocr_birth_date": "1993-07-07",
       "ocr_martyrdom_date": "2024-01-27",
       "created_at": "2026-05-18T18:50:03",
-      "updated_at": "2026-06-10T19:05:38",
+      "updated_at": "2026-06-20T10:54:06",
       "archive_org_id": null
     },
     {
@@ -4369,7 +4729,7 @@
       "ocr_birth_date": "1998-01-25",
       "ocr_martyrdom_date": "2023-12-29",
       "created_at": "2026-05-18T12:49:17",
-      "updated_at": "2026-06-10T20:39:47",
+      "updated_at": "2026-06-20T10:54:06",
       "archive_org_id": null
     },
     {
@@ -4393,7 +4753,7 @@
       "ocr_birth_date": "2001-09-03",
       "ocr_martyrdom_date": "2023-10-07",
       "created_at": "2026-05-18T12:41:01",
-      "updated_at": "2026-06-10T20:39:47",
+      "updated_at": "2026-06-20T10:54:06",
       "archive_org_id": null
     },
     {
@@ -4489,7 +4849,7 @@
       "ocr_birth_date": "1998-08-07",
       "ocr_martyrdom_date": "2025-10-03",
       "created_at": "2026-05-18T03:25:37",
-      "updated_at": "2026-06-14T12:13:28",
+      "updated_at": "2026-06-20T10:54:06",
       "archive_org_id": null
     },
     {
@@ -4801,7 +5161,7 @@
       "ocr_birth_date": "1999-01-08",
       "ocr_martyrdom_date": "2024-07-14",
       "created_at": "2026-05-17T13:22:12",
-      "updated_at": "2026-06-10T19:05:38",
+      "updated_at": "2026-06-20T10:54:06",
       "archive_org_id": null
     },
     {
@@ -4849,7 +5209,7 @@
       "ocr_birth_date": "1986-10-26",
       "ocr_martyrdom_date": "2023-10-29",
       "created_at": "2026-05-17T13:22:12",
-      "updated_at": "2026-06-10T19:05:38",
+      "updated_at": "2026-06-20T10:54:06",
       "archive_org_id": null
     },
     {
@@ -4945,7 +5305,7 @@
       "ocr_birth_date": "2004-04-07",
       "ocr_martyrdom_date": "2024-06-28",
       "created_at": "2026-05-17T13:22:12",
-      "updated_at": "2026-06-10T19:05:38",
+      "updated_at": "2026-06-20T10:54:06",
       "archive_org_id": null
     },
     {
@@ -4993,7 +5353,7 @@
       "ocr_birth_date": "2002-12-31",
       "ocr_martyrdom_date": "2024-09-19",
       "created_at": "2026-05-17T13:22:12",
-      "updated_at": "2026-06-10T19:05:38",
+      "updated_at": "2026-06-20T10:54:06",
       "archive_org_id": null
     },
     {
@@ -5017,7 +5377,7 @@
       "ocr_birth_date": "1978-05-20",
       "ocr_martyrdom_date": "2024-03-29",
       "created_at": "2026-05-17T13:22:12",
-      "updated_at": "2026-06-10T19:05:38",
+      "updated_at": "2026-06-20T10:54:06",
       "archive_org_id": null
     },
     {
@@ -5377,7 +5737,7 @@
       "ocr_birth_date": "1988-02-07",
       "ocr_martyrdom_date": "2024-02-03",
       "created_at": "2026-05-17T13:22:12",
-      "updated_at": "2026-06-10T18:52:09",
+      "updated_at": "2026-06-20T10:54:06",
       "archive_org_id": null
     },
     {
@@ -5425,7 +5785,7 @@
       "ocr_birth_date": "1990-05-10",
       "ocr_martyrdom_date": "2024-03-24",
       "created_at": "2026-05-17T13:22:12",
-      "updated_at": "2026-06-10T18:52:09",
+      "updated_at": "2026-06-20T10:54:06",
       "archive_org_id": null
     },
     {
@@ -5449,7 +5809,7 @@
       "ocr_birth_date": "1990-10-31",
       "ocr_martyrdom_date": "2025-05-15",
       "created_at": "2026-05-17T13:22:12",
-      "updated_at": "2026-06-10T18:52:09",
+      "updated_at": "2026-06-20T10:54:06",
       "archive_org_id": null
     },
     {
@@ -5545,7 +5905,7 @@
       "ocr_birth_date": "1995-11-22",
       "ocr_martyrdom_date": "2025-07-21",
       "created_at": "2026-05-17T13:22:12",
-      "updated_at": "2026-06-10T18:52:09",
+      "updated_at": "2026-06-20T10:54:06",
       "archive_org_id": null
     },
     {
@@ -5833,7 +6193,7 @@
       "ocr_birth_date": "2001-03-03",
       "ocr_martyrdom_date": "2023-12-20",
       "created_at": "2026-05-17T13:22:11",
-      "updated_at": "2026-06-10T18:52:09",
+      "updated_at": "2026-06-20T10:54:06",
       "archive_org_id": null
     },
     {
@@ -5857,7 +6217,7 @@
       "ocr_birth_date": "1998-04-10",
       "ocr_martyrdom_date": "2025-07-04",
       "created_at": "2026-05-17T13:22:11",
-      "updated_at": "2026-06-10T18:52:09",
+      "updated_at": "2026-06-20T10:54:06",
       "archive_org_id": null
     },
     {
@@ -5929,7 +6289,7 @@
       "ocr_birth_date": "2000-03-29",
       "ocr_martyrdom_date": "2023-10-15",
       "created_at": "2026-05-17T13:22:11",
-      "updated_at": "2026-06-10T18:52:09",
+      "updated_at": "2026-06-20T10:54:06",
       "archive_org_id": null
     },
     {
@@ -5953,7 +6313,7 @@
       "ocr_birth_date": "1989-09-14",
       "ocr_martyrdom_date": "2025-05-14",
       "created_at": "2026-05-17T13:22:11",
-      "updated_at": "2026-06-10T18:52:09",
+      "updated_at": "2026-06-20T10:54:06",
       "archive_org_id": null
     },
     {
@@ -6961,7 +7321,7 @@
       "ocr_birth_date": null,
       "ocr_martyrdom_date": "2023-10-23",
       "created_at": "2026-05-17T13:22:11",
-      "updated_at": "2026-06-10T13:33:57",
+      "updated_at": "2026-06-20T10:54:06",
       "archive_org_id": null
     },
     {
@@ -7033,7 +7393,7 @@
       "ocr_birth_date": "1993-11-03",
       "ocr_martyrdom_date": "2025-08-20",
       "created_at": "2026-05-17T13:22:11",
-      "updated_at": "2026-06-10T13:33:57",
+      "updated_at": "2026-06-20T10:54:06",
       "archive_org_id": null
     },
     {
@@ -7513,7 +7873,7 @@
       "ocr_birth_date": "1994-11-24",
       "ocr_martyrdom_date": "2024-11-27",
       "created_at": "2026-05-17T13:22:11",
-      "updated_at": "2026-06-10T13:21:57",
+      "updated_at": "2026-06-20T10:54:06",
       "archive_org_id": null
     },
     {
@@ -7561,7 +7921,7 @@
       "ocr_birth_date": "2002-03-11",
       "ocr_martyrdom_date": "2025-07-08",
       "created_at": "2026-05-17T13:22:11",
-      "updated_at": "2026-06-10T13:21:57",
+      "updated_at": "2026-06-20T10:54:06",
       "archive_org_id": null
     },
     {
@@ -7681,7 +8041,7 @@
       "ocr_birth_date": "2000-04-09",
       "ocr_martyrdom_date": "2024-10-22",
       "created_at": "2026-05-17T13:22:11",
-      "updated_at": "2026-06-10T13:21:57",
+      "updated_at": "2026-06-20T10:54:06",
       "archive_org_id": null
     },
     {
@@ -7873,7 +8233,7 @@
       "ocr_birth_date": "1999-09-11",
       "ocr_martyrdom_date": "2023-12-24",
       "created_at": "2026-05-17T13:22:11",
-      "updated_at": "2026-06-10T13:21:57",
+      "updated_at": "2026-06-20T10:54:06",
       "archive_org_id": null
     },
     {
@@ -7921,7 +8281,7 @@
       "ocr_birth_date": "1993-03-11",
       "ocr_martyrdom_date": "2024-03-04",
       "created_at": "2026-05-17T13:22:11",
-      "updated_at": "2026-06-10T13:21:57",
+      "updated_at": "2026-06-20T10:54:06",
       "archive_org_id": null
     },
     {
@@ -8041,7 +8401,7 @@
       "ocr_birth_date": "1989-07-18",
       "ocr_martyrdom_date": "2024-03-05",
       "created_at": "2026-05-17T13:22:11",
-      "updated_at": "2026-06-10T13:21:57",
+      "updated_at": "2026-06-20T10:54:06",
       "archive_org_id": null
     },
     {
@@ -8137,7 +8497,7 @@
       "ocr_birth_date": "1997-04-04",
       "ocr_martyrdom_date": "2023-11-15",
       "created_at": "2026-05-17T13:22:11",
-      "updated_at": "2026-06-10T13:21:57",
+      "updated_at": "2026-06-20T10:54:06",
       "archive_org_id": null
     },
     {
@@ -8281,7 +8641,7 @@
       "ocr_birth_date": "2002-02-14",
       "ocr_martyrdom_date": "2023-11-02",
       "created_at": "2026-05-17T13:22:11",
-      "updated_at": "2026-06-10T13:21:57",
+      "updated_at": "2026-06-20T10:54:06",
       "archive_org_id": null
     },
     {
@@ -8329,7 +8689,7 @@
       "ocr_birth_date": "2001-12-22",
       "ocr_martyrdom_date": "2024-06-20",
       "created_at": "2026-05-17T13:22:11",
-      "updated_at": "2026-06-10T13:21:57",
+      "updated_at": "2026-06-20T10:54:06",
       "archive_org_id": null
     },
     {
@@ -8473,7 +8833,7 @@
       "ocr_birth_date": "1996-11-15",
       "ocr_martyrdom_date": "2025-07-26",
       "created_at": "2026-05-17T13:22:11",
-      "updated_at": "2026-06-10T13:21:56",
+      "updated_at": "2026-06-20T10:54:06",
       "archive_org_id": null
     },
     {
@@ -8665,7 +9025,7 @@
       "ocr_birth_date": "2002-11-16",
       "ocr_martyrdom_date": "2025-10-10",
       "created_at": "2026-05-17T13:22:11",
-      "updated_at": "2026-06-10T13:21:56",
+      "updated_at": "2026-06-20T10:54:06",
       "archive_org_id": null
     },
     {
@@ -8857,7 +9217,7 @@
       "ocr_birth_date": "2000-12-09",
       "ocr_martyrdom_date": "2023-10-07",
       "created_at": "2026-05-17T13:22:11",
-      "updated_at": "2026-06-10T13:21:56",
+      "updated_at": "2026-06-20T10:54:06",
       "archive_org_id": null
     },
     {
@@ -9025,7 +9385,7 @@
       "ocr_birth_date": "2001-06-04",
       "ocr_martyrdom_date": "2023-10-07",
       "created_at": "2026-05-17T13:22:11",
-      "updated_at": "2026-06-10T13:10:19",
+      "updated_at": "2026-06-20T10:54:06",
       "archive_org_id": null
     },
     {
@@ -9097,7 +9457,7 @@
       "ocr_birth_date": "1989-07-18",
       "ocr_martyrdom_date": "2024-10-22",
       "created_at": "2026-05-17T13:22:11",
-      "updated_at": "2026-06-10T13:10:19",
+      "updated_at": "2026-06-20T10:54:06",
       "archive_org_id": null
     },
     {
@@ -9289,7 +9649,7 @@
       "ocr_birth_date": "1995-06-12",
       "ocr_martyrdom_date": "2025-10-01",
       "created_at": "2026-05-17T13:22:11",
-      "updated_at": "2026-06-10T13:10:19",
+      "updated_at": "2026-06-20T10:54:06",
       "archive_org_id": null
     },
     {
@@ -9361,7 +9721,7 @@
       "ocr_birth_date": "2001-12-12",
       "ocr_martyrdom_date": "2024-12-23",
       "created_at": "2026-05-17T13:22:11",
-      "updated_at": "2026-06-10T13:10:19",
+      "updated_at": "2026-06-20T10:54:06",
       "archive_org_id": null
     },
     {
@@ -9385,7 +9745,7 @@
       "ocr_birth_date": "1998-08-26",
       "ocr_martyrdom_date": "2025-07-01",
       "created_at": "2026-05-17T13:22:11",
-      "updated_at": "2026-06-10T13:10:19",
+      "updated_at": "2026-06-20T10:54:06",
       "archive_org_id": null
     },
     {
@@ -9697,7 +10057,7 @@
       "ocr_birth_date": "1998-09-30",
       "ocr_martyrdom_date": "2024-01-18",
       "created_at": "2026-05-17T13:22:11",
-      "updated_at": "2026-06-10T13:10:19",
+      "updated_at": "2026-06-20T10:54:06",
       "archive_org_id": null
     },
     {
@@ -9745,7 +10105,7 @@
       "ocr_birth_date": "1992-08-02",
       "ocr_martyrdom_date": "2024-05-23",
       "created_at": "2026-05-17T13:22:11",
-      "updated_at": "2026-06-10T13:10:19",
+      "updated_at": "2026-06-20T10:54:06",
       "archive_org_id": null
     },
     {
@@ -9961,7 +10321,7 @@
       "ocr_birth_date": "2000-08-20",
       "ocr_martyrdom_date": "2023-10-07",
       "created_at": "2026-05-17T13:22:11",
-      "updated_at": "2026-06-10T13:10:19",
+      "updated_at": "2026-06-20T10:54:06",
       "archive_org_id": null
     },
     {
@@ -10009,7 +10369,7 @@
       "ocr_birth_date": "1996-01-27",
       "ocr_martyrdom_date": "2024-04-21",
       "created_at": "2026-05-17T13:22:11",
-      "updated_at": "2026-06-10T13:10:19",
+      "updated_at": "2026-06-20T10:54:06",
       "archive_org_id": null
     },
     {
@@ -10081,7 +10441,7 @@
       "ocr_birth_date": "2002-09-03",
       "ocr_martyrdom_date": "2024-12-12",
       "created_at": "2026-05-17T13:22:11",
-      "updated_at": "2026-06-10T13:10:19",
+      "updated_at": "2026-06-20T10:54:06",
       "archive_org_id": null
     },
     {
@@ -10153,7 +10513,7 @@
       "ocr_birth_date": "2001-10-07",
       "ocr_martyrdom_date": "2024-12-30",
       "created_at": "2026-05-17T13:22:11",
-      "updated_at": "2026-06-10T13:10:19",
+      "updated_at": "2026-06-20T10:54:06",
       "archive_org_id": null
     },
     {
@@ -10225,7 +10585,7 @@
       "ocr_birth_date": "1986-08-13",
       "ocr_martyrdom_date": "2023-10-07",
       "created_at": "2026-05-17T13:22:11",
-      "updated_at": "2026-06-10T13:10:19",
+      "updated_at": "2026-06-20T10:54:06",
       "archive_org_id": null
     },
     {
@@ -10273,7 +10633,7 @@
       "ocr_birth_date": "2002-03-06",
       "ocr_martyrdom_date": "2024-01-23",
       "created_at": "2026-05-17T13:22:11",
-      "updated_at": "2026-06-10T13:10:19",
+      "updated_at": "2026-06-20T10:54:06",
       "archive_org_id": null
     },
     {
@@ -10321,7 +10681,7 @@
       "ocr_birth_date": "1997-03-05",
       "ocr_martyrdom_date": "2024-11-04",
       "created_at": "2026-05-17T13:22:11",
-      "updated_at": "2026-06-10T13:10:19",
+      "updated_at": "2026-06-20T10:54:06",
       "archive_org_id": null
     },
     {
@@ -10801,7 +11161,7 @@
       "ocr_birth_date": "1998-05-29",
       "ocr_martyrdom_date": null,
       "created_at": "2026-05-17T13:22:11",
-      "updated_at": "2026-06-10T12:58:58",
+      "updated_at": "2026-06-20T10:54:06",
       "archive_org_id": null
     },
     {
@@ -10993,7 +11353,7 @@
       "ocr_birth_date": "2003-03-30",
       "ocr_martyrdom_date": "2024-05-22",
       "created_at": "2026-05-17T13:22:11",
-      "updated_at": "2026-06-10T12:58:58",
+      "updated_at": "2026-06-20T10:54:06",
       "archive_org_id": null
     },
     {
@@ -11089,7 +11449,7 @@
       "ocr_birth_date": "1993-01-03",
       "ocr_martyrdom_date": "2025-05-29",
       "created_at": "2026-05-17T13:22:11",
-      "updated_at": "2026-06-10T12:58:58",
+      "updated_at": "2026-06-20T10:54:06",
       "archive_org_id": null
     },
     {
@@ -11161,7 +11521,7 @@
       "ocr_birth_date": "1997-09-11",
       "ocr_martyrdom_date": "2024-02-04",
       "created_at": "2026-05-17T13:22:11",
-      "updated_at": "2026-06-10T12:58:58",
+      "updated_at": "2026-06-20T10:54:06",
       "archive_org_id": null
     },
     {
@@ -11305,7 +11665,7 @@
       "ocr_birth_date": "1979-09-14",
       "ocr_martyrdom_date": "2024-02-14",
       "created_at": "2026-05-17T13:22:11",
-      "updated_at": "2026-06-10T12:58:58",
+      "updated_at": "2026-06-20T10:54:06",
       "archive_org_id": null
     },
     {
@@ -11353,7 +11713,7 @@
       "ocr_birth_date": "1996-12-24",
       "ocr_martyrdom_date": "2023-10-07",
       "created_at": "2026-05-17T13:22:11",
-      "updated_at": "2026-06-10T12:58:58",
+      "updated_at": "2026-06-20T10:54:06",
       "archive_org_id": null
     },
     {
@@ -11377,7 +11737,7 @@
       "ocr_birth_date": "2003-11-19",
       "ocr_martyrdom_date": null,
       "created_at": "2026-05-17T13:22:11",
-      "updated_at": "2026-06-10T12:58:58",
+      "updated_at": "2026-06-20T10:54:06",
       "archive_org_id": null
     },
     {
@@ -11425,7 +11785,7 @@
       "ocr_birth_date": "2000-12-14",
       "ocr_martyrdom_date": null,
       "created_at": "2026-05-17T13:22:11",
-      "updated_at": "2026-06-10T12:58:58",
+      "updated_at": "2026-06-20T10:54:06",
       "archive_org_id": null
     },
     {
@@ -11521,7 +11881,7 @@
       "ocr_birth_date": "2004-02-02",
       "ocr_martyrdom_date": "2023-10-07",
       "created_at": "2026-05-17T13:22:11",
-      "updated_at": "2026-06-10T21:30:53",
+      "updated_at": "2026-06-20T10:54:06",
       "archive_org_id": null
     },
     {
@@ -11641,7 +12001,7 @@
       "ocr_birth_date": "1992-07-04",
       "ocr_martyrdom_date": "2024-02-14",
       "created_at": "2026-05-17T13:22:11",
-      "updated_at": "2026-06-10T12:58:58",
+      "updated_at": "2026-06-20T10:54:06",
       "archive_org_id": null
     },
     {
@@ -11785,7 +12145,7 @@
       "ocr_birth_date": "1991-12-16",
       "ocr_martyrdom_date": "2023-10-07",
       "created_at": "2026-05-17T13:22:11",
-      "updated_at": "2026-06-10T12:45:13",
+      "updated_at": "2026-06-20T10:54:06",
       "archive_org_id": null
     },
     {
@@ -12073,7 +12433,7 @@
       "ocr_birth_date": "05 2000",
       "ocr_martyrdom_date": "2024-02-07",
       "created_at": "2026-05-17T13:22:11",
-      "updated_at": "2026-06-10T12:45:13",
+      "updated_at": "2026-06-20T10:54:06",
       "archive_org_id": null
     },
     {
@@ -12145,7 +12505,7 @@
       "ocr_birth_date": "1996-01-31",
       "ocr_martyrdom_date": "2023-12-07",
       "created_at": "2026-05-17T13:22:11",
-      "updated_at": "2026-06-10T12:45:13",
+      "updated_at": "2026-06-20T10:54:06",
       "archive_org_id": null
     },
     {
@@ -12217,7 +12577,7 @@
       "ocr_birth_date": "2002-10-02",
       "ocr_martyrdom_date": "2023-11-14",
       "created_at": "2026-05-17T13:22:11",
-      "updated_at": "2026-06-10T12:45:13",
+      "updated_at": "2026-06-20T10:54:06",
       "archive_org_id": null
     },
     {
@@ -12505,7 +12865,7 @@
       "ocr_birth_date": "2002-11-09",
       "ocr_martyrdom_date": "2024-06-25",
       "created_at": "2026-05-17T13:22:11",
-      "updated_at": "2026-06-10T12:45:13",
+      "updated_at": "2026-06-20T10:54:06",
       "archive_org_id": null
     },
     {
@@ -12625,7 +12985,7 @@
       "ocr_birth_date": "1995-12-13",
       "ocr_martyrdom_date": "2024-01-23",
       "created_at": "2026-05-17T13:22:11",
-      "updated_at": "2026-06-10T11:47:01",
+      "updated_at": "2026-06-20T10:54:06",
       "archive_org_id": null
     },
     {
@@ -12697,7 +13057,7 @@
       "ocr_birth_date": "1993-07-17",
       "ocr_martyrdom_date": "2023-10-07",
       "created_at": "2026-05-17T13:22:11",
-      "updated_at": "2026-06-10T11:47:01",
+      "updated_at": "2026-06-20T10:54:06",
       "archive_org_id": null
     },
     {
@@ -12793,7 +13153,7 @@
       "ocr_birth_date": "1991-06-23",
       "ocr_martyrdom_date": "0",
       "created_at": "2026-05-17T13:22:11",
-      "updated_at": "2026-06-10T11:47:01",
+      "updated_at": "2026-06-20T10:54:06",
       "archive_org_id": null
     },
     {
@@ -12817,7 +13177,7 @@
       "ocr_birth_date": "1984-03-22",
       "ocr_martyrdom_date": "2024-03-15",
       "created_at": "2026-05-17T13:22:11",
-      "updated_at": "2026-06-10T11:47:01",
+      "updated_at": "2026-06-20T10:54:06",
       "archive_org_id": null
     },
     {
@@ -12985,7 +13345,7 @@
       "ocr_birth_date": "2003-02-04",
       "ocr_martyrdom_date": null,
       "created_at": "2026-05-17T13:22:11",
-      "updated_at": "2026-06-10T11:47:01",
+      "updated_at": "2026-06-20T10:54:06",
       "archive_org_id": null
     },
     {
@@ -13081,7 +13441,7 @@
       "ocr_birth_date": "2003-12-18",
       "ocr_martyrdom_date": "2023-11-15",
       "created_at": "2026-05-17T13:22:11",
-      "updated_at": "2026-06-10T11:47:01",
+      "updated_at": "2026-06-20T10:54:06",
       "archive_org_id": null
     },
     {
@@ -13153,7 +13513,7 @@
       "ocr_birth_date": "2005-02-23",
       "ocr_martyrdom_date": "2024-09-25",
       "created_at": "2026-05-17T13:22:11",
-      "updated_at": "2026-06-10T11:47:01",
+      "updated_at": "2026-06-20T10:54:06",
       "archive_org_id": null
     },
     {
@@ -13225,7 +13585,7 @@
       "ocr_birth_date": "1993-08-03",
       "ocr_martyrdom_date": "2025-05-18",
       "created_at": "2026-05-17T13:22:11",
-      "updated_at": "2026-06-10T11:47:01",
+      "updated_at": "2026-06-20T10:54:06",
       "archive_org_id": null
     },
     {
@@ -13537,7 +13897,7 @@
       "ocr_birth_date": "1999-04-26",
       "ocr_martyrdom_date": "2024-12-15",
       "created_at": "2026-05-17T13:22:11",
-      "updated_at": "2026-06-10T11:47:01",
+      "updated_at": "2026-06-20T10:54:06",
       "archive_org_id": null
     },
     {
@@ -13753,7 +14113,7 @@
       "ocr_birth_date": "1994-03-10",
       "ocr_martyrdom_date": "2024-03-30",
       "created_at": "2026-05-17T13:22:11",
-      "updated_at": "2026-06-10T21:30:03",
+      "updated_at": "2026-06-20T10:54:06",
       "archive_org_id": null
     },
     {
@@ -13777,7 +14137,7 @@
       "ocr_birth_date": "1999-04-27",
       "ocr_martyrdom_date": "2023-12-26",
       "created_at": "2026-05-17T13:22:11",
-      "updated_at": "2026-06-10T11:47:01",
+      "updated_at": "2026-06-20T10:54:06",
       "archive_org_id": null
     },
     {
@@ -13801,7 +14161,7 @@
       "ocr_birth_date": "1996-02-15",
       "ocr_martyrdom_date": null,
       "created_at": "2026-05-17T13:22:11",
-      "updated_at": "2026-06-10T11:47:01",
+      "updated_at": "2026-06-20T10:54:06",
       "archive_org_id": null
     },
     {
@@ -13873,7 +14233,7 @@
       "ocr_birth_date": "1993-11-30",
       "ocr_martyrdom_date": "2023-10-07",
       "created_at": "2026-05-17T13:22:11",
-      "updated_at": "2026-06-10T20:39:47",
+      "updated_at": "2026-06-20T10:54:06",
       "archive_org_id": null
     },
     {
@@ -13945,7 +14305,7 @@
       "ocr_birth_date": "2001-01-21",
       "ocr_martyrdom_date": "2023-12-06",
       "created_at": "2026-05-17T13:22:11",
-      "updated_at": "2026-06-10T20:39:47",
+      "updated_at": "2026-06-20T10:54:06",
       "archive_org_id": null
     },
     {
@@ -13993,7 +14353,7 @@
       "ocr_birth_date": "1992-02-06",
       "ocr_martyrdom_date": null,
       "created_at": "2026-05-17T13:22:11",
-      "updated_at": "2026-06-14T12:21:15",
+      "updated_at": "2026-06-20T10:54:06",
       "archive_org_id": null
     },
     {
@@ -14065,7 +14425,7 @@
       "ocr_birth_date": "1999-05-29",
       "ocr_martyrdom_date": "2024-07-03",
       "created_at": "2026-05-17T13:22:11",
-      "updated_at": "2026-06-10T20:39:47",
+      "updated_at": "2026-06-20T10:54:06",
       "archive_org_id": null
     },
     {
@@ -14233,7 +14593,7 @@
       "ocr_birth_date": "1996-12-06",
       "ocr_martyrdom_date": "2023-10-30",
       "created_at": "2026-05-17T13:22:11",
-      "updated_at": "2026-06-10T20:39:47",
+      "updated_at": "2026-06-20T10:54:06",
       "archive_org_id": null
     },
     {
@@ -14257,7 +14617,7 @@
       "ocr_birth_date": "1996-05-02",
       "ocr_martyrdom_date": "2024-01-15",
       "created_at": "2026-05-17T13:22:11",
-      "updated_at": "2026-06-10T20:39:47",
+      "updated_at": "2026-06-20T10:54:06",
       "archive_org_id": null
     },
     {
@@ -14305,7 +14665,7 @@
       "ocr_birth_date": "1996-07-05",
       "ocr_martyrdom_date": "2023-10-07",
       "created_at": "2026-05-17T13:22:11",
-      "updated_at": "2026-06-10T20:39:47",
+      "updated_at": "2026-06-20T10:54:06",
       "archive_org_id": null
     },
     {
@@ -14401,7 +14761,7 @@
       "ocr_birth_date": "1995-02-12",
       "ocr_martyrdom_date": "2023-12-15",
       "created_at": "2026-05-17T13:22:11",
-      "updated_at": "2026-06-10T20:39:47",
+      "updated_at": "2026-06-20T10:54:06",
       "archive_org_id": null
     },
     {
@@ -14641,7 +15001,7 @@
       "ocr_birth_date": "1993-03-09",
       "ocr_martyrdom_date": "2023-06-15",
       "created_at": "2026-05-17T13:22:11",
-      "updated_at": "2026-06-10T20:39:47",
+      "updated_at": "2026-06-20T10:54:06",
       "archive_org_id": null
     },
     {
