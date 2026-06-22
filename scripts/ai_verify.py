@@ -48,6 +48,7 @@ from src.sqlserver_client import (
     mark_ai_verified,
     mark_ai_note,
     NORMALIZE_COLUMNS,
+    ALLOWED_NORMALIZE_COLUMNS,
     get_distinct_field_values,
     bulk_update_field_value,
 )
@@ -116,9 +117,10 @@ def cmd_apply(args) -> int:
 
 def cmd_normalize_fields(args) -> int:
     columns = args.columns or list(NORMALIZE_COLUMNS)
-    bad = [c for c in columns if c not in NORMALIZE_COLUMNS]
+    bad = [c for c in columns if c not in ALLOWED_NORMALIZE_COLUMNS]
     if bad:
-        print(f"error: not normalizable: {bad}; allowed: {list(NORMALIZE_COLUMNS)}")
+        print(f"error: not normalizable: {bad}; "
+              f"allowed: {list(ALLOWED_NORMALIZE_COLUMNS)}")
         return 2
 
     conn = make_conn(load_config())
@@ -194,7 +196,8 @@ def main() -> int:
     )
     sn.add_argument(
         "--columns", nargs="+", metavar="COL",
-        help=f"columns to process (default: all of {list(NORMALIZE_COLUMNS)})",
+        help=f"columns to process (default: {list(NORMALIZE_COLUMNS)}; "
+             f"'name' is opt-in and allowed too)",
     )
     sn.add_argument("--json", help="write the full merge plan to this file")
     sn.add_argument(

@@ -26,3 +26,5 @@ docs/superpowers/specs/2026-06-22-field-spelling-normalizer-design.md
 src/field_normalizer.py
 src/sqlserver_client.py
 tests/test_field_normalizer.py
+scripts/ai_verify.py
+src/sqlserver_client.py

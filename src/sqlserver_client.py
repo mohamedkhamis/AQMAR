@@ -289,14 +289,19 @@ def get_ai_pending(conn, limit: int = 50) -> list:
 # column against this whitelist before interpolating it — the injection guard.
 # =============================================================================
 
+# Default columns processed when --columns is omitted (the safe metadata set).
 NORMALIZE_COLUMNS = ("military_rank", "weapon", "battalion", "brigade")
+# Full whitelist of columns the normalizer is *allowed* to touch. `name` is
+# opt-in only (pass --columns name) — it's higher-risk, so it never runs by
+# default, but the same conservative same-letters rule applies when asked.
+ALLOWED_NORMALIZE_COLUMNS = NORMALIZE_COLUMNS + ("name",)
 
 
 def _check_normalize_column(column: str) -> str:
-    if column not in NORMALIZE_COLUMNS:
+    if column not in ALLOWED_NORMALIZE_COLUMNS:
         raise ValueError(
             f"column {column!r} is not normalizable; "
-            f"allowed: {NORMALIZE_COLUMNS}"
+            f"allowed: {ALLOWED_NORMALIZE_COLUMNS}"
         )
     return column
 
