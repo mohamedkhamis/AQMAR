@@ -19,9 +19,18 @@ Two subcommands:
         ]}
       Dates are strict yyyy-mm-dd; anything else aborts with an error.
 
+  normalize-fields [--columns ...] [--json plan.json] [--apply]
+      Merge near-duplicate spellings in the metadata columns
+      (military_rank / weapon / battalion / brigade). Values that are
+      identical after stripping tashkeel/tatweel/punctuation and collapsing
+      whitespace are merged to the most-frequent spelling; letters are never
+      changed. Dry-run by default — pass --apply to write.
+
 Usage:
   .venv\\Scripts\\python.exe scripts\\ai_verify.py pending --limit 50 --json data\\ai_batches\\pending_001.json
   .venv\\Scripts\\python.exe scripts\\ai_verify.py apply data\\ai_batches\\results_001.json
+  .venv\\Scripts\\python.exe scripts\\ai_verify.py normalize-fields
+  .venv\\Scripts\\python.exe scripts\\ai_verify.py normalize-fields --apply
 """
 import argparse
 import io
@@ -38,7 +47,11 @@ from src.sqlserver_client import (
     get_ai_pending,
     mark_ai_verified,
     mark_ai_note,
+    NORMALIZE_COLUMNS,
+    get_distinct_field_values,
+    bulk_update_field_value,
 )
+from src.field_normalizer import build_merge_plan
 
 
 def cmd_pending(args) -> int:
@@ -101,6 +114,66 @@ def cmd_apply(args) -> int:
     return 0
 
 
+def cmd_normalize_fields(args) -> int:
+    columns = args.columns or list(NORMALIZE_COLUMNS)
+    bad = [c for c in columns if c not in NORMALIZE_COLUMNS]
+    if bad:
+        print(f"error: not normalizable: {bad}; allowed: {list(NORMALIZE_COLUMNS)}")
+        return 2
+
+    conn = make_conn(load_config())
+    plan_out = {}
+    grand_groups = grand_rows = 0
+    try:
+        for col in columns:
+            value_counts = get_distinct_field_values(conn, col)
+            plan = build_merge_plan(value_counts)
+            plan_out[col] = [
+                {
+                    "canonical": g.canonical,
+                    "canonical_count": g.canonical_count,
+                    "variants": [{"value": v, "count": c} for v, c in g.variants],
+                    "rows_changed": g.rows_changed,
+                }
+                for g in plan
+            ]
+
+            print(f"\n=== {col} === ({len(value_counts)} distinct values)")
+            if not plan:
+                print("  (nothing to merge)")
+                continue
+            col_rows = 0
+            for g in plan:
+                print(f'  "{g.canonical}" ({g.canonical_count} rows)')
+                for v, c in g.variants:
+                    print(f'     <- "{v}" ({c})')
+                    if args.apply:
+                        n = bulk_update_field_value(conn, col, v, g.canonical)
+                        if n != c:
+                            print(f"        [warn] updated {n} rows, expected {c}")
+                col_rows += g.rows_changed
+            print(f"  {len(plan)} group(s), {col_rows} row(s) "
+                  f"{'changed' if args.apply else 'would change'}")
+            grand_groups += len(plan)
+            grand_rows += col_rows
+    finally:
+        conn.close()
+
+    if args.json:
+        Path(args.json).parent.mkdir(parents=True, exist_ok=True)
+        Path(args.json).write_text(
+            json.dumps(plan_out, ensure_ascii=False, indent=2), encoding="utf-8"
+        )
+        print(f"\nPlan written -> {args.json}")
+
+    verb = "merged" if args.apply else "would merge"
+    print(f"\nTotal: {grand_groups} group(s), {grand_rows} row(s) {verb} "
+          f"across {len(columns)} column(s).")
+    if not args.apply and grand_groups:
+        print("[dry-run -- pass --apply to write]")
+    return 0
+
+
 def main() -> int:
     p = argparse.ArgumentParser(description=__doc__)
     sub = p.add_subparsers(dest="cmd", required=True)
@@ -113,6 +186,22 @@ def main() -> int:
     sa = sub.add_parser("apply", help="apply a results JSON file")
     sa.add_argument("results")
     sa.set_defaults(fn=cmd_apply)
+
+    sn = sub.add_parser(
+        "normalize-fields",
+        help="merge near-duplicate spellings in metadata columns "
+             "(military_rank/weapon/battalion/brigade)",
+    )
+    sn.add_argument(
+        "--columns", nargs="+", metavar="COL",
+        help=f"columns to process (default: all of {list(NORMALIZE_COLUMNS)})",
+    )
+    sn.add_argument("--json", help="write the full merge plan to this file")
+    sn.add_argument(
+        "--apply", action="store_true",
+        help="execute the merges (default is a dry-run preview)",
+    )
+    sn.set_defaults(fn=cmd_normalize_fields)
 
     args = p.parse_args()
     return args.fn(args)

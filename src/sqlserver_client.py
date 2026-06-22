@@ -282,6 +282,54 @@ def get_ai_pending(conn, limit: int = 50) -> list:
 
 
 # =============================================================================
+# Field-spelling normalizer (2026-06-22)
+#
+# Bulk-merge near-duplicate free-text values in the metadata columns. Column
+# names can't be parameterized in SQL, so every entry point validates the
+# column against this whitelist before interpolating it — the injection guard.
+# =============================================================================
+
+NORMALIZE_COLUMNS = ("military_rank", "weapon", "battalion", "brigade")
+
+
+def _check_normalize_column(column: str) -> str:
+    if column not in NORMALIZE_COLUMNS:
+        raise ValueError(
+            f"column {column!r} is not normalizable; "
+            f"allowed: {NORMALIZE_COLUMNS}"
+        )
+    return column
+
+
+def get_distinct_field_values(conn, column: str) -> list:
+    """Distinct non-blank values of one whitelisted column with row counts,
+    as a list of (value, count) tuples. NULL and whitespace-only rows are
+    excluded — they're not spellings to merge."""
+    col = _check_normalize_column(column)
+    cur = conn.cursor()
+    cur.execute(
+        f"SELECT {col}, COUNT(*) FROM dbo.martyrs "
+        f"WHERE {col} IS NOT NULL AND LTRIM(RTRIM({col})) <> '' "
+        f"GROUP BY {col}"
+    )
+    return [(row[0], row[1]) for row in cur.fetchall()]
+
+
+def bulk_update_field_value(conn, column: str, old_value: str, new_value: str) -> int:
+    """Rewrite every row whose whitelisted column equals old_value to
+    new_value (exact match, parameterized). Returns rows affected."""
+    col = _check_normalize_column(column)
+    cur = conn.cursor()
+    cur.execute(
+        f"UPDATE dbo.martyrs SET {col} = ? WHERE {col} = ?",
+        new_value, old_value,
+    )
+    n = cur.rowcount
+    conn.commit()
+    return n
+
+
+# =============================================================================
 # Read queries
 # =============================================================================
 
