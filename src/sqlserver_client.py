@@ -264,6 +264,49 @@ def mark_ai_note(conn, msg_id: int, note: str) -> None:
     conn.commit()
 
 
+def parse_frame_paths(raw: str) -> list:
+    """Split a stored frame_paths value (';'-joined) into a normalized list of
+    forward-slash relative paths, dropping blanks. Shared by the pending dump
+    and the featured-frame membership check so their normalization can't drift.
+    """
+    return [p.strip().replace("\\", "/") for p in (raw or "").split(";") if p.strip()]
+
+
+def set_featured_frame(conn, msg_id: int, path: str) -> bool:
+    """Record the AI-picked cover frame for a row (2026-07-02).
+
+    `path` must be one of that row's frame_paths — raises ValueError otherwise
+    (a bad path means the results file is wrong; cmd_apply catches this and
+    demotes it to a non-fatal [FRAME-SKIP]). Writes ONLY featured_frame_path,
+    guarded on NULL so an admin's hand-picked cover is never clobbered. Returns
+    True if it wrote, False if a cover already existed. Never touches the human
+    verification, ai_verified, ocr_*, or date columns.
+    """
+    want = (path or "").strip().replace("\\", "/")
+    if not want:
+        raise ValueError(f"msg {msg_id}: empty featured frame path")
+
+    cur = conn.cursor()
+    cur.execute("SELECT frame_paths FROM dbo.martyrs WHERE msg_id = ?", msg_id)
+    row = cur.fetchone()
+    frames = set(parse_frame_paths(row[0] if row else None))
+    if want not in frames:
+        raise ValueError(
+            f"msg {msg_id}: featured frame {want!r} is not one of the row's "
+            f"frames: {sorted(frames)}"
+        )
+
+    cur.execute(
+        "UPDATE dbo.martyrs SET featured_frame_path = ? "
+        "WHERE msg_id = ? "
+        "AND (featured_frame_path IS NULL OR LTRIM(RTRIM(featured_frame_path)) = '')",
+        want, msg_id,
+    )
+    updated = cur.rowcount == 1
+    conn.commit()
+    return updated
+
+
 def get_ai_pending(conn, limit: int = 50) -> list:
     """Next rows for the AI batch: human-unverified AND not yet AI-checked.
     msg_id ASC keeps batches deterministic and resumable (the flag itself is

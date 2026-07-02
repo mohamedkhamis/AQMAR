@@ -15,6 +15,8 @@ from src.sqlserver_client import (
     mark_rejected,
     mark_ai_verified,
     mark_ai_note,
+    set_featured_frame,
+    parse_frame_paths,
     get_ai_pending,
     get_by_status,
     get_by_msg_id,
@@ -294,6 +296,90 @@ def test_get_ai_pending_filters_unverified_not_yet_ai_checked():
     assert "ai_verified = 0" in sql
     assert "ORDER BY msg_id" in sql
     assert "TOP (50)" in sql
+
+
+# =============================================================================
+# Featured cover-frame selection (2026-07-02)
+# =============================================================================
+
+def test_parse_frame_paths_splits_normalizes_and_drops_blanks():
+    """Shared parser: ';'-split, backslash->forward, strip, drop empties,
+    order preserved. None/empty -> []."""
+    assert parse_frame_paths(
+        "data/frames\\1_28.jpg;data/frames\\1_30.jpg"
+    ) == ["data/frames/1_28.jpg", "data/frames/1_30.jpg"]
+    assert parse_frame_paths("  a ; ; b  ") == ["a", "b"]
+    assert parse_frame_paths(None) == []
+    assert parse_frame_paths("") == []
+
+
+def _frames_conn(frame_paths, rowcount=1):
+    """A mock conn whose cursor returns `frame_paths` from the validation SELECT
+    and reports `rowcount` from the UPDATE."""
+    mock_cur = MagicMock()
+    mock_cur.fetchone.return_value = (frame_paths,)
+    mock_cur.rowcount = rowcount
+    return MagicMock(cursor=MagicMock(return_value=mock_cur)), mock_cur
+
+
+def test_set_featured_frame_writes_only_featured_when_null():
+    """Valid frame + row has no cover yet -> UPDATE sets featured_frame_path,
+    guarded on NULL, and touches nothing else. Returns True."""
+    conn, cur = _frames_conn(
+        "data/frames/1600_28.jpg;data/frames/1600_30.jpg;data/frames/1600_32.jpg"
+    )
+    result = set_featured_frame(conn, msg_id=1600, path="data/frames/1600_28.jpg")
+
+    assert result is True
+    update_sql = cur.execute.call_args_list[-1].args[0]
+    assert "featured_frame_path = ?" in update_sql
+    assert "WHERE msg_id = ?" in update_sql
+    # NULL-guard so an admin hand-pick is never clobbered
+    assert "featured_frame_path IS NULL" in update_sql
+    # AI/human/date columns must never be touched here
+    assert "verification_status" not in update_sql
+    assert "ai_verified" not in update_sql
+    assert "birth_date" not in update_sql
+    assert "martyrdom_date" not in update_sql
+    conn.commit.assert_called_once()
+
+
+def test_set_featured_frame_preserves_existing():
+    """Row already has a cover -> NULL-guarded UPDATE matches 0 rows -> False."""
+    conn, cur = _frames_conn(
+        "data/frames/1600_28.jpg;data/frames/1600_30.jpg", rowcount=0
+    )
+    assert set_featured_frame(conn, msg_id=1600, path="data/frames/1600_30.jpg") is False
+
+
+def test_set_featured_frame_normalizes_backslashes():
+    """frame_paths stored with backslashes still matches a forward-slash pick,
+    and the value written is normalized to forward slashes."""
+    conn, cur = _frames_conn(
+        "data/frames\\1600_28.jpg;data/frames\\1600_30.jpg;data/frames\\1600_32.jpg"
+    )
+    assert set_featured_frame(conn, msg_id=1600, path="data/frames/1600_30.jpg") is True
+    written = cur.execute.call_args_list[-1].args[1]
+    assert written == "data/frames/1600_30.jpg"
+
+
+def test_set_featured_frame_rejects_path_not_in_frames():
+    """A pick that isn't one of the row's frames means the results file is wrong."""
+    import pytest
+    conn, cur = _frames_conn(
+        "data/frames/1600_28.jpg;data/frames/1600_30.jpg;data/frames/1600_32.jpg"
+    )
+    with pytest.raises(ValueError):
+        set_featured_frame(conn, msg_id=1600, path="data/frames/1600_99.jpg")
+
+
+def test_set_featured_frame_rejects_when_no_frames():
+    """No frames on the row -> nothing valid to select -> raise."""
+    import pytest
+    for empty in (None, "", "   "):
+        conn, cur = _frames_conn(empty)
+        with pytest.raises(ValueError):
+            set_featured_frame(conn, msg_id=1600, path="data/frames/1600_28.jpg")
 
 
 # =============================================================================

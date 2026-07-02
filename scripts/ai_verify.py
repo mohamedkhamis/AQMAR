@@ -6,7 +6,13 @@ Two subcommands:
   pending --limit N [--json out.json]
       Dump the next N rows needing AI verification (human-unverified AND
       ai_verified=0), with current dates + raw OCR text + frame paths.
-      Claude reads the frames and writes a results file.
+      Claude reads the frames and writes a results file. While reading the
+      frames to check the dates, also pick each row's best "cover" frame: the
+      sharpest, fully-rendered one where the whole card (portrait + rank + both
+      dates + name + battalion line) is clean and unobstructed. Reject the
+      transition frames (faded / motion-blurred / overlaid with the animated
+      "أقمار الطوفان" title). If several are equally clean, pick the smallest
+      suffix. Put it in the result's featured_frame_path (see below).
 
   apply results.json
       Apply a results file. Shape:
@@ -15,9 +21,15 @@ Two subcommands:
            "birth_date": "1991-01-08",      # present => fix this column
            "martyrdom_date": null,           # null/absent => keep DB value
            "verified": true,                 # false => note-only (mark_ai_note)
+           "featured_frame_path":            # optional => set the cover frame
+             "data/frames/23_28.jpg",        #   (must be one of the row's frames)
            "note": "fixed swap: ..."}
         ]}
       Dates are strict yyyy-mm-dd; anything else aborts with an error.
+      featured_frame_path is optional and independent of `verified`: it is
+      written NULL-guarded (won't overwrite an admin's hand-picked cover) and
+      touches only that column. A path that isn't one of the row's frames is a
+      non-fatal [FRAME-SKIP] warning — it won't abort the date batch.
 
   normalize-fields [--columns ...] [--json plan.json] [--apply]
       Merge near-duplicate spellings in the metadata columns
@@ -47,6 +59,8 @@ from src.sqlserver_client import (
     get_ai_pending,
     mark_ai_verified,
     mark_ai_note,
+    set_featured_frame,
+    parse_frame_paths,
     NORMALIZE_COLUMNS,
     ALLOWED_NORMALIZE_COLUMNS,
     get_distinct_field_values,
@@ -63,10 +77,7 @@ def cmd_pending(args) -> int:
         conn.close()
     # Split the semicolon list so the reader doesn't have to re-parse it.
     for r in rows:
-        r["frame_paths"] = [
-            p.strip().replace("\\", "/")
-            for p in (r.get("frame_paths") or "").split(";") if p.strip()
-        ]
+        r["frame_paths"] = parse_frame_paths(r.get("frame_paths"))
     payload = {"count": len(rows), "rows": rows}
     text = json.dumps(payload, ensure_ascii=False, indent=2)
     if args.json:
@@ -86,7 +97,7 @@ def cmd_apply(args) -> int:
         return 1
 
     conn = make_conn(load_config())
-    ok = fixed = noted = 0
+    ok = fixed = noted = framed = 0
     try:
         for r in results:
             msg_id = r["msg_id"]
@@ -109,9 +120,24 @@ def cmd_apply(args) -> int:
                 mark_ai_note(conn, msg_id, note)
                 noted += 1
                 print(f"  [SKIPPED]  msg {msg_id} — {note}")
+
+            # Cover frame is independent of date verification. A bad/duplicate
+            # path is non-fatal (cosmetic) — warn and keep going so it never
+            # aborts an otherwise-good date batch.
+            feat = (r.get("featured_frame_path") or "").strip()
+            if feat:
+                try:
+                    if set_featured_frame(conn, msg_id, feat):
+                        framed += 1
+                        print(f"  [FRAME]      msg {msg_id}: {feat}")
+                    else:
+                        print(f"  [FRAME-KEEP] msg {msg_id}: kept existing cover")
+                except ValueError as e:
+                    print(f"  [FRAME-SKIP] msg {msg_id}: {e}")
     finally:
         conn.close()
-    print(f"\nApplied {len(results)} rows: {ok} match, {fixed} fixed, {noted} not-verifiable")
+    print(f"\nApplied {len(results)} rows: {ok} match, {fixed} fixed, "
+          f"{noted} not-verifiable, {framed} cover frames set")
     return 0
 
 
