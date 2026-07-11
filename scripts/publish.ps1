@@ -37,7 +37,7 @@ try {
     }
 
     # 1. Export — writes data/martyrs.json + records publish_versions row
-    Write-Host "Step 1/3: exporting verified rows to JSON..."
+    Write-Host "Step 1/4: exporting verified rows to JSON..."
     $noteArg = if ($Note) { @("--note", $Note) } else { @() }
     & $venvPython $exportScript @noteArg
     if ($LASTEXITCODE -ne 0) {
@@ -49,9 +49,20 @@ try {
     $version = $version.Trim()
     if (-not $version) { Write-Error "Could not read version from data/martyrs.json" }
 
-    # 3. Commit + push
+    # 3. Stage the selected cover frames so GitHub Pages can serve them.
+    #    (data/frames/ is gitignored; stage_covers.ps1 force-adds only the
+    #    ~765 covers referenced by martyrs.json's featured_frame_path values.)
     Write-Host ""
-    Write-Host "Step 2/3: committing data/martyrs.json..."
+    Write-Host "Step 2/4: staging selected cover frames..."
+    & (Join-Path $PSScriptRoot "stage_covers.ps1")
+    if ($LASTEXITCODE -ne 0) {
+        Write-Error "stage_covers.ps1 failed with exit code $LASTEXITCODE"
+    }
+
+    # 4. Commit + push. `git commit` (no -a) captures everything staged above:
+    #    the covers from stage_covers.ps1 plus data/martyrs.json.
+    Write-Host ""
+    Write-Host "Step 3/4: committing data/martyrs.json + covers..."
     $commitMsg = if ($Note) { "publish v${version}: $Note" } else { "publish v$version" }
     git add data/martyrs.json
     git commit -m $commitMsg
@@ -60,7 +71,7 @@ try {
     }
 
     Write-Host ""
-    Write-Host "Step 3/3: pushing to origin..."
+    Write-Host "Step 4/4: pushing to origin..."
     git push
     if ($LASTEXITCODE -ne 0) {
         Write-Error "git push failed"

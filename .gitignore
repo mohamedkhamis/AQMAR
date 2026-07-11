@@ -12,6 +12,10 @@ __pycache__/
 .superpowers/
 
 # Data: track martyrs.json/xlsx, photos/, overrides.json — exclude intermediates.
+# NOTE: the ~765 SELECTED cover frames (one per published martyr, listed in
+# martyrs.json's featured_frame_path) are force-added into git by
+# scripts/stage_covers.ps1 so GitHub Pages can serve the detail-page cover;
+# the rest of data/frames/ (raw intermediate card frames) stays ignored here.
 data/frames/
 data/state.json
 data/missing_birth.log
