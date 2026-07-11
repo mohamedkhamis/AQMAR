@@ -681,9 +681,25 @@ html[data-theme="dark"] body::before { mix-blend-mode: screen; opacity: 0.4; }
   color: var(--ink);
   border: 1px solid var(--divider);
   border-radius: 6px;
-  padding: 4px 6px;
+  padding: 4px 6px !important;
+  margin: 0 4px;
   font-family: var(--font-body);
 }
+.litepicker .month-item-header select.month-item-year {
+  min-width: 70px;
+}
+
+.month-item-year {
+    text-align: center;
+    text-align-last: center;
+}
+
+.month-item-name option,
+.month-item-year option {
+    text-align: center;
+}
+
+
 .litepicker .month-item-header select option {
   background: var(--bg-2);
   color: var(--ink);
