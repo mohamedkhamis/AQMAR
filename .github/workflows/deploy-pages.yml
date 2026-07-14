@@ -49,7 +49,7 @@ jobs:
             -H "Content-Type: application/json" \
             --data '{"name":"aqmar","production_branch":"master"}')
           echo "$resp"
-          echo "$resp" | grep -q '"success":true' \
+          echo "$resp" | grep -qE '"success":[[:space:]]*true' \
             || { echo "::error::Failed to create Pages project 'aqmar' (is the name taken? check the response above)"; exit 1; }
           echo "Created Pages project 'aqmar' (production branch: master)."
 
