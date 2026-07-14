@@ -1,15 +1,15 @@
 name: Deploy to Cloudflare Pages
 
-# Publishes the static SPA (repo root, served exactly like GitHub Pages) to
-# Cloudflare Pages on every push to master, and on demand from the Actions tab.
+# Publishes the static SPA to Cloudflare Pages on every push to master, and on
+# demand from the Actions tab. The site is pure static (no build step / Tailwind
+# Play CDN), served exactly like GitHub Pages.
 #
 # Requires two repository secrets (Settings -> Secrets and variables -> Actions):
 #   CLOUDFLARE_API_TOKEN   - token with the "Cloudflare Pages: Edit" permission
 #   CLOUDFLARE_ACCOUNT_ID  - the account ID from the Cloudflare dashboard
 #
-# The site is pure static (no build step / Tailwind Play CDN), so we upload the
-# checked-out tree as-is. --branch=master keeps this a PRODUCTION deploy so it
-# lands on https://aqmar.pages.dev (not a per-commit preview URL).
+# The result is served at https://aqmar.pages.dev. --branch=master + a project
+# whose production branch is master keep this a PRODUCTION deploy (not a preview).
 
 on:
   push:
@@ -27,10 +27,46 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # wrangler's `pages deploy` does NOT create the project, so make sure it
+      # exists first (idempotent: skips if already present). Pins the production
+      # branch to master so master deploys land on the *.pages.dev URL.
+      - name: Ensure the Cloudflare Pages project exists
+        env:
+          CF_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CF_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          base="https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT_ID}/pages/projects"
+          status=$(curl -s -o /dev/null -w '%{http_code}' \
+            -H "Authorization: Bearer ${CF_API_TOKEN}" "${base}/aqmar")
+          if [ "$status" = "200" ]; then
+            echo "Pages project 'aqmar' already exists."
+            exit 0
+          fi
+          echo "Project 'aqmar' not found (HTTP $status) - creating it..."
+          resp=$(curl -s -X POST "${base}" \
+            -H "Authorization: Bearer ${CF_API_TOKEN}" \
+            -H "Content-Type: application/json" \
+            --data '{"name":"aqmar","production_branch":"master"}')
+          echo "$resp"
+          echo "$resp" | grep -q '"success":true' \
+            || { echo "::error::Failed to create Pages project 'aqmar' (is the name taken? check the response above)"; exit 1; }
+          echo "Created Pages project 'aqmar' (production branch: master)."
+
+      # Stage EXACTLY the tracked files (git archive HEAD) into ./dist. This
+      # mirrors what GitHub Pages serves and guarantees the wrangler npm install
+      # (node_modules/) is never uploaded as site content.
+      - name: Stage site
+        run: |
+          set -euo pipefail
+          rm -rf dist && mkdir dist
+          git archive HEAD | tar -x -C dist
+          echo "Staged $(find dist -type f | wc -l) files into dist/."
+
       - name: Deploy
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy . --project-name=aqmar --branch=master
+          command: pages deploy dist --project-name=aqmar --branch=master --commit-dirty=true
           gitHubToken: ${{ secrets.GITHUB_TOKEN }}
