@@ -38,11 +38,29 @@ Two subcommands:
       whitespace are merged to the most-frequent spelling; letters are never
       changed. Dry-run by default — pass --apply to write.
 
+  canon-dump [--columns ...] [--json out.json]
+      Dump the distinct values + row counts of the closed-ish metadata
+      columns (default: military_rank, battalion) as compact TEXT — the input
+      for an AI canonicalization pass. No frames, no per-row data (low token
+      cost). The AI writes a mapping file {col: [{"from","to","count"?,
+      "confidence"?,"note"?}]} where every `to` is an existing DB value, so it
+      maps OCR variants onto the current canon (new values follow current).
+
+  canon-apply mapping.json [--apply]
+      Apply an AI-proposed canon mapping. Dry-run by default (prints each
+      from -> to (N rows) [confidence] — note); --apply rewrites via the same
+      bulk_update_field_value as normalize-fields. Guards: `to` must exist in
+      the DB (else skip), from==to / from-absent are skipped, and a chain (a
+      value that is both a `from` and a `to` in one column) aborts before any
+      write.
+
 Usage:
   .venv\\Scripts\\python.exe scripts\\ai_verify.py pending --limit 50 --json data\\ai_batches\\pending_001.json
   .venv\\Scripts\\python.exe scripts\\ai_verify.py apply data\\ai_batches\\results_001.json
   .venv\\Scripts\\python.exe scripts\\ai_verify.py normalize-fields
   .venv\\Scripts\\python.exe scripts\\ai_verify.py normalize-fields --apply
+  .venv\\Scripts\\python.exe scripts\\ai_verify.py canon-dump --json data\\ai_batches\\canon_001.json
+  .venv\\Scripts\\python.exe scripts\\ai_verify.py canon-apply data\\ai_batches\\canon_map_001.json --apply
 """
 import argparse
 import io
@@ -51,7 +69,6 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
 
 from src.config import load_config
 from src.sqlserver_client import (
@@ -67,6 +84,10 @@ from src.sqlserver_client import (
     bulk_update_field_value,
 )
 from src.field_normalizer import build_merge_plan
+from src.field_canon import build_dump, plan_canon_updates
+
+# Closed-ish metadata sets we canonicalize with the AI-proposed canon loop.
+CANON_COLUMNS = ("military_rank", "battalion")
 
 
 def cmd_pending(args) -> int:
@@ -202,7 +223,84 @@ def cmd_normalize_fields(args) -> int:
     return 0
 
 
+def cmd_canon_dump(args) -> int:
+    columns = args.columns or list(CANON_COLUMNS)
+    bad = [c for c in columns if c not in ALLOWED_NORMALIZE_COLUMNS]
+    if bad:
+        print(f"error: not dumpable: {bad}; "
+              f"allowed: {list(ALLOWED_NORMALIZE_COLUMNS)}")
+        return 2
+    conn = make_conn(load_config())
+    try:
+        distinct = {c: get_distinct_field_values(conn, c) for c in columns}
+    finally:
+        conn.close()
+    payload = build_dump(distinct)
+    text = json.dumps(payload, ensure_ascii=False, indent=2)
+    if args.json:
+        Path(args.json).parent.mkdir(parents=True, exist_ok=True)
+        Path(args.json).write_text(text, encoding="utf-8")
+        counts = {c: len(v) for c, v in payload.items()}
+        print(f"distinct values -> {args.json}  {counts}")
+    else:
+        print(text)
+    return 0
+
+
+def cmd_canon_apply(args) -> int:
+    mapping = json.loads(Path(args.results).read_text(encoding="utf-8"))
+    columns = list(mapping.keys())
+    bad = [c for c in columns if c not in ALLOWED_NORMALIZE_COLUMNS]
+    if bad:
+        print(f"error: not applicable columns: {bad}; "
+              f"allowed: {list(ALLOWED_NORMALIZE_COLUMNS)}")
+        return 2
+
+    conn = make_conn(load_config())
+    try:
+        existing = {
+            c: {v for v, _ in get_distinct_field_values(conn, c)}
+            for c in columns
+        }
+        plan = plan_canon_updates(mapping, existing)
+
+        for col in columns:
+            print(f"\n=== {col} ===")
+            for e in (e for e in plan.entries if e.column == col):
+                if e.action == "apply":
+                    tag = f"[{e.confidence or 'n/a'}]"
+                    print(f'  "{e.from_value}" -> "{e.to_value}" '
+                          f'({e.count}) {tag} — {e.note}')
+                else:
+                    print(f'  [skip:{e.reason}] "{e.from_value}" '
+                          f'-> "{e.to_value}"')
+
+        if plan.errors:
+            for msg in plan.errors:
+                print(f"  [ERROR] {msg}")
+            print("\nAborting: fix the mapping (errors above). Nothing written.")
+            return 2
+
+        if not args.apply:
+            print(f"\n{len(plan.to_apply)} mapping(s) would change rows "
+                  f"[dry-run — pass --apply to write]")
+            return 0
+
+        changed = 0
+        for e in plan.to_apply:
+            n = bulk_update_field_value(conn, e.column, e.from_value, e.to_value)
+            changed += n
+            print(f'  [APPLIED] {e.column}: "{e.from_value}" '
+                  f'-> "{e.to_value}" ({n} rows)')
+        print(f"\nApplied {len(plan.to_apply)} mapping(s), "
+              f"{changed} row(s) changed.")
+        return 0
+    finally:
+        conn.close()
+
+
 def main() -> int:
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
     p = argparse.ArgumentParser(description=__doc__)
     sub = p.add_subparsers(dest="cmd", required=True)
 
@@ -231,6 +329,24 @@ def main() -> int:
         help="execute the merges (default is a dry-run preview)",
     )
     sn.set_defaults(fn=cmd_normalize_fields)
+
+    scd = sub.add_parser(
+        "canon-dump",
+        help="dump distinct rank/battalion values (text) for AI canonicalization",
+    )
+    scd.add_argument("--columns", nargs="+", metavar="COL",
+                     help=f"columns to dump (default: {list(CANON_COLUMNS)})")
+    scd.add_argument("--json", help="write to this file instead of stdout")
+    scd.set_defaults(fn=cmd_canon_dump)
+
+    sca = sub.add_parser(
+        "canon-apply",
+        help="apply an AI-proposed canon mapping (dry-run unless --apply)",
+    )
+    sca.add_argument("results", help="mapping JSON produced from a canon-dump")
+    sca.add_argument("--apply", action="store_true",
+                     help="execute the merges (default is a dry-run preview)")
+    sca.set_defaults(fn=cmd_canon_apply)
 
     args = p.parse_args()
     return args.fn(args)

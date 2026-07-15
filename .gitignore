@@ -27,6 +27,8 @@ data/ai_batches/
 scripts/_run_phase3_silent.bat
 scripts/ai_verify.py
 docs/superpowers/specs/2026-06-22-field-spelling-normalizer-design.md
+docs/superpowers/specs/2026-07-15-field-canon-rank-battalion-design.md
+docs/superpowers/plans/2026-07-15-field-canon-rank-battalion.md
 src/field_normalizer.py
 src/sqlserver_client.py
 tests/test_field_normalizer.py
