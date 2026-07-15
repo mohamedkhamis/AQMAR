@@ -41,7 +41,7 @@ never block a row.
 | Read-only preview (static JSON) | `.\scripts\serve.ps1` → http://localhost:8000/webui/ |
 | Publish a new snapshot | `.\scripts\publish.ps1 -Note "…"` (export → git commit, no auto-push) |
 | Local IIS portal | http://localhost:8082/ — one-time setup with `scripts\iis_deploy.ps1` (needs UAC), serves directly from the working tree |
-| Production | https://mohamedkhamis.github.io/AQMAR/ — GitHub Pages built from `master` |
+| Production | https://aqmar.pages.dev — Cloudflare Pages, auto-deploys from `master` via `.github/workflows/deploy-pages.yml`. Also https://mohamedkhamis.github.io/AQMAR/ — GitHub Pages built from `master`. |
 
 ## Conventions
 

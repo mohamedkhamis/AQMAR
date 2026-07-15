@@ -39,7 +39,7 @@ records to a static bilingual web UI.
         │
         ▼  git commit + push
         ▼
-   GitHub Pages — public read-only view of the SPA
+   Cloudflare Pages + GitHub Pages — public read-only view of the SPA
 ```
 
 - **Local-first** — all data lives on your machine. Internet only needed
@@ -161,8 +161,9 @@ git commit -m "publish vN: weekly verification batch"
 git push
 ```
 
-The published `data/martyrs.json` is what GitHub Pages serves to public
-visitors via the same SPA in read-only mode.
+The published `data/martyrs.json` is what the public sites (Cloudflare
+Pages and GitHub Pages) serve to visitors via the same SPA in read-only
+mode.
 
 ---
 
@@ -196,11 +197,23 @@ published snapshot:
 # → http://localhost:8000/webui/  (reads data/martyrs.json directly)
 ```
 
-### Hosting (GitHub Pages)
+### Hosting (public)
 
-Push only `webui/` + `data/martyrs.json` + `data/photos/` to your
-`gh-pages` branch (or use the default branch + `/docs` source). The
-SPA gracefully falls back to the static JSON when no API is reachable.
+The site is served from two free static hosts, both built from `master`.
+The SPA gracefully falls back to the static `data/martyrs.json` when no
+admin API is reachable, so no server is required:
+
+- **Cloudflare Pages** — https://aqmar.pages.dev — the short public URL.
+  Auto-deploys on every push to `master` via
+  `.github/workflows/deploy-pages.yml` (GitHub Actions →
+  `wrangler pages deploy`). Needs the `CLOUDFLARE_API_TOKEN` +
+  `CLOUDFLARE_ACCOUNT_ID` repo secrets.
+- **GitHub Pages** — https://mohamedkhamis.github.io/AQMAR/ — built from
+  `master`.
+
+Both serve the whole repo tree; the root `index.html` redirects to
+`webui/`, and every asset path is relative, so the site works unchanged
+at either origin.
 
 ---
 
