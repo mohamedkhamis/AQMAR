@@ -991,7 +991,7 @@
             <span class="text-muted text-[13px] font-latin-sans" x-text="ev.name_en || ''"></span>
             <span class="text-muted text-[13px]" style="font-variant-numeric: tabular-nums;"
                   x-text="ev.end_date
-                    ? `${formatDate(ev.start_date)} ← ${formatDate(ev.end_date)}`
+                    ? formatDateRange(ev.start_date, ev.end_date)
                     : `${formatDate(ev.start_date)} — ${lang === 'ar' ? 'مستمر' : 'ongoing'}`"></span>
             <span class="flex gap-2" style="margin-inline-start: auto;">
               <button @click="editEvent(ev)" class="btn btn-ghost"

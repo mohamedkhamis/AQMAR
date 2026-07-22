@@ -37,7 +37,7 @@ def _valid_iso_date(s) -> bool:
         return False
 
 
-def load_settings(path) -> dict:
+def load_settings(path: str | Path) -> dict:
     """Parsed settings file, or a fresh DEFAULT_SETTINGS copy when missing.
     Invalid JSON raises ValueError — silently resetting the file would
     destroy hand-entered events, so the admin must see the error."""
@@ -119,7 +119,7 @@ def merge_settings(existing: dict, incoming: dict) -> dict:
     return merged
 
 
-def save_settings(path, data: dict) -> None:
+def save_settings(path: str | Path, data: dict) -> None:
     """Atomic write: temp file in the same directory then os.replace, so a
     crash mid-write can never leave a half-written settings.json."""
     p = Path(path)

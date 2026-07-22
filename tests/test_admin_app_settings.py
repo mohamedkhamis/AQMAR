@@ -110,3 +110,18 @@ def test_put_events_sorted_by_start_date(client):
     assert r.status_code == 200
     starts = [e["start_date"] for e in r.json()["events"]]
     assert starts == ["2023-10-07", "2025-01-19"]
+
+
+def test_get_settings_500_on_invalid_json_on_disk(client):
+    path = admin_app.SETTINGS_PATH
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text("{not json", encoding="utf-8")
+    r = client.get("/api/settings")
+    assert r.status_code == 500
+    assert "not valid JSON" in r.json()["detail"]
+
+
+def test_put_missing_events_key_is_422(client):
+    r = client.put("/api/settings", json={"version": 1}, headers=VALID_TOKEN_HEADER)
+    assert r.status_code == 422
+    assert "events" in r.json()["detail"]

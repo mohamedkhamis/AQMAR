@@ -42,7 +42,6 @@ from src.sqlserver_client import (
 )
 from src.exporter import export_to_json, DEFAULT_JSON_PATH
 from src.settings_store import (
-    DEFAULT_SETTINGS,
     MAX_BODY_BYTES,
     load_settings,
     merge_settings,
@@ -232,6 +231,8 @@ def put_settings(
     """Validate + merge {version, events} over the existing file and write it
     atomically. Unknown top-level keys already in the file are preserved so
     an events-only save can't wipe future settings."""
+    if "events" not in body:
+        raise HTTPException(status_code=422, detail="'events' is required")
     if len(json.dumps(body, ensure_ascii=False).encode("utf-8")) > MAX_BODY_BYTES:
         raise HTTPException(status_code=422,
                             detail="Settings payload too large (max 256 KB)")
@@ -241,7 +242,7 @@ def put_settings(
     try:
         existing = load_settings(SETTINGS_PATH)
     except ValueError:
-        existing = dict(DEFAULT_SETTINGS)   # corrupted file — this PUT repairs it
+        existing = {"version": 1, "events": []}   # corrupted file — this PUT repairs it
     try:
         merged = merge_settings(existing, body)
     except ValueError as e:

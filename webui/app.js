@@ -188,7 +188,11 @@ function aqmar() {
       // Load martyrs from the priority chain (Supabase → local JSON → sample).
       // Extracted into loadMartyrs() so the Retry button can re-invoke it.
       await this.loadMartyrs();
-      await this.loadGlobalSettings();
+      // Global events load in parallel — deliberately NOT awaited so a slow
+      // or hung settings fetch can never delay revealApp() (spec: settings
+      // must never block the site). The lifeline x-effect tracks this.events
+      // and re-renders when they arrive.
+      this.loadGlobalSettings();
 
       // Persist the dataset version ("store ID") and reveal the app — this is
       // what the boot spinner waits for ("spinner till the store ID is in
@@ -238,6 +242,15 @@ function aqmar() {
         const el = document.getElementById('lifeline-root');
         if (el) dodgeTimelineLabels(el);
       });
+
+      // Re-run the label dodge once webfonts finish loading — cold-cache
+      // first paint can measure label widths against fallback fonts.
+      if (document.fonts && document.fonts.ready) {
+        document.fonts.ready.then(() => {
+          const el = document.getElementById('lifeline-root');
+          if (el) dodgeTimelineLabels(el);
+        });
+      }
     },
 
     // Data-loading helper, callable from init() and retryLoad(). Now delegates
@@ -345,6 +358,7 @@ function aqmar() {
     async deleteEvent(ev) {
       const q = this.lang === 'ar' ? `حذف حدث «${ev.name_ar}»؟` : `Delete event "${ev.name_ar}"?`;
       if (!confirm(q)) return;
+      if (this.eventForm && this.eventForm.id === ev.id) this.cancelEventForm();
       await this._putEvents(this.events.filter(e => e.id !== ev.id), false);
     },
     // Shared save path: await the PUT, replace state from the server's
@@ -1185,6 +1199,7 @@ function aqmar() {
     // HELPERS (also exposed for templates)
     // ============================================================
     formatDate(iso) { return formatDate(iso, this.lang); },
+    formatDateRange(startIso, endIso) { return formatDateRange(startIso, endIso, this.lang); },
     computeAge(birth, martyrdom) {
       // Calendar-accurate age (delegates to filter-logic.js's computeAge)
       // with the 0–120 OCR sanity bound. Year-subtraction until 2026-07-22 —

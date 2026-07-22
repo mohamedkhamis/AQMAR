@@ -229,7 +229,7 @@ existing admin styling:
 | Failure | Behavior |
 |---|---|
 | `settings.json` missing/unreachable/invalid JSON in SPA | `events: []`, site unaffected |
-| PUT validation failure | 422 with Arabic-friendly `detail`; form shows it, file untouched |
+| PUT validation failure | 422 with an English `detail` (the SPA's client-side checks show Arabic for the common cases); form shows it, file untouched |
 | Concurrent admin edits | Last write wins (single-admin tool; acceptable) |
 | Person missing birth or martyrdom | No line today → still no line; no events computed |
 | Event outside lifetime | Omitted for that person |

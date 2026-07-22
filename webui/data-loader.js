@@ -59,7 +59,7 @@
     const events = raw && Array.isArray(raw.events) ? raw.events : [];
     const sorted = [...events].sort((a, b) =>
       String(a.start_date || "").localeCompare(String(b.start_date || "")));
-    return { version: (raw && raw.version) || 1, events: sorted };
+    return { version: raw && Number.isInteger(raw.version) ? raw.version : 1, events: sorted };
   }
 
   // Global settings (events). Same API-first strategy as loadData(), but any
