@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "events": [
+    {
+      "id": "evt-1",
+      "name_ar": "معركة طوفان الأقصى",
+      "name_en": "7 October War",
+      "start_date": "2023-10-07",
+      "end_date": null
+    }
+  ]
+}

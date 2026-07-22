@@ -15,8 +15,7 @@
      · data/photos/*      → cache-first  (each photo caches itself the first
                             time it is viewed — "cache as viewed"; the 247 MB
                             set is never downloaded up front)
-     · data/martyrs.json  → network-first (fresh data online, cached snapshot
-                            offline)
+     · data/{martyrs,settings}.json → network-first (fresh data online, cached snapshot offline)
 
    Photo filenames are stable, so the photo cache persists across dataset
    versions — no 247 MB re-download when the published version bumps. The
@@ -65,7 +64,7 @@ self.addEventListener("fetch", (event) => {
   const path = url.pathname;
   if (/\/data\/photos\//.test(path)) {
     event.respondWith(cacheFirst(req, PHOTO_CACHE));
-  } else if (/\/data\/martyrs\.json$/.test(path)) {
+  } else if (/\/data\/(martyrs|settings)\.json$/.test(path)) {
     event.respondWith(networkFirst(req, DATA_CACHE));
   }
   // Otherwise: no respondWith() → default browser handling.

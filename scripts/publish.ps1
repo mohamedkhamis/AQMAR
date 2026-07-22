@@ -65,6 +65,7 @@ try {
     Write-Host "Step 3/4: committing data/martyrs.json + covers..."
     $commitMsg = if ($Note) { "publish v${version}: $Note" } else { "publish v$version" }
     git add data/martyrs.json
+    git add data/settings.json
     git commit -m $commitMsg
     if ($LASTEXITCODE -ne 0) {
         Write-Error "git commit failed (possibly no changes to commit?)"
