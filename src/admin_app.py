@@ -17,6 +17,9 @@ Endpoints:
     POST /api/martyrs/{msg_id}/reject — mark rejected (won't be published)
     POST /api/publish               — trigger export-to-JSON (stub, Batch 6)
     PUT  /api/settings              — save global settings (events list)
+    GET  /api/notify-settings       — email notification settings (masked)
+    PUT  /api/notify-settings       — save email notification settings
+    POST /api/notify-test           — send a test email with stored settings
 
 Static:
   /webui/...        — SPA static files (from webui/ directory)
@@ -48,6 +51,14 @@ from src.settings_store import (
     save_settings,
     validate_events,
 )
+from src import notifier
+from src.notify_store import (
+    load_notify,
+    validate_notify,
+    merge_notify,
+    mask_notify,
+    save_notify,
+)
 
 cfg = load_config()
 
@@ -55,6 +66,7 @@ cfg = load_config()
 # server and tests behave identically regardless of launch directory.
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent
 SETTINGS_PATH = _PROJECT_ROOT / "data" / "settings.json"
+NOTIFY_PATH = _PROJECT_ROOT / "data" / "notify_settings.json"
 
 app = FastAPI(
     title="AQMAR Admin API",
@@ -249,6 +261,61 @@ def put_settings(
         raise HTTPException(status_code=422, detail=str(e))
     save_settings(SETTINGS_PATH, merged)
     return merged
+
+
+# =============================================================================
+# Email notification settings (data/notify_settings.json — LOCAL, gitignored)
+# =============================================================================
+
+@app.get("/api/notify-settings")
+def get_notify_settings(_: None = Depends(require_admin)):
+    """Admin-only (unlike /api/settings): recipients are private. The app
+    password never leaves the server — only has_password does."""
+    try:
+        return mask_notify(load_notify(NOTIFY_PATH))
+    except ValueError as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.put("/api/notify-settings")
+def put_notify_settings(
+    body: dict = Body(...),
+    _: None = Depends(require_admin),
+):
+    """Merge over the stored file (blank app_password keeps the stored one),
+    validate the MERGED result, save atomically, return it masked."""
+    try:
+        existing = load_notify(NOTIFY_PATH)
+    except ValueError:
+        existing = load_notify(NOTIFY_PATH.with_name("__missing__"))  # defaults
+    merged = merge_notify(existing, body)
+    errors = validate_notify(merged)
+    if errors:
+        raise HTTPException(status_code=422, detail="; ".join(errors))
+    save_notify(NOTIFY_PATH, merged)
+    return mask_notify(merged)
+
+
+@app.post("/api/notify-test")
+def notify_test(_: None = Depends(require_admin)):
+    """Send a test email with the stored settings. SMTP errors come back as
+    {ok:false, error} so the UI can show them inline. 422 when not yet
+    configured (no password / no recipients / no sender). Deliberately does
+    NOT require enabled=true — a test-send is how the user validates the
+    App Password BEFORE turning nightly email on (see setup flow)."""
+    try:
+        settings = load_notify(NOTIFY_PATH)
+    except ValueError as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    if not (str(settings.get("app_password") or "").strip()
+            and settings.get("recipients") and settings.get("sender_email")):
+        raise HTTPException(status_code=422,
+                            detail="Email settings incomplete — save sender, password and recipients first")
+    try:
+        notifier.send_test(settings)
+        return {"ok": True}
+    except Exception as e:
+        return {"ok": False, "error": str(e)[:300]}
 
 
 # =============================================================================
