@@ -9,18 +9,21 @@ Endpoints:
     GET  /api/health                — connectivity probe
     GET  /api/martyrs               — all rows (the SPA's main list)
     GET  /api/martyrs/{msg_id}      — single row by primary key
+    GET  /api/settings              — global settings (events list)
 
   Admin (require X-Admin-Token header matching cfg.admin_token):
     GET  /api/martyrs/unverified    — verification queue
     PUT  /api/martyrs/{msg_id}      — apply edits + mark verified
     POST /api/martyrs/{msg_id}/reject — mark rejected (won't be published)
     POST /api/publish               — trigger export-to-JSON (stub, Batch 6)
+    PUT  /api/settings              — save global settings (events list)
 
 Static:
   /webui/...        — SPA static files (from webui/ directory)
   /data/photos/...  — martyr photos (from data/photos/ directory)
   /                 — 302 redirect to /webui/
 """
+import json
 from pathlib import Path
 from typing import Optional, Annotated
 
@@ -38,8 +41,21 @@ from src.sqlserver_client import (
     mark_rejected,
 )
 from src.exporter import export_to_json, DEFAULT_JSON_PATH
+from src.settings_store import (
+    DEFAULT_SETTINGS,
+    MAX_BODY_BYTES,
+    load_settings,
+    merge_settings,
+    save_settings,
+    validate_events,
+)
 
 cfg = load_config()
+
+# Resolved once from the repo layout — never CWD-relative, so the admin
+# server and tests behave identically regardless of launch directory.
+_PROJECT_ROOT = Path(__file__).resolve().parent.parent
+SETTINGS_PATH = _PROJECT_ROOT / "data" / "settings.json"
 
 app = FastAPI(
     title="AQMAR Admin API",
@@ -194,13 +210,50 @@ def publish(
     return {"ok": True, **result}
 
 
+# =============================================================================
+# Global settings (data/settings.json) — events shown on every lifespan line
+# =============================================================================
+
+@app.get("/api/settings")
+def get_settings():
+    """Public: the SPA loads global events from here when running against the
+    local admin server; static hosts read data/settings.json directly."""
+    try:
+        return load_settings(SETTINGS_PATH)
+    except ValueError as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.put("/api/settings")
+def put_settings(
+    body: dict = Body(...),
+    _: None = Depends(require_admin),
+):
+    """Validate + merge {version, events} over the existing file and write it
+    atomically. Unknown top-level keys already in the file are preserved so
+    an events-only save can't wipe future settings."""
+    if len(json.dumps(body, ensure_ascii=False).encode("utf-8")) > MAX_BODY_BYTES:
+        raise HTTPException(status_code=422,
+                            detail="Settings payload too large (max 256 KB)")
+    errors = validate_events(body.get("events", []))
+    if errors:
+        raise HTTPException(status_code=422, detail="; ".join(errors))
+    try:
+        existing = load_settings(SETTINGS_PATH)
+    except ValueError:
+        existing = dict(DEFAULT_SETTINGS)   # corrupted file — this PUT repairs it
+    try:
+        merged = merge_settings(existing, body)
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e))
+    save_settings(SETTINGS_PATH, merged)
+    return merged
 
 
 # =============================================================================
 # Static file mounts (SPA + photos)
 # =============================================================================
 
-_PROJECT_ROOT = Path(__file__).resolve().parent.parent
 _WEBUI_DIR = _PROJECT_ROOT / "webui"
 _PHOTOS_DIR = _PROJECT_ROOT / "data" / "photos"
 _FRAMES_DIR = _PROJECT_ROOT / "data" / "frames"
