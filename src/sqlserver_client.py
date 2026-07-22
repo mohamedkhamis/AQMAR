@@ -324,6 +324,44 @@ def get_ai_pending(conn, limit: int = 50) -> list:
     return _rows_to_dicts(cur)
 
 
+def get_stuck_rows(conn) -> list[dict]:
+    """Pending rows the AI flagged for a human (verified:false + note).
+    These stay in the queue until the admin verifies/rejects them; the
+    nightly email lists them so they aren't forgotten."""
+    sql = """
+        SELECT msg_id, name, ai_note
+        FROM dbo.martyrs
+        WHERE verification_status = 'unverified'
+          AND ai_verified = 0
+          AND ai_note IS NOT NULL AND LTRIM(RTRIM(ai_note)) <> ''
+        ORDER BY msg_id
+    """
+    cur = conn.cursor()
+    cur.execute(sql)
+    cols = [d[0] for d in cur.description]
+    return [dict(zip(cols, row)) for row in cur.fetchall()]
+
+
+def count_ai_verified_since(conn, since_iso: str) -> dict:
+    """Counts for the nightly email: rows AI-verified since the run started.
+    'fixed' relies on the ai_note conventions ('fixed…'/'filled…') written
+    by the verify prompt — a heuristic, good enough for a summary line."""
+    sql = """
+        SELECT COUNT(*) AS total,
+               COALESCE(SUM(CASE WHEN ai_note LIKE 'fix%' OR ai_note LIKE 'fill%'
+                                 THEN 1 ELSE 0 END), 0) AS fixed,
+               COALESCE(SUM(CASE WHEN featured_frame_path IS NOT NULL
+                                 THEN 1 ELSE 0 END), 0) AS covers
+        FROM dbo.martyrs
+        WHERE ai_verified_at >= ?
+    """
+    cur = conn.cursor()
+    cur.execute(sql, (since_iso,))
+    row = cur.fetchone()
+    return {"total": int(row[0] or 0), "fixed": int(row[1] or 0),
+            "covers": int(row[2] or 0)}
+
+
 # =============================================================================
 # Field-spelling normalizer (2026-06-22)
 #
