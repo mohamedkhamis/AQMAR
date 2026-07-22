@@ -61,7 +61,7 @@
      Load BEFORE Alpine + app.js so their globals are available at init time. -->
 <script src="data-loader.js?v=20260722"></script>
 <script src="filter-logic.js?v=20260722"></script>
-<script src="admin-edit.js"></script>
+<script src="admin-edit.js?v=20260722"></script>
 
 <!-- Alpine + focus plugin (plugin must load BEFORE the core). -->
 <script defer src="https://unpkg.com/@alpinejs/focus@3.x.x/dist/cdn.min.js"></script>
@@ -960,6 +960,76 @@
         <button @click="logout()" class="btn btn-text" style="color: rgba(255,255,255,0.75);"
                 x-text="lang === 'ar' ? 'خروج' : 'Sign out'"></button>
       </div>
+    </div>
+
+    <!-- ===== Global events (data/settings.json) — rendered on every
+         lifespan line with the person's age at each event's start.
+         All names display via x-text (never x-html). ===== -->
+    <div x-show="!editingId" class="bg-paper border border-divider rounded-lg mb-7" style="padding: 22px 26px;">
+      <div class="flex items-center justify-between gap-4 flex-wrap">
+        <div>
+          <div class="font-latin-sans text-[11px] tracking-[0.2em] text-olive uppercase"
+               x-text="lang === 'ar' ? 'الأحداث العامة' : 'Global events'"></div>
+          <div class="font-body text-[13px] text-muted mt-1"
+               x-text="lang === 'ar'
+                 ? 'تظهر على خطّ الحياة في صفحة كل شهيد، مع عمره عند بداية كل حدث. تُنشر مع أول Publish قادم.'
+                 : 'Shown on every martyr\'s lifespan line with their age at each event. Published with the next Publish.'"></div>
+        </div>
+        <button x-show="!eventForm" @click="newEvent()" class="btn btn-primary"
+                x-text="lang === 'ar' ? '+ إضافة حدث' : '+ Add event'"></button>
+      </div>
+
+      <template x-if="events.length === 0 && !eventForm">
+        <div class="text-muted text-[14px] mt-4"
+             x-text="lang === 'ar' ? 'لا توجد أحداث بعد.' : 'No events yet.'"></div>
+      </template>
+
+      <div class="mt-4 flex flex-col">
+        <template x-for="ev in events" :key="ev.id">
+          <div class="flex items-center gap-4 flex-wrap py-2.5" style="border-bottom: 1px solid var(--divider);">
+            <span class="font-body font-bold text-ink text-[15px]" x-text="ev.name_ar"></span>
+            <span class="text-muted text-[13px] font-latin-sans" x-text="ev.name_en || ''"></span>
+            <span class="text-muted text-[13px]" style="font-variant-numeric: tabular-nums;"
+                  x-text="ev.end_date
+                    ? `${formatDate(ev.start_date)} ← ${formatDate(ev.end_date)}`
+                    : `${formatDate(ev.start_date)} — ${lang === 'ar' ? 'مستمر' : 'ongoing'}`"></span>
+            <span class="flex gap-2" style="margin-inline-start: auto;">
+              <button @click="editEvent(ev)" class="btn btn-ghost"
+                      x-text="lang === 'ar' ? 'تحرير' : 'Edit'"></button>
+              <button @click="deleteEvent(ev)" class="btn btn-ghost" style="color: var(--crimson);"
+                      x-text="lang === 'ar' ? 'حذف' : 'Delete'"></button>
+            </span>
+          </div>
+        </template>
+      </div>
+
+      <template x-if="eventForm">
+        <div class="mt-5 grid-pair grid gap-x-6">
+          <label class="block mb-4">
+            <div class="field-label" x-text="lang === 'ar' ? 'الاسم بالعربية (مطلوب)' : 'Arabic name (required)'"></div>
+            <input class="input" dir="rtl" x-model="eventForm.name_ar">
+          </label>
+          <label class="block mb-4">
+            <div class="field-label" x-text="lang === 'ar' ? 'الاسم بالإنجليزية (اختياري)' : 'English name (optional)'"></div>
+            <input class="input" dir="ltr" x-model="eventForm.name_en">
+          </label>
+          <label class="block mb-4">
+            <div class="field-label" x-text="lang === 'ar' ? 'تاريخ البداية (مطلوب)' : 'Start date (required)'"></div>
+            <input class="input" dir="ltr" type="date" x-model="eventForm.start_date">
+          </label>
+          <label class="block mb-4">
+            <div class="field-label" x-text="lang === 'ar' ? 'تاريخ النهاية (اختياري)' : 'End date (optional)'"></div>
+            <input class="input" dir="ltr" type="date" x-model="eventForm.end_date">
+          </label>
+          <div class="flex items-center gap-3 flex-wrap" style="grid-column: 1 / -1;">
+            <button @click="saveEventForm()" class="btn btn-primary" :disabled="eventSaving"
+                    x-text="eventSaving ? '…' : (lang === 'ar' ? 'حفظ الحدث' : 'Save event')"></button>
+            <button @click="cancelEventForm()" class="btn btn-ghost"
+                    x-text="lang === 'ar' ? 'إلغاء' : 'Cancel'"></button>
+            <span class="text-[13px]" style="color: var(--crimson);" x-text="eventError"></span>
+          </div>
+        </div>
+      </template>
     </div>
 
     <!-- Edit form -->

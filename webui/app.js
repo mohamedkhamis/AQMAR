@@ -49,6 +49,11 @@ function aqmar() {
     // ----- global settings (data/settings.json) -----
     events: [],            // global events, sorted ascending by start_date
     settingsVersion: 1,
+    // Admin events editor. eventForm null = closed; otherwise a working copy
+    // {id, name_ar, name_en, start_date, end_date} (empty strings for blank).
+    eventForm: null,
+    eventError: '',
+    eventSaving: false,
 
     // ----- data -----
     all: [],
@@ -295,6 +300,70 @@ function aqmar() {
       const s = await loadSettings();
       this.events = s.events;
       this.settingsVersion = s.version;
+    },
+
+    // ---- Global events admin (settings.json) ----
+    newEvent() {
+      this.eventError = '';
+      this.eventForm = { id: null, name_ar: '', name_en: '', start_date: '', end_date: '' };
+    },
+    editEvent(ev) {
+      this.eventError = '';
+      this.eventForm = { id: ev.id, name_ar: ev.name_ar, name_en: ev.name_en || '',
+                         start_date: ev.start_date, end_date: ev.end_date || '' };
+    },
+    cancelEventForm() {
+      this.eventForm = null;
+      this.eventError = '';
+    },
+    async saveEventForm() {
+      const f = this.eventForm;
+      if (!f || this.eventSaving) return;
+      // Client-side mirror of the server validation → friendlier errors.
+      if (!f.name_ar.trim()) {
+        this.eventError = this.lang === 'ar' ? 'الاسم بالعربية مطلوب' : 'Arabic name is required';
+        return;
+      }
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(f.start_date)) {
+        this.eventError = this.lang === 'ar' ? 'تاريخ البداية مطلوب' : 'Start date is required';
+        return;
+      }
+      if (f.end_date && f.end_date < f.start_date) {
+        this.eventError = this.lang === 'ar' ? 'تاريخ النهاية قبل تاريخ البداية' : 'End date is before start date';
+        return;
+      }
+      const next = this.events.filter(e => e.id !== f.id);
+      next.push({
+        id: f.id,                       // null → server assigns evt-<n>
+        name_ar: f.name_ar.trim(),
+        name_en: f.name_en.trim() || null,
+        start_date: f.start_date,
+        end_date: f.end_date || null,
+      });
+      await this._putEvents(next, true);
+    },
+    async deleteEvent(ev) {
+      const q = this.lang === 'ar' ? `حذف حدث «${ev.name_ar}»؟` : `Delete event "${ev.name_ar}"?`;
+      if (!confirm(q)) return;
+      await this._putEvents(this.events.filter(e => e.id !== ev.id), false);
+    },
+    // Shared save path: await the PUT, replace state from the server's
+    // response on success (NOT optimistic — same as saveEdit); any failure
+    // (422 validation, 403 token, network) shows inline and changes nothing.
+    async _putEvents(nextEvents, closeForm) {
+      this.eventSaving = true;
+      this.eventError = '';
+      try {
+        const saved = await saveSettingsViaApi({ version: this.settingsVersion, events: nextEvents });
+        const s = adaptSettings(saved);
+        this.events = s.events;
+        this.settingsVersion = s.version;
+        if (closeForm) this.eventForm = null;
+      } catch (e) {
+        this.eventError = e.message || (this.lang === 'ar' ? 'فشل الحفظ' : 'Save failed');
+      } finally {
+        this.eventSaving = false;
+      }
     },
 
     // ============================================================

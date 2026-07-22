@@ -64,8 +64,18 @@
     return await global.AQMAR_API.post(`/martyrs/${msgId}/reject`);
   }
 
+  // Save the global settings (events list). PUT /api/settings with
+  // {version, events}; the server validates, merges over the existing
+  // data/settings.json (preserving unknown top-level keys) and returns the
+  // saved document. Throws on auth / validation / network errors.
+  async function saveSettingsViaApi(settings) {
+    if (!global.AQMAR_API) throw new Error("API client not initialized.");
+    return await global.AQMAR_API.put("/settings", settings);
+  }
+
   global.buildEditDiff = buildEditDiff;
   global.translateToDbSchema = translateToDbSchema;
   global.saveEditViaApi = saveEditViaApi;
   global.rejectViaApi = rejectViaApi;
+  global.saveSettingsViaApi = saveSettingsViaApi;
 })(window);
