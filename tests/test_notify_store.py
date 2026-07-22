@@ -89,6 +89,13 @@ def test_merge_blank_password_keeps_existing():
     assert merged["app_password"] == GOOD["app_password"]
 
 
+def test_merge_absent_password_key_keeps_existing():
+    # The realistic PUT-body shape: a payload built from mask_notify's output
+    # has no app_password key at all (only has_password). Must keep the stored one.
+    incoming = {k: v for k, v in GOOD.items() if k != "app_password"}
+    assert merge_notify(GOOD, incoming)["app_password"] == GOOD["app_password"]
+
+
 def test_merge_new_password_replaces():
     incoming = dict(GOOD, app_password="new pass")
     assert merge_notify(GOOD, incoming)["app_password"] == "new pass"
