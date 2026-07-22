@@ -55,6 +55,14 @@ function aqmar() {
     eventError: '',
     eventSaving: false,
 
+    // ----- email notification settings (admin Settings page) -----
+    notifySettings: null,   // masked dict from GET /api/notify-settings
+    notifyLoading: false,
+    notifySaving: false,
+    notifyError: '',
+    notifyTestState: '',    // '' | 'sending' | 'ok' | error message
+    newRecipient: '',
+
     // ----- data -----
     all: [],
     cities: [],
@@ -380,6 +388,63 @@ function aqmar() {
       }
     },
 
+    // ---- Email notification settings (admin Settings page) ----
+    async loadNotifySettings() {
+      this.notifyLoading = true;
+      this.notifyError = '';
+      try {
+        this.notifySettings = await getNotifySettingsViaApi();
+        this.notifySettings.app_password = '';   // write-only field
+      } catch (e) {
+        this.notifyError = e.message || 'Load failed';
+      } finally {
+        this.notifyLoading = false;
+      }
+    },
+    addRecipient() {
+      const v = this.newRecipient.trim();
+      if (!v) return;
+      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v)) {
+        this.notifyError = this.lang === 'ar' ? 'بريد غير صالح' : 'Invalid email';
+        return;
+      }
+      if (!this.notifySettings.recipients.includes(v)) this.notifySettings.recipients.push(v);
+      this.newRecipient = '';
+      this.notifyError = '';
+    },
+    removeRecipient(i) {
+      this.notifySettings.recipients.splice(i, 1);
+    },
+    async saveNotifySettings() {
+      if (!this.notifySettings || this.notifySaving) return;
+      this.notifySaving = true;
+      this.notifyError = '';
+      try {
+        const s = this.notifySettings;
+        const saved = await saveNotifySettingsViaApi({
+          version: s.version, enabled: s.enabled,
+          sender_email: s.sender_email,
+          app_password: s.app_password || '',   // blank keeps stored
+          recipients: s.recipients,
+        });
+        this.notifySettings = saved;            // server truth (masked)
+        this.notifySettings.app_password = '';
+      } catch (e) {
+        this.notifyError = e.message || (this.lang === 'ar' ? 'فشل الحفظ' : 'Save failed');
+      } finally {
+        this.notifySaving = false;
+      }
+    },
+    async sendTestEmail() {
+      this.notifyTestState = 'sending';
+      try {
+        const r = await sendTestEmailViaApi();
+        this.notifyTestState = r.ok ? 'ok' : (r.error || 'failed');
+      } catch (e) {
+        this.notifyTestState = e.message || 'failed';
+      }
+    },
+
     // ============================================================
     // OFFLINE CACHE (Service Worker + version "store ID")
     // ============================================================
@@ -436,12 +501,15 @@ function aqmar() {
     goto(v) {
       // Admin is only reachable where allowed; bounce to the search page
       // otherwise (defensive — the nav button that calls this is also gated).
-      if (v === 'admin' && !this.adminAllowed) v = 'home';
+      if ((v === 'admin' || v === 'admin-settings') && !this.adminAllowed) v = 'home';
       this.view = v;
       this.matchFilter = null;
       this.selectedId = null;
       this.editingId = null;
       this.mobileNavOpen = false;
+      // Lazy-load the email notification settings the first time the admin
+      // opens the Settings page (keeps public/home boot untouched).
+      if (v === 'admin-settings' && !this.notifySettings) this.loadNotifySettings();
       window.scrollTo({ top: 0, behavior: 'smooth' });
     },
     openMartyr(id) {
@@ -499,6 +567,12 @@ function aqmar() {
     get adminAllowed() {
       const cfg = window.AQMAR_CONFIG || {};
       return cfg.adminEnabled !== false && this.isLocalDev;
+    },
+
+    // True on either admin page (People verify + Settings). Drives the shared
+    // banner/tabs section so it stays mounted while switching between them.
+    get isAdminView() {
+      return this.view === 'admin' || this.view === 'admin-settings';
     },
 
     // Compact label for the birthday-match delta badge.

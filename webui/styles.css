@@ -547,6 +547,18 @@ html[data-theme="dark"] body::before { mix-blend-mode: screen; opacity: 0.4; }
   cursor: help;
 }
 
+/* Admin page tabs (People verify / Settings) */
+.admin-tab {
+  border: 1px solid var(--divider);
+  background: transparent;
+  color: var(--muted);
+}
+.admin-tab.is-active {
+  background: var(--paper);
+  color: var(--ink);
+  border-color: var(--forest);
+}
+
 /* AI audit panel at the top of the admin edit form */
 .ai-note-panel {
   display: flex;

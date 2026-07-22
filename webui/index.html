@@ -925,8 +925,11 @@
     </div>
   </section>
 
-  <!-- ===================== ADMIN ===================== -->
-  <section id="main-content-admin" x-show="view === 'admin' && isAdmin" :aria-hidden="view !== 'admin'" class="max-w-[1240px] mx-auto px-8 pt-8 pb-20" x-cloak>
+  <!-- Shared admin banner + page tabs (People verify / Settings). Stays
+       mounted across both admin views so the banner + tabs don't flicker
+       when switching. Gated identically to the admin pages (loopback only). -->
+  <section x-show="isAdminView && isAdmin" :aria-hidden="!isAdminView"
+           class="max-w-[1240px] mx-auto px-8 pt-8" x-cloak>
     <div class="admin-banner bg-forest-grad text-paper px-7 py-5 rounded-lg mb-7 flex items-center justify-between gap-6">
       <div>
         <div class="font-latin-sans text-[11px] tracking-[0.3em] opacity-70">EDITOR · ADMIN MODE</div>
@@ -962,75 +965,18 @@
       </div>
     </div>
 
-    <!-- ===== Global events (data/settings.json) — rendered on every
-         lifespan line with the person's age at each event's start.
-         All names display via x-text (never x-html). ===== -->
-    <div x-show="!editingId" class="bg-paper border border-divider rounded-lg mb-7" style="padding: 22px 26px;">
-      <div class="flex items-center justify-between gap-4 flex-wrap">
-        <div>
-          <div class="font-latin-sans text-[11px] tracking-[0.2em] text-olive uppercase"
-               x-text="lang === 'ar' ? 'الأحداث العامة' : 'Global events'"></div>
-          <div class="font-body text-[13px] text-muted mt-1"
-               x-text="lang === 'ar'
-                 ? 'تظهر على خطّ الحياة في صفحة كل شهيد، مع عمره عند بداية كل حدث. تُنشر مع أول Publish قادم.'
-                 : 'Shown on every martyr\'s lifespan line with their age at each event. Published with the next Publish.'"></div>
-        </div>
-        <button x-show="!eventForm" @click="newEvent()" class="btn btn-primary"
-                x-text="lang === 'ar' ? '+ إضافة حدث' : '+ Add event'"></button>
-      </div>
-
-      <template x-if="events.length === 0 && !eventForm">
-        <div class="text-muted text-[14px] mt-4"
-             x-text="lang === 'ar' ? 'لا توجد أحداث بعد.' : 'No events yet.'"></div>
-      </template>
-
-      <div class="mt-4 flex flex-col">
-        <template x-for="ev in events" :key="ev.id">
-          <div class="flex items-center gap-4 flex-wrap py-2.5" style="border-bottom: 1px solid var(--divider);">
-            <span class="font-body font-bold text-ink text-[15px]" x-text="ev.name_ar"></span>
-            <span class="text-muted text-[13px] font-latin-sans" x-text="ev.name_en || ''"></span>
-            <span class="text-muted text-[13px]" style="font-variant-numeric: tabular-nums;"
-                  x-text="ev.end_date
-                    ? formatDateRange(ev.start_date, ev.end_date)
-                    : `${formatDate(ev.start_date)} — ${lang === 'ar' ? 'مستمر' : 'ongoing'}`"></span>
-            <span class="flex gap-2" style="margin-inline-start: auto;">
-              <button @click="editEvent(ev)" class="btn btn-ghost"
-                      x-text="lang === 'ar' ? 'تحرير' : 'Edit'"></button>
-              <button @click="deleteEvent(ev)" class="btn btn-ghost" style="color: var(--crimson);"
-                      x-text="lang === 'ar' ? 'حذف' : 'Delete'"></button>
-            </span>
-          </div>
-        </template>
-      </div>
-
-      <template x-if="eventForm">
-        <div class="mt-5 grid-pair grid gap-x-6">
-          <label class="block mb-4">
-            <div class="field-label" x-text="lang === 'ar' ? 'الاسم بالعربية (مطلوب)' : 'Arabic name (required)'"></div>
-            <input class="input" dir="rtl" x-model="eventForm.name_ar">
-          </label>
-          <label class="block mb-4">
-            <div class="field-label" x-text="lang === 'ar' ? 'الاسم بالإنجليزية (اختياري)' : 'English name (optional)'"></div>
-            <input class="input" dir="ltr" x-model="eventForm.name_en">
-          </label>
-          <label class="block mb-4">
-            <div class="field-label" x-text="lang === 'ar' ? 'تاريخ البداية (مطلوب)' : 'Start date (required)'"></div>
-            <input class="input" dir="ltr" type="date" x-model="eventForm.start_date">
-          </label>
-          <label class="block mb-4">
-            <div class="field-label" x-text="lang === 'ar' ? 'تاريخ النهاية (اختياري)' : 'End date (optional)'"></div>
-            <input class="input" dir="ltr" type="date" x-model="eventForm.end_date">
-          </label>
-          <div class="flex items-center gap-3 flex-wrap" style="grid-column: 1 / -1;">
-            <button @click="saveEventForm()" class="btn btn-primary" :disabled="eventSaving"
-                    x-text="eventSaving ? '…' : (lang === 'ar' ? 'حفظ الحدث' : 'Save event')"></button>
-            <button @click="cancelEventForm()" class="btn btn-ghost"
-                    x-text="lang === 'ar' ? 'إلغاء' : 'Cancel'"></button>
-            <span class="text-[13px]" style="color: var(--crimson);" x-text="eventError"></span>
-          </div>
-        </div>
-      </template>
+    <div class="admin-tabs flex gap-2 mb-7">
+      <button @click="goto('admin')" class="btn admin-tab"
+              :class="view === 'admin' ? 'is-active' : ''"
+              x-text="lang === 'ar' ? 'التحقق' : 'People verify'"></button>
+      <button @click="goto('admin-settings')" class="btn admin-tab"
+              :class="view === 'admin-settings' ? 'is-active' : ''"
+              x-text="lang === 'ar' ? 'الإعدادات' : 'Settings'"></button>
     </div>
+  </section>
+
+  <!-- ===================== ADMIN ===================== -->
+  <section id="main-content-admin" x-show="view === 'admin' && isAdmin" :aria-hidden="view !== 'admin'" class="max-w-[1240px] mx-auto px-8 pt-0 pb-20" x-cloak>
 
     <!-- Edit form -->
     <div x-show="editingId" class="grid-detail is-admin grid gap-7">
@@ -1578,6 +1524,154 @@
                   ? `عرض الكل (${adminList().length})`
                   : `Show all (${adminList().length})`"></button>
       </div>
+    </div>
+  </section>
+
+  <!-- ===================== ADMIN SETTINGS ===================== -->
+  <section id="main-content-admin-settings"
+           x-show="view === 'admin-settings' && isAdmin"
+           :aria-hidden="view !== 'admin-settings'"
+           class="max-w-[1240px] mx-auto px-8 pt-0 pb-20" x-cloak>
+
+    <!-- ===== Global events (data/settings.json) — rendered on every
+         lifespan line with the person's age at each event's start.
+         All names display via x-text (never x-html). ===== -->
+    <div class="bg-paper border border-divider rounded-lg mb-7" style="padding: 22px 26px;">
+      <div class="flex items-center justify-between gap-4 flex-wrap">
+        <div>
+          <div class="font-latin-sans text-[11px] tracking-[0.2em] text-olive uppercase"
+               x-text="lang === 'ar' ? 'الأحداث العامة' : 'Global events'"></div>
+          <div class="font-body text-[13px] text-muted mt-1"
+               x-text="lang === 'ar'
+                 ? 'تظهر على خطّ الحياة في صفحة كل شهيد، مع عمره عند بداية كل حدث. تُنشر مع أول Publish قادم.'
+                 : 'Shown on every martyr\'s lifespan line with their age at each event. Published with the next Publish.'"></div>
+        </div>
+        <button x-show="!eventForm" @click="newEvent()" class="btn btn-primary"
+                x-text="lang === 'ar' ? '+ إضافة حدث' : '+ Add event'"></button>
+      </div>
+
+      <template x-if="events.length === 0 && !eventForm">
+        <div class="text-muted text-[14px] mt-4"
+             x-text="lang === 'ar' ? 'لا توجد أحداث بعد.' : 'No events yet.'"></div>
+      </template>
+
+      <div class="mt-4 flex flex-col">
+        <template x-for="ev in events" :key="ev.id">
+          <div class="flex items-center gap-4 flex-wrap py-2.5" style="border-bottom: 1px solid var(--divider);">
+            <span class="font-body font-bold text-ink text-[15px]" x-text="ev.name_ar"></span>
+            <span class="text-muted text-[13px] font-latin-sans" x-text="ev.name_en || ''"></span>
+            <span class="text-muted text-[13px]" style="font-variant-numeric: tabular-nums;"
+                  x-text="ev.end_date
+                    ? formatDateRange(ev.start_date, ev.end_date)
+                    : `${formatDate(ev.start_date)} — ${lang === 'ar' ? 'مستمر' : 'ongoing'}`"></span>
+            <span class="flex gap-2" style="margin-inline-start: auto;">
+              <button @click="editEvent(ev)" class="btn btn-ghost"
+                      x-text="lang === 'ar' ? 'تحرير' : 'Edit'"></button>
+              <button @click="deleteEvent(ev)" class="btn btn-ghost" style="color: var(--crimson);"
+                      x-text="lang === 'ar' ? 'حذف' : 'Delete'"></button>
+            </span>
+          </div>
+        </template>
+      </div>
+
+      <template x-if="eventForm">
+        <div class="mt-5 grid-pair grid gap-x-6">
+          <label class="block mb-4">
+            <div class="field-label" x-text="lang === 'ar' ? 'الاسم بالعربية (مطلوب)' : 'Arabic name (required)'"></div>
+            <input class="input" dir="rtl" x-model="eventForm.name_ar">
+          </label>
+          <label class="block mb-4">
+            <div class="field-label" x-text="lang === 'ar' ? 'الاسم بالإنجليزية (اختياري)' : 'English name (optional)'"></div>
+            <input class="input" dir="ltr" x-model="eventForm.name_en">
+          </label>
+          <label class="block mb-4">
+            <div class="field-label" x-text="lang === 'ar' ? 'تاريخ البداية (مطلوب)' : 'Start date (required)'"></div>
+            <input class="input" dir="ltr" type="date" x-model="eventForm.start_date">
+          </label>
+          <label class="block mb-4">
+            <div class="field-label" x-text="lang === 'ar' ? 'تاريخ النهاية (اختياري)' : 'End date (optional)'"></div>
+            <input class="input" dir="ltr" type="date" x-model="eventForm.end_date">
+          </label>
+          <div class="flex items-center gap-3 flex-wrap" style="grid-column: 1 / -1;">
+            <button @click="saveEventForm()" class="btn btn-primary" :disabled="eventSaving"
+                    x-text="eventSaving ? '…' : (lang === 'ar' ? 'حفظ الحدث' : 'Save event')"></button>
+            <button @click="cancelEventForm()" class="btn btn-ghost"
+                    x-text="lang === 'ar' ? 'إلغاء' : 'Cancel'"></button>
+            <span class="text-[13px]" style="color: var(--crimson);" x-text="eventError"></span>
+          </div>
+        </div>
+      </template>
+    </div>
+
+    <!-- Email notifications (data/notify_settings.json — local only) -->
+    <div class="bg-paper border border-divider rounded-lg mb-7" style="padding: 22px 26px;">
+      <div class="font-latin-sans text-[11px] tracking-[0.2em] text-olive uppercase"
+           x-text="lang === 'ar' ? 'إشعارات البريد' : 'Email notifications'"></div>
+      <div class="font-body text-[13px] text-muted mt-1"
+           x-text="lang === 'ar'
+             ? 'ملخّص النشر الليلي يُرسل من حساب Gmail عبر كلمة مرور تطبيق. الإعدادات محلية على هذا الجهاز فقط ولا تُنشر أبداً.'
+             : 'Nightly summary is sent from a Gmail account via an App Password. Stored on this PC only, never published.'"></div>
+
+      <template x-if="notifyLoading"><div class="text-muted text-[14px] mt-4">…</div></template>
+
+      <template x-if="notifySettings">
+        <div class="mt-5">
+          <label class="flex items-center gap-3 mb-5" style="cursor:pointer;">
+            <input type="checkbox" x-model="notifySettings.enabled">
+            <span class="font-body font-bold text-ink text-[15px]"
+                  x-text="lang === 'ar' ? 'تفعيل الإرسال' : 'Enable sending'"></span>
+          </label>
+
+          <div class="grid-pair grid gap-x-6">
+            <label class="block mb-4">
+              <div class="field-label" x-text="lang === 'ar' ? 'بريد المرسِل (Gmail)' : 'Sender (Gmail)'"></div>
+              <input class="input" dir="ltr" x-model="notifySettings.sender_email">
+            </label>
+            <label class="block mb-4">
+              <div class="field-label"
+                   x-text="(lang === 'ar' ? 'كلمة مرور التطبيق' : 'App Password')
+                           + (notifySettings.has_password ? ' ✓' : '')"></div>
+              <input class="input" dir="ltr" type="password" x-model="notifySettings.app_password"
+                     :placeholder="notifySettings.has_password
+                       ? '•••• •••• •••• ••••'
+                       : (lang === 'ar' ? 'أدخل كلمة مرور التطبيق' : 'Enter app password')">
+            </label>
+          </div>
+
+          <div class="field-label" x-text="lang === 'ar' ? 'المستلمون' : 'Recipients'"></div>
+          <div class="flex flex-col mb-3">
+            <template x-for="(r, i) in notifySettings.recipients" :key="r">
+              <div class="flex items-center gap-3 py-2" style="border-bottom: 1px solid var(--divider);">
+                <span class="font-latin-sans text-[14px] text-ink" dir="ltr" x-text="r"></span>
+                <button @click="removeRecipient(i)" class="btn btn-ghost"
+                        style="color: var(--crimson); margin-inline-start: auto;">✕</button>
+              </div>
+            </template>
+          </div>
+          <div class="flex items-center gap-3 mb-5 flex-wrap">
+            <input class="input" dir="ltr" style="max-width: 320px;" x-model="newRecipient"
+                   @keydown.enter="addRecipient()"
+                   :placeholder="lang === 'ar' ? 'إضافة بريد…' : 'Add email…'">
+            <button @click="addRecipient()" class="btn btn-ghost"
+                    x-text="lang === 'ar' ? '+ إضافة' : '+ Add'"></button>
+          </div>
+
+          <div class="flex items-center gap-3 flex-wrap">
+            <button @click="saveNotifySettings()" class="btn btn-primary" :disabled="notifySaving"
+                    x-text="notifySaving ? '…' : (lang === 'ar' ? 'حفظ الإعدادات' : 'Save settings')"></button>
+            <button @click="sendTestEmail()" class="btn btn-ghost" :disabled="notifyTestState === 'sending'"
+                    x-text="notifyTestState === 'sending' ? '…'
+                            : (lang === 'ar' ? 'إرسال رسالة تجريبية' : 'Send test email')"></button>
+            <span class="text-[13px]" style="color: var(--forest);"
+                  x-show="notifyTestState === 'ok'"
+                  x-text="lang === 'ar' ? 'وصلت الرسالة ✓' : 'Test sent ✓'"></span>
+            <span class="text-[13px]" style="color: var(--crimson);"
+                  x-show="notifyTestState && notifyTestState !== 'ok' && notifyTestState !== 'sending'"
+                  x-text="notifyTestState"></span>
+            <span class="text-[13px]" style="color: var(--crimson);" x-text="notifyError"></span>
+          </div>
+        </div>
+      </template>
     </div>
   </section>
 

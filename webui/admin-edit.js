@@ -73,9 +73,26 @@
     return await global.AQMAR_API.put("/settings", settings);
   }
 
+  // --- Email notification settings (local notify_settings.json) ---
+  async function getNotifySettingsViaApi() {
+    if (!global.AQMAR_API) throw new Error("API client not initialized.");
+    return await global.AQMAR_API.get("/notify-settings");
+  }
+  async function saveNotifySettingsViaApi(body) {
+    if (!global.AQMAR_API) throw new Error("API client not initialized.");
+    return await global.AQMAR_API.put("/notify-settings", body);
+  }
+  async function sendTestEmailViaApi() {
+    if (!global.AQMAR_API) throw new Error("API client not initialized.");
+    return await global.AQMAR_API.post("/notify-test");
+  }
+
   global.buildEditDiff = buildEditDiff;
   global.translateToDbSchema = translateToDbSchema;
   global.saveEditViaApi = saveEditViaApi;
   global.rejectViaApi = rejectViaApi;
   global.saveSettingsViaApi = saveSettingsViaApi;
+  global.getNotifySettingsViaApi = getNotifySettingsViaApi;
+  global.saveNotifySettingsViaApi = saveNotifySettingsViaApi;
+  global.sendTestEmailViaApi = sendTestEmailViaApi;
 })(window);
