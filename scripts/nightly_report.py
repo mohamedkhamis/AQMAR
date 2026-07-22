@@ -56,6 +56,21 @@ def _load_json(path: Path):
     return None
 
 
+def _safe_load(path: Path, errors: list, label: str):
+    """Load JSON from path; never raises.
+
+    Missing/empty file is a normal "nothing there yet" case: returns None,
+    no error. A present-but-corrupt file (malformed JSON or unreadable) is
+    an actual failure: appends an entry to `errors` and returns None so the
+    caller can treat the payload as unavailable instead of crashing.
+    """
+    try:
+        return _load_json(path)
+    except (json.JSONDecodeError, OSError) as e:
+        errors.append({"stage": "report", "detail": f"{label} unreadable: {e}"[:300]})
+        return None
+
+
 def main() -> int:
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
     ap = argparse.ArgumentParser()
@@ -72,8 +87,14 @@ def main() -> int:
         stage, _, detail = e.partition(":")
         errors.append({"stage": stage, "detail": detail or stage})
 
-    baseline = _load_json(Path(args.baseline))
-    current = _load_json(MARTYRS_PATH)
+    n_errors_before_loads = len(errors)
+    baseline = _safe_load(Path(args.baseline), errors, "baseline")
+    current = _safe_load(MARTYRS_PATH, errors, "martyrs.json")
+    if len(errors) > n_errors_before_loads:
+        # Either load actually failed (corrupt/unreadable, not just missing) —
+        # treat the run as "nothing to publish" rather than risk a spurious
+        # "everything is new" email off a partial/mismatched payload pair.
+        current = None
 
     stuck, counts = [], {"total": 0, "fixed": 0, "covers": 0}
     try:
