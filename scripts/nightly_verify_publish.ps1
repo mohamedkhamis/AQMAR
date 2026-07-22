@@ -165,8 +165,15 @@ NEVER run git add/commit/push or any git state-changing command.
                 # Output flows to stdout where the wrapper's cmd redirection logs it.
                 $eap = $ErrorActionPreference
                 $ErrorActionPreference = 'Continue'
+                # ALLOWLIST, not --dangerously-skip-permissions: the frames/poster
+                # images this reads are externally-sourced (OCR of channel video),
+                # so a prompt-injected image must not reach a blanket-bypass agent.
+                # Headless claude auto-approves exactly these tools and DENIES anything
+                # else WITHOUT prompting, so the run stays silent while confining the
+                # agent to file ops + .venv python (git still disallowed on top). Same
+                # proven set as ai_verify_daily.ps1.
                 $prompt | claude -p --output-format text `
-                    --dangerously-skip-permissions `
+                    --allowedTools "Read" "Write" "Edit" "Glob" "Grep" "Bash(.venv*)" `
                     --disallowedTools "Bash(git*)" 2>&1
                 $claudeExit = $LASTEXITCODE
                 $ErrorActionPreference = $eap
@@ -234,8 +241,15 @@ catch {
     Write-Host "FATAL: $($_.Exception.Message)"
     # best-effort error email (never throws the run further)
     try {
-        & $py scripts\nightly_report.py --baseline logs\nightly_baseline.json `
-            --run-start $runStart --error "fatal:$($_.Exception.Message)"
+        # Honor -DryRun here too: without it a fatal thrown during a dry run
+        # would reach a REAL send. (& $py @args = positional argv to a native
+        # exe, which is correct for python.)
+        $fatalArgs = @("scripts\nightly_report.py",
+                       "--baseline", "logs\nightly_baseline.json",
+                       "--run-start", $runStart,
+                       "--error", "fatal:$($_.Exception.Message)")
+        if ($DryRun) { $fatalArgs += "--dry-run" }
+        & $py @fatalArgs
     } catch {}
     $exitCode = 1
 }
