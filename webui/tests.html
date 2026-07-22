@@ -46,11 +46,11 @@
   </script>
 
   <!-- Modules under test — order matters: dependencies first -->
-  <script src="config.js?v=4" charset="UTF-8"></script>
-  <script src="filter-logic.js?v=5" charset="UTF-8"></script>
+  <script src="config.js?v=5" charset="UTF-8"></script>
+  <script src="filter-logic.js?v=6" charset="UTF-8"></script>
   <script src="data-loader.js?v=7" charset="UTF-8"></script>
   <script src="admin-edit.js?v=4" charset="UTF-8"></script>
-  <script src="app.js?v=4" charset="UTF-8"></script>
+  <script src="app.js?v=5" charset="UTF-8"></script>
 
   <!-- Test files -->
   <script>
@@ -122,6 +122,55 @@
 
     test("windowDaysFromMode falls back to 30 for unknown mode", () => {
       assertEq(windowDaysFromMode("nonsense", 999), 30);
+    });
+
+    // ===== global events (filter-logic.js) =====
+
+    const EVS = [
+      { id: "evt-1", name_ar: "أ", start_date: "2023-10-07", end_date: null },
+      { id: "evt-2", name_ar: "ب", start_date: "2023-11-24", end_date: "2023-11-30" },
+      { id: "evt-3", name_ar: "ج", start_date: "2025-01-19", end_date: "2025-03-18" },
+    ];
+
+    test("eventsForPerson keeps only events inside the lifetime", () => {
+      const r = eventsForPerson(EVS, "1995-08-17", "2024-01-01");
+      assertEq(r.map(e => e.id), ["evt-1", "evt-2"]);
+    });
+
+    test("eventsForPerson boundary dates are inclusive", () => {
+      const r = eventsForPerson(EVS, "2023-10-07", "2023-11-24");
+      assertEq(r.map(e => e.id), ["evt-1", "evt-2"]);
+    });
+
+    test("eventsForPerson returns [] when person dates missing or malformed", () => {
+      assertEq(eventsForPerson(EVS, "", "2024-01-01"), []);
+      assertEq(eventsForPerson(EVS, "1995-08-17", ""), []);
+      assertEq(eventsForPerson(EVS, "1995-08-17", "فبرايسر"), []);
+    });
+
+    test("eventsForPerson annotates calendar-accurate age_at_start", () => {
+      const r = eventsForPerson(EVS, "1995-12-01", "2024-01-01");
+      assertEq(r[0].age_at_start, 27);   // Dec birthday not reached on 7 Oct
+      const r2 = eventsForPerson(EVS, "1995-08-17", "2024-01-01");
+      assertEq(r2[0].age_at_start, 28);  // Aug birthday already passed
+    });
+
+    test("eventsForPerson sorts ascending by start_date", () => {
+      const shuffled = [EVS[2], EVS[0], EVS[1]];
+      const r = eventsForPerson(shuffled, "1995-08-17", "2025-04-22");
+      assertEq(r.map(e => e.id), ["evt-1", "evt-2", "evt-3"]);
+    });
+
+    test("eventDisplayName prefers English only when set", () => {
+      assertEq(eventDisplayName({ name_ar: "حدث", name_en: "" }, "en"), "حدث");
+      assertEq(eventDisplayName({ name_ar: "حدث", name_en: "Event" }, "en"), "Event");
+      assertEq(eventDisplayName({ name_ar: "حدث", name_en: "Event" }, "ar"), "حدث");
+      assertEq(eventDisplayName(null, "ar"), "");
+    });
+
+    test("computeAge stays calendar-accurate at the event-day boundary", () => {
+      assertEq(computeAge("1995-10-07", "2023-10-07"), 28);  // birthday that day
+      assertEq(computeAge("1995-10-08", "2023-10-07"), 27);  // one day short
     });
   </script>
 

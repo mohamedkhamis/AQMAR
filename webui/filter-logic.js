@@ -204,6 +204,42 @@
     return params;
   }
 
+  // ---- Global events (2026-07-22) ----
+  // Events come from data/settings.json (see data-loader.js loadSettings).
+
+  // First 10 chars when the string starts with YYYY-MM-DD, else null. The
+  // martyr dates can carry OCR garbage — mirror formatDate's prefix rule.
+  function isoDayPrefix(s) {
+    return (typeof s === "string" && /^\d{4}-\d{2}-\d{2}/.test(s)) ? s.slice(0, 10) : null;
+  }
+
+  // Events whose start_date falls inside [birth, martyrdom] (inclusive),
+  // sorted ascending, each annotated with age_at_start (calendar-accurate
+  // computeAge). Missing or malformed person dates → [] — no events can be
+  // placed on a line that can't be drawn.
+  function eventsForPerson(events, birthIso, martyrdomIso) {
+    const birth = isoDayPrefix(birthIso);
+    const mart = isoDayPrefix(martyrdomIso);
+    if (!birth || !mart) return [];
+    return (events || [])
+      .filter(e => {
+        const s = isoDayPrefix(e && e.start_date);
+        return s && s >= birth && s <= mart;
+      })
+      .map(e => ({ ...e, age_at_start: computeAge(birth, e.start_date.slice(0, 10)) }))
+      .sort((a, b) => a.start_date < b.start_date ? -1 : a.start_date > b.start_date ? 1 : 0);
+  }
+
+  // Display name for the active language. Arabic is the required source
+  // field; English is optional and falls back to Arabic when empty.
+  function eventDisplayName(event, lang) {
+    if (!event) return "";
+    if (lang === "en" && typeof event.name_en === "string" && event.name_en.trim()) {
+      return event.name_en;
+    }
+    return event.name_ar || "";
+  }
+
   global.daysBetween = daysBetween;
   global.parseBirthdayQuery = parseBirthdayQuery;
   global.buildBirthdayParams = buildBirthdayParams;
@@ -215,4 +251,7 @@
   global.sortRows = sortRows;
   global.normalizeArabic = normalizeArabic;
   global.searchPredicate = searchPredicate;
+  global.isoDayPrefix = isoDayPrefix;
+  global.eventsForPerson = eventsForPerson;
+  global.eventDisplayName = eventDisplayName;
 })(window);

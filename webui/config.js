@@ -58,7 +58,6 @@ window.AQMAR_CONFIG = {
       id: i + 1,
       name: `${rand(FIRST, seeded(i*3+1))} ${rand(MIDDLE, seeded(i*7+2))} ${rand(LAST, seeded(i*11+3))}`,
       birth, martyrdom,
-      age: my - by,
       city: rand(CITIES, seeded(i*37)),
       rank: seeded(i*41) > 0.25 ? rand(RANKS, seeded(i*41)) : null,
       weapon: seeded(i*43) > 0.40 ? rand(WEAPONS, seeded(i*43)) : null,

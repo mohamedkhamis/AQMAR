@@ -1097,15 +1097,12 @@ function aqmar() {
     // ============================================================
     formatDate(iso) { return formatDate(iso, this.lang); },
     computeAge(birth, martyrdom) {
-      // Returns null if either date is missing OR malformed (e.g. "فبرايسر")
-      // so downstream templates can render '—' instead of "null عاماً".
-      if (!birth || !martyrdom) return null;
-      const by = parseInt(String(birth).slice(0,4), 10);
-      const my = parseInt(String(martyrdom).slice(0,4), 10);
-      if (!Number.isFinite(by) || !Number.isFinite(my)) return null;
-      const age = my - by;
-      // Sanity bound — negative or unrealistic ages indicate scrambled OCR.
-      if (age < 0 || age > 120) return null;
+      // Calendar-accurate age (delegates to filter-logic.js's computeAge)
+      // with the 0–120 OCR sanity bound. Year-subtraction until 2026-07-22 —
+      // that showed 28 for a martyr who died two months before his 28th
+      // birthday, and would contradict the event ages on the lifespan line.
+      const age = window.computeAge(birth, martyrdom);
+      if (age == null || age < 0 || age > 120) return null;
       return age;
     },
     // Short-form "X عاماً" / "X yrs" with em-dash fallback for missing/malformed.
