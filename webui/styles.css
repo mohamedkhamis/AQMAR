@@ -420,6 +420,10 @@ html[data-theme="dark"] body::before { mix-blend-mode: screen; opacity: 0.4; }
   border-top: 1px solid var(--divider);
   border-bottom: 1px solid var(--divider);
 }
+/* Cell separators live here (not inline) so the wrap breakpoints below can
+   restyle them — copies the .ai-stats-strip pattern. */
+.dates-strip > div { border-inline-start: 1px solid var(--divider); }
+.dates-strip > div:first-child { border-inline-start: none; }
 .grid-2col       { grid-template-columns: 1fr 1fr; }
 .footer-grid     { grid-template-columns: 1.5fr 1fr 1fr 1fr; }
 .grid-pair       { grid-template-columns: 1fr 1fr; }
@@ -671,6 +675,13 @@ html[dir="rtl"] .lifeline-life { background: linear-gradient(to left, var(--oliv
   .footer-grid > *:first-child { grid-column: 1 / -1; }
   .admin-banner { flex-direction: column; align-items: flex-start !important; gap: 16px; }
   .dates-strip { grid-template-columns: 1fr 1fr; }
+  /* 2-col wrap: the age cell starts a new full-width row — no stray start
+     border, and a top border separates the rows. */
+  .dates-strip > div:nth-child(3) {
+    grid-column: 1 / -1;
+    border-inline-start: none;
+    border-top: 1px solid var(--divider);
+  }
   .grid-pair { grid-template-columns: 1fr; }
   /* Tighten the header so logo + controls (incl. the admin button) fit
      small phones without overflowing. !important beats Tailwind px-8 / gap-6. */
@@ -682,6 +693,9 @@ html[dir="rtl"] .lifeline-life { background: linear-gradient(to left, var(--oliv
   .hero-pad { padding: clamp(20px, 5vw, 44px) !important; }
   .lifeline, .ev-list { display: none; }
   .lifeline-v { display: block; }
+  .dates-strip { grid-template-columns: 1fr; }
+  .dates-strip > div { border-inline-start: none; }
+  .dates-strip > div + div { border-top: 1px solid var(--divider); }
 }
 
 /* Skip-to-content link — visible only on keyboard focus */
