@@ -36,6 +36,25 @@ def test_get_requires_admin(client):
     assert client.get("/api/notify-settings").status_code == 403
 
 
+def test_put_requires_admin_token(client):
+    assert client.put("/api/notify-settings", json=BODY).status_code == 403
+
+
+def test_put_rejects_wrong_token(client):
+    r = client.put("/api/notify-settings", json=BODY,
+                   headers={"X-Admin-Token": "wrong"})
+    assert r.status_code == 403
+
+
+def test_notify_test_requires_admin_token(client):
+    assert client.post("/api/notify-test").status_code == 403
+
+
+def test_notify_test_rejects_wrong_token(client):
+    assert client.post("/api/notify-test",
+                       headers={"X-Admin-Token": "wrong"}).status_code == 403
+
+
 def test_get_returns_masked_defaults(client):
     r = client.get("/api/notify-settings", headers=TOK)
     assert r.status_code == 200
