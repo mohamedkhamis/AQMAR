@@ -202,7 +202,7 @@ function aqmar() {
       });
 
       // Auto-recompute "Age at martyrdom" whenever the admin edits either
-      // date in the edit form. Reuses the existing year-only computeAge so
+      // date in the edit form. Reuses the (now calendar-accurate) computeAge so
       // freshly-typed values match how rows are seeded on load. The age input
       // stays editable so the admin can still override manually if one date
       // is unparseable but a known age was mentioned elsewhere.
@@ -225,6 +225,13 @@ function aqmar() {
         this.draft.featuredFrame = (current?.kind === 'frame')
           ? denormalizePath(current.src)
           : null;
+      });
+
+      // Lifespan line: label positions are pixel-measured, so re-run the
+      // dodge pass when the viewport resizes (no re-render needed).
+      window.addEventListener('resize', () => {
+        const el = document.getElementById('lifeline-root');
+        if (el) dodgeTimelineLabels(el);
       });
     },
 
@@ -1336,67 +1343,129 @@ function aqmar() {
         </div>`;
     },
 
+    // Lifespan line — day-precision axis from birth to today, with the
+    // global events (data/settings.json) that fall inside this person's
+    // lifetime. Emits BOTH the horizontal desktop layout and the vertical
+    // ≤480px layout; CSS swaps them. All positions are PHYSICAL left
+    // percentages computed here — the old inset-inline-start +
+    // translateX(-50%) mix sat markers off-center by half their width in
+    // Arabic, and the 90deg gradient ran backwards in RTL (now CSS per-dir).
+    // Every event name passes through esc(): settings.json is admin-authored
+    // content entering x-html markup.
     renderTimeline(m) {
       if (!m.birth || !m.martyrdom) return '';
       const ar = this.lang === 'ar';
-      const birthY = parseInt(m.birth.slice(0,4), 10);
-      const martY  = parseInt(m.martyrdom.slice(0,4), 10);
-      if (!Number.isFinite(birthY) || !Number.isFinite(martY)) return '';
-      const endY   = new Date().getFullYear();
-      const startY = birthY;
-      const range  = Math.max(endY - startY, 1);
-      const birthPos = ((birthY - startY) / range) * 100;
-      const martPos  = ((martY  - startY) / range) * 100;
+      const t0 = new Date(String(m.birth).slice(0, 10) + 'T00:00:00').getTime();
+      const tMart = new Date(String(m.martyrdom).slice(0, 10) + 'T00:00:00').getTime();
+      if (!Number.isFinite(t0) || !Number.isFinite(tMart) || tMart <= t0) return '';
+      const t1 = Math.max(Date.now(), tMart);
+      const span = Math.max(t1 - t0, 86400000);
+      const pct = (iso) => {
+        const t = new Date(String(iso).slice(0, 10) + 'T00:00:00').getTime();
+        return Math.min(Math.max(((t - t0) / span) * 100, 0), 100);
+      };
+      const phys = (p) => (ar ? 100 - p : p);
+      const pBirth = pct(m.birth), pMart = pct(m.martyrdom);
+      const birthY = String(m.birth).slice(0, 4);
+      const martY = String(m.martyrdom).slice(0, 4);
+      const days = Math.floor((tMart - t0) / 86400000);
+      const ageStr = Number.isFinite(m.age) ? m.age : '—';
+      const evs = eventsForPerson(this.events, m.birth, m.martyrdom);
+      const ageLine = (n) => n == null ? '' : (ar ? `عمره ${n} عاماً` : `Age ${n}`);
 
-      // Ticks every 5 years
-      const ticks = [];
-      for (let y = Math.ceil(startY / 5) * 5; y <= endY; y += 5) ticks.push(y);
-
-      const days = Math.floor((new Date(m.martyrdom) - new Date(m.birth)) / 86400000);
-
-      const tickHtml = ticks.map(y => {
-        const pos = ((y - startY) / range) * 100;
-        return `
-          <div style="position:absolute; top:28px; inset-inline-start:${pos}%; width:1px; height:8px; background:var(--faint); transform:translateX(-50%);">
-            <div style="position:absolute; top:12px; inset-inline-start:0; transform:translateX(-50%); font-family:var(--font-latin-sans); font-size:10px; color:var(--muted); font-variant-numeric:tabular-nums;">${y}</div>
-          </div>`;
-      }).join('');
-
-      return `
-        <div class="flex items-baseline justify-between mb-6">
+      // ---- header: lived line + legend ----
+      let h = `
+        <div class="lifeline-head">
           <div>
-            <div class="font-latin-sans" style="font-size:11px; letter-spacing:0.2em; color:var(--olive); text-transform:uppercase;">
-              ${ar ? 'خطّ الحياة' : 'Lifespan'}
-            </div>
-            <div class="font-display" style="font-size:22px; font-weight:500; margin-top:4px;">
+            <div class="lifeline-kicker">${ar ? 'خطّ الحياة' : 'Lifespan'}</div>
+            <div class="lifeline-lived">
               ${ar
-                ? `عاشَ <b style="color:var(--forest)">${m.age}</b> عاماً <span style="color:var(--muted); font-size:16px;">(${days.toLocaleString('ar-EG')} يوماً)</span>`
-                : `Lived <b style="color:var(--forest)">${m.age}</b> years <span style="color:var(--muted); font-size:16px;">(${days.toLocaleString()} days)</span>`}
+                ? `عاشَ <b>${ageStr}</b> عاماً <span class="days">(${days.toLocaleString('ar-EG')} يوماً)</span>`
+                : `Lived <b>${ageStr}</b> years <span class="days">(${days.toLocaleString()} days)</span>`}
             </div>
           </div>
-          <div class="flex gap-4.5" style="gap:18px; font-size:12px; color:var(--muted);">
-            <div class="flex items-center" style="gap:6px;">
-              <span style="width:10px; height:10px; border-radius:50%; background:var(--olive); box-shadow: 0 0 0 3px var(--paper), 0 0 0 4px var(--olive);"></span>
-              ${ar ? 'الميلاد' : 'Birth'}
-            </div>
-            <div class="flex items-center" style="gap:6px;">
-              <span style="width:10px; height:10px; background:var(--forest); transform:rotate(45deg);"></span>
-              ${ar ? 'الاستشهاد' : 'Martyrdom'}
-            </div>
-          </div>
-        </div>
-        <div style="position:relative; height:64px; margin-inline:12px;">
-          <div style="position:absolute; top:30px; inset-inline:0; height:2px; background:var(--divider);"></div>
-          <div style="position:absolute; top:28px; inset-inline-start:${birthPos}%; width:${martPos - birthPos}%; height:6px; background:linear-gradient(90deg, var(--olive), var(--forest)); border-radius:999px;"></div>
-          ${tickHtml}
-          <div style="position:absolute; top:18px; inset-inline-start:${birthPos}%; transform:translateX(-50%);">
-            <div style="width:16px; height:16px; border-radius:50%; background:var(--olive); border:3px solid var(--paper); box-shadow:0 0 0 1px var(--olive);"></div>
-            <div style="position:absolute; top:-22px; inset-inline-start:50%; transform:translateX(-50%); font-family:var(--font-naskh); font-size:12px; color:var(--olive); white-space:nowrap; font-weight:700;">${birthY}</div>
-          </div>
-          <div style="position:absolute; top:22px; inset-inline-start:${martPos}%; transform:translateX(-50%) rotate(45deg); width:14px; height:14px; background:var(--forest); box-shadow:0 0 0 3px var(--paper), 0 0 0 4px var(--forest);">
-            <div style="position:absolute; top:-32px; inset-inline-start:50%; transform:translateX(-50%) rotate(-45deg); font-family:var(--font-naskh); font-size:12px; color:var(--forest); white-space:nowrap; font-weight:700;">${martY}</div>
+          <div class="lifeline-legend">
+            <span><span class="sw sw-birth"></span>${ar ? 'الميلاد' : 'Birth'}</span>
+            <span><span class="sw sw-mart"></span>${ar ? 'الاستشهاد' : 'Martyrdom'}</span>
+            ${evs.length ? `
+            <span><span class="sw sw-event"></span>${ar ? 'حدث' : 'Event'}</span>
+            <span><span class="sw sw-band"></span>${ar ? 'فترة حدث' : 'Event period'}</span>` : ''}
           </div>
         </div>`;
+
+      // ---- horizontal layout (hidden ≤480px) ----
+      h += `<div class="lifeline"><svg class="lifeline-leaders" aria-hidden="true"></svg>`;
+      h += `<div class="lifeline-base"></div>`;
+      h += `<div class="lifeline-life" style="left:${Math.min(phys(pBirth), phys(pMart))}%; width:${pMart - pBirth}%;"></div>`;
+      evs.forEach((e) => {
+        const ps = pct(e.start_date);
+        const pe = Math.min(pct(e.end_date || m.martyrdom), pMart); // ongoing/overrunning → clamp
+        h += `<div class="lifeline-band" style="left:${Math.min(phys(ps), phys(pe))}%; width:${Math.abs(pe - ps)}%;"></div>`;
+      });
+      const markerPcts = [pBirth, pMart, ...evs.map(e => pct(e.start_date))];
+      const yStart = Math.ceil(parseInt(birthY, 10) / 5) * 5;
+      const yEnd = new Date().getFullYear();
+      for (let y = yStart; y <= yEnd; y += 5) {
+        const tp = pct(`${y}-01-01`);
+        if (markerPcts.some(mp => Math.abs(mp - tp) < 3)) continue; // don't collide
+        h += `<div class="lifeline-tick" style="left:${phys(tp)}%;"><span>${y}</span></div>`;
+      }
+      h += `<div class="mk mk-birth" style="left:${phys(pBirth)}%;"></div>
+            <div class="mk-year mk-year-birth" style="left:${phys(pBirth)}%;">${birthY}</div>
+            <div class="mk mk-mart" style="left:${phys(pMart)}%;"></div>
+            <div class="mk-year mk-year-mart" style="left:${phys(pMart)}%;">${martY}</div>`;
+      evs.forEach((e, i) => {
+        const x = phys(pct(e.start_date));
+        const side = i % 2 === 0 ? 'above' : 'below';
+        h += `<div class="mk mk-event" style="left:${x}%;"></div>
+              <div class="ev-label" data-x="${x}" data-side="${side}">
+                <div class="n">${esc(eventDisplayName(e, this.lang))}</div>
+                ${e.age_at_start != null ? `<div class="a">${ageLine(e.age_at_start)}</div>` : ''}
+              </div>`;
+      });
+      h += `</div>`;
+
+      // ---- event detail list (hidden ≤480px with the line) ----
+      if (evs.length) {
+        h += `<div class="ev-list">` + evs.map((e) => `
+          <div class="ev-row">
+            <span class="bullet"></span>
+            <span class="n">${esc(eventDisplayName(e, this.lang))}</span>
+            <span class="d">${e.end_date
+              ? formatDateRange(e.start_date, e.end_date, this.lang)
+              : `${formatDate(e.start_date, this.lang)} — ${ar ? 'مستمر' : 'ongoing'}`}</span>
+            ${e.age_at_start != null ? `<span class="age-pill">${ageLine(e.age_at_start)}</span>` : ''}
+          </div>`).join('') + `</div>`;
+      }
+
+      // ---- vertical layout (shown ≤480px) ----
+      h += `<div class="lifeline-v">
+        <div class="v-entry">
+          <span class="v-mk"><span class="sw sw-birth"></span></span>
+          <div class="v-year v-year-birth">${birthY}</div>
+          <div class="v-date">${ar ? 'وُلد في' : 'Born'} ${formatDate(m.birth, this.lang)}</div>
+        </div>`;
+      evs.forEach((e) => {
+        h += `<div class="v-entry">
+          <span class="v-mk"><span class="sw sw-event"></span></span>
+          <div class="v-name">${esc(eventDisplayName(e, this.lang))}</div>
+          <div class="v-date">${e.end_date
+            ? formatDateRange(e.start_date, e.end_date, this.lang)
+            : formatDate(e.start_date, this.lang)}</div>
+          <div class="v-meta">
+            ${e.age_at_start != null ? `<span class="age-pill">${ageLine(e.age_at_start)}</span>` : ''}
+            ${!e.end_date ? `<span class="tag-ongoing">${ar ? 'استمرّ حتى استشهاده' : 'Ongoing at his martyrdom'}</span>` : ''}
+          </div>
+        </div>`;
+      });
+      h += `<div class="v-entry">
+          <span class="v-mk"><span class="sw sw-mart"></span></span>
+          <div class="v-year v-year-mart">${martY}</div>
+          <div class="v-date">${ar ? 'استُشهد في' : 'Martyred'} ${formatDate(m.martyrdom, this.lang)}</div>
+          ${Number.isFinite(m.age) ? `<div class="v-meta"><span class="age-pill">${ar ? `عن عمر ${m.age} عاماً` : `Aged ${m.age}`}</span></div>` : ''}
+        </div>
+      </div>`;
+      return h;
     },
   };
 }
@@ -1491,4 +1560,71 @@ function formatDate(iso, locale = 'ar') {
   }
   const arMonths = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
   return `${d} ${arMonths[mIdx]} ${y}`;
+}
+
+// Date-range display for events: same-month ranges compact to
+// "24 – 30 نوفمبر 2023"; cross-month ranges join both full dates with an
+// arrow matching the reading direction. Falls back to whichever date is
+// valid when one side is malformed.
+function formatDateRange(startIso, endIso, locale = 'ar') {
+  const fs = formatDate(startIso, locale);
+  const fe = formatDate(endIso, locale);
+  if (fs === '—' || fe === '—') return fs !== '—' ? fs : fe;
+  if (String(startIso).slice(0, 7) === String(endIso).slice(0, 7)) {
+    const startDay = parseInt(String(startIso).slice(8, 10), 10);
+    return `${startDay} – ${fe}`;
+  }
+  return locale === 'en' ? `${fs} → ${fe}` : `${fs} ← ${fe}`;
+}
+
+// Y of the horizontal line inside .lifeline, in px. MUST match the CSS tops
+// in the "Lifespan line + global events" block of styles.css.
+const LIFELINE_TOP = 112;
+
+// Post-render label layout for the lifespan line. Event labels keep their
+// side (above/below) but may slide horizontally so they never overlap; an
+// SVG leader line connects each label back to its true marker position.
+// Runs after every renderTimeline() insertion (x-effect + $nextTick in
+// index.html) and on window resize. No-op while the horizontal layout is
+// hidden (≤480px shows the vertical layout instead).
+function dodgeTimelineLabels(root) {
+  if (!root) return;
+  const tl = root.querySelector('.lifeline');
+  if (!tl || tl.offsetParent === null) return;
+  const svg = tl.querySelector('.lifeline-leaders');
+  const labels = Array.from(tl.querySelectorAll('.ev-label'));
+  if (!svg || labels.length === 0) return;
+  const W = tl.clientWidth;
+  svg.setAttribute('viewBox', `0 0 ${W} ${tl.clientHeight}`);
+  svg.innerHTML = '';
+  const GAP = 14;
+  ['above', 'below'].forEach((side) => {
+    const group = labels
+      .filter((l) => l.dataset.side === side)
+      .map((l) => ({ el: l, target: (parseFloat(l.dataset.x) / 100) * W, w: l.offsetWidth }))
+      .sort((a, b) => a.target - b.target);
+    // Two sweeps: push right off earlier labels, then clamp back from the
+    // container edge — labels end up as close to their true x as fits.
+    let prevRight = 0;
+    group.forEach((g) => {
+      g.c = Math.max(g.target, prevRight + g.w / 2);
+      prevRight = g.c + g.w / 2 + GAP;
+    });
+    let nextLeft = W;
+    for (let i = group.length - 1; i >= 0; i--) {
+      const g = group[i];
+      g.c = Math.min(g.c, nextLeft - g.w / 2);
+      nextLeft = g.c - g.w / 2 - GAP;
+    }
+    group.forEach((g) => {
+      g.el.style.left = `${g.c - g.w / 2}px`;
+      g.el.style.visibility = 'visible';
+      const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      line.setAttribute('x1', g.target);
+      line.setAttribute('y1', side === 'above' ? LIFELINE_TOP - 12 : LIFELINE_TOP + 12);
+      line.setAttribute('x2', g.c);
+      line.setAttribute('y2', side === 'above' ? LIFELINE_TOP - 34 : LIFELINE_TOP + 28);
+      svg.appendChild(line);
+    });
+  });
 }

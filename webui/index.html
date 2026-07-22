@@ -50,7 +50,7 @@
 <!-- Design tokens + components. ?v bumped 2026-06-15 (combined filters,
      offline cache, admin flag) so returning visitors don't run a stale
      app.js against the new markup. -->
-<link rel="stylesheet" href="styles.css?v=20260617b">
+<link rel="stylesheet" href="styles.css?v=20260722">
 
 <!-- Site config -->
 <script src="config.js?v=20260722"></script>
@@ -765,9 +765,16 @@
           </div>
         </article>
 
-        <!-- Lifespan timeline -->
-        <section class="mt-7 bg-paper border border-divider rounded-lg" style="padding: 28px 36px;">
-          <div x-html="renderTimeline(current)"></div>
+        <!-- Lifespan timeline — global events from data/settings.json render
+             on this line. x-effect re-runs on current/lang/events changes;
+             the dodge pass then positions the labels (needs measured
+             widths, hence $nextTick). Hidden entirely when either date is
+             missing (renderTimeline would return '' and leave an empty box). -->
+        <section class="mt-7 bg-paper border border-divider rounded-lg" style="padding: 28px 36px;"
+                 x-show="current.birth && current.martyrdom">
+          <div id="lifeline-root"
+               x-effect="$el.innerHTML = (view === 'detail' && current) ? renderTimeline(current) : '';
+                         $nextTick(() => dodgeTimelineLabels($el))"></div>
         </section>
 
         <!-- Media & source — the selected video-card frame (lead image) + the

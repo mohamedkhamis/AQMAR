@@ -27,6 +27,14 @@
   --ai:        #4cc3b0;
   --ai-dim:    rgba(76, 195, 176, 0.12);
 
+  /* Global-events accents on the lifespan line (2026-07-22): translucent
+     gold for event-period bands + age pills, translucent olive for the
+     "ongoing" tag. */
+  --gold-dim:    rgba(251, 191, 36, 0.12);
+  --gold-dim-2:  rgba(251, 191, 36, 0.24);
+  --olive-dim:   rgba(184, 146, 74, 0.12);
+  --olive-dim-2: rgba(184, 146, 74, 0.30);
+
   --font-display: "El Messiri", "Amiri", serif;
   --font-naskh:   "Amiri", serif;
   --font-body:    "IBM Plex Sans Arabic", system-ui, sans-serif;
@@ -549,6 +557,87 @@ html[data-theme="dark"] body::before { mix-blend-mode: screen; opacity: 0.4; }
 .ai-note-panel .d { font-size: 12.5px; color: var(--ink-2); line-height: 1.7; }
 .ai-note-panel .when { font-family: var(--font-latin-sans); font-size: 11px; color: var(--muted); margin-top: 4px; }
 
+/* ===== Lifespan line + global events (2026-07-22) =====
+   Markup emitted by renderTimeline() in app.js. The horizontal layout
+   (.lifeline + .ev-list) renders above 480px; the vertical layout
+   (.lifeline-v) replaces it at ≤480px (swap lives in the 480 media query).
+   Positions along the line are inline `left` percentages (data-driven,
+   PHYSICAL — RTL is converted in JS); all other geometry lives here.
+   The line's y inside .lifeline is 112px — keep in sync with LIFELINE_TOP
+   in app.js (the SVG leader-line pass needs it as a number). */
+.lifeline-head { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin-bottom: 26px; }
+.lifeline-kicker { font-family: var(--font-latin-sans); font-size: 11px; letter-spacing: 0.2em; color: var(--olive); text-transform: uppercase; }
+.lifeline-lived { font-family: var(--font-display); font-size: 22px; font-weight: 500; margin-top: 4px; }
+.lifeline-lived b { color: var(--forest); }
+.lifeline-lived .days { color: var(--muted); font-size: 16px; }
+.lifeline-legend { display: flex; gap: 18px; font-size: 12px; color: var(--muted); flex-wrap: wrap; align-items: center; }
+.lifeline-legend > span { display: inline-flex; align-items: center; gap: 6px; }
+.sw { flex: none; display: inline-block; }
+.sw-birth { width: 10px; height: 10px; border-radius: 50%; background: var(--olive); box-shadow: 0 0 0 3px var(--paper), 0 0 0 4px var(--olive); }
+.sw-mart  { width: 10px; height: 10px; background: var(--forest); transform: rotate(45deg); }
+.sw-event { width: 10px; height: 10px; border-radius: 50%; background: var(--paper); border: 2px solid var(--ink-2); }
+.sw-band  { width: 18px; height: 8px; border-radius: 4px; background: var(--gold-dim); border: 1px solid var(--gold-dim-2); }
+
+.lifeline { position: relative; height: 210px; margin-inline: 12px; }
+.lifeline-leaders { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
+.lifeline-leaders line { stroke: var(--faint); stroke-width: 1; }
+.lifeline-base { position: absolute; inset-inline: 0; top: 112px; height: 2px; background: var(--divider); }
+.lifeline-life {
+  position: absolute; top: 110px; height: 6px; border-radius: 999px;
+  background: linear-gradient(to right, var(--olive), var(--forest));
+}
+/* linear-gradient has no logical directions — flip it per document dir so
+   olive always sits on the birth side. */
+html[dir="rtl"] .lifeline-life { background: linear-gradient(to left, var(--olive), var(--forest)); }
+.lifeline-band {
+  position: absolute; top: 107px; height: 12px; border-radius: 6px;
+  background: var(--gold-dim); border: 1px solid var(--gold-dim-2);
+}
+.lifeline-tick { position: absolute; top: 109px; width: 1px; height: 8px; background: var(--faint); transform: translateX(-50%); }
+.lifeline-tick span {
+  position: absolute; top: 11px; left: 50%; transform: translateX(-50%);
+  font-family: var(--font-latin-sans); font-size: 10px; color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.lifeline .mk { position: absolute; transform: translateX(-50%); }
+.lifeline .mk-birth { top: 104px; width: 16px; height: 16px; border-radius: 50%; background: var(--olive); border: 3px solid var(--paper); box-shadow: 0 0 0 1px var(--olive); }
+.lifeline .mk-mart  { top: 105px; width: 14px; height: 14px; background: var(--forest); box-shadow: 0 0 0 3px var(--paper), 0 0 0 4px var(--forest); transform: translateX(-50%) rotate(45deg); }
+.lifeline .mk-event { top: 106px; width: 12px; height: 12px; border-radius: 50%; background: var(--paper); border: 2px solid var(--ink-2); box-shadow: 0 0 0 2px var(--paper); }
+.mk-year { position: absolute; transform: translateX(-50%); white-space: nowrap; font-family: var(--font-naskh); font-size: 12px; font-weight: 700; }
+.mk-year-birth { top: 80px; color: var(--olive); }
+.mk-year-mart  { top: 128px; color: var(--forest); }
+.lifeline .ev-label { position: absolute; text-align: center; white-space: nowrap; visibility: hidden; }
+.lifeline .ev-label[data-side="above"] { top: 40px; }
+.lifeline .ev-label[data-side="below"] { top: 142px; }
+.lifeline .ev-label .n { font-size: 12.5px; font-weight: 600; color: var(--ink-2); }
+.lifeline .ev-label .a { font-size: 11px; color: var(--forest); margin-top: 1px; }
+
+.ev-list { display: flex; flex-direction: column; gap: 10px; margin-top: 24px; }
+.ev-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.ev-row .bullet { flex: none; width: 10px; height: 10px; border-radius: 50%; background: var(--paper); border: 2px solid var(--ink-2); }
+.ev-row .n { font-size: 14.5px; font-weight: 600; color: var(--ink); }
+.ev-row .d { font-size: 12.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.age-pill {
+  font-size: 12px; color: var(--forest); background: var(--gold-dim);
+  border: 1px solid var(--gold-dim-2); border-radius: 999px; padding: 1px 10px 2px;
+}
+.tag-ongoing {
+  font-size: 11px; color: var(--olive-2); background: var(--olive-dim);
+  border: 1px solid var(--olive-dim-2); border-radius: 999px; padding: 1px 9px 2px;
+}
+
+/* Vertical (≤480px) layout — birth at top, events in order, martyrdom last. */
+.lifeline-v { display: none; position: relative; padding-inline-start: 34px; }
+.lifeline-v::before { content: ""; position: absolute; inset-block: 8px; inset-inline-start: 10px; width: 2px; background: var(--divider); }
+.lifeline-v .v-entry { position: relative; padding-block: 10px 14px; }
+.lifeline-v .v-mk { position: absolute; inset-inline-start: -30px; top: 16px; }
+.lifeline-v .v-year { font-family: var(--font-naskh); font-size: 15px; font-weight: 700; }
+.lifeline-v .v-year-birth { color: var(--olive); }
+.lifeline-v .v-year-mart { color: var(--forest); }
+.lifeline-v .v-name { font-size: 14.5px; font-weight: 600; color: var(--ink); }
+.lifeline-v .v-date { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; margin-top: 1px; }
+.lifeline-v .v-meta { margin-top: 5px; display: flex; gap: 8px; flex-wrap: wrap; }
+
 /* Responsive — tablet (1024) / large phone (768) / small phone (480).
    Grid rules need no !important now that defaults live in classes above. The
    .nav-links / .admin-banner / .hero-pad rules DO keep it — they override
@@ -591,6 +680,8 @@ html[data-theme="dark"] body::before { mix-blend-mode: screen; opacity: 0.4; }
   .grid-filters { grid-template-columns: 1fr; }
   .stats-strip { grid-template-columns: 1fr 1fr; }
   .hero-pad { padding: clamp(20px, 5vw, 44px) !important; }
+  .lifeline, .ev-list { display: none; }
+  .lifeline-v { display: block; }
 }
 
 /* Skip-to-content link — visible only on keyboard focus */
