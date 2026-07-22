@@ -46,6 +46,10 @@ function aqmar() {
     dataSource: null,         // 'api' | 'static-json' | 'sample-data' | null — drives the banner copy
     publishedVersion: null,   // version number from data/martyrs.json if loaded from snapshot
 
+    // ----- global settings (data/settings.json) -----
+    events: [],            // global events, sorted ascending by start_date
+    settingsVersion: 1,
+
     // ----- data -----
     all: [],
     cities: [],
@@ -179,6 +183,7 @@ function aqmar() {
       // Load martyrs from the priority chain (Supabase → local JSON → sample).
       // Extracted into loadMartyrs() so the Retry button can re-invoke it.
       await this.loadMartyrs();
+      await this.loadGlobalSettings();
 
       // Persist the dataset version ("store ID") and reveal the app — this is
       // what the boot spinner waits for ("spinner till the store ID is in
@@ -275,6 +280,14 @@ function aqmar() {
 
     async retryLoad() {
       await this.loadMartyrs();
+    },
+
+    // Load global settings (events). Failures leave events empty — the
+    // lifespan line just renders without event markers.
+    async loadGlobalSettings() {
+      const s = await loadSettings();
+      this.events = s.events;
+      this.settingsVersion = s.version;
     },
 
     // ============================================================

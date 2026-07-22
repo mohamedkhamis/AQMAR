@@ -52,6 +52,38 @@
     };
   }
 
+  // Normalize a raw settings payload: default the version, keep only a real
+  // events array, and sort ascending by start_date so every consumer gets
+  // lower→higher date order for free.
+  function adaptSettings(raw) {
+    const events = raw && Array.isArray(raw.events) ? raw.events : [];
+    const sorted = [...events].sort((a, b) =>
+      String(a.start_date || "").localeCompare(String(b.start_date || "")));
+    return { version: (raw && raw.version) || 1, events: sorted };
+  }
+
+  // Global settings (events). Same API-first strategy as loadData(), but any
+  // failure resolves to the empty default — settings must NEVER block or
+  // break the site.
+  async function loadSettings() {
+    const host = (global.location && global.location.hostname) || "";
+    if (global.AQMAR_API && localApiPossible(host)) {
+      try {
+        return adaptSettings(await global.AQMAR_API.get("/settings"));
+      } catch (e) {
+        console.warn("Settings API load failed, falling back to data/settings.json:", e.message);
+      }
+    }
+    try {
+      const res = await fetch("../data/settings.json", { cache: "no-cache" });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return adaptSettings(await res.json());
+    } catch (e) {
+      console.warn("Settings unavailable, continuing without events:", e.message);
+      return { version: 1, events: [] };
+    }
+  }
+
   // Photo paths in the DB are stored as "data/photos/N.jpg" — and on Windows
   // pyodbc occasionally returns them with backslashes ("data/photos\N.jpg")
   // because that's how os.path.join concatenated them in phase3_daily.py.
@@ -178,4 +210,6 @@
   global.localApiPossible = localApiPossible;
   global.adaptMartyrToNewSchema = adaptMartyrToNewSchema;
   global.adaptOverridesToNewSchema = adaptOverridesToNewSchema;
+  global.loadSettings = loadSettings;
+  global.adaptSettings = adaptSettings;
 })(window);
