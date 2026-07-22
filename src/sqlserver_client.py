@@ -457,7 +457,7 @@ def get_verified_for_export(conn) -> list:
         "SELECT * FROM dbo.martyrs "
         "WHERE verification_status <> 'rejected' "
         "AND (verification_status = 'verified' OR ai_verified = 1) "
-        "ORDER BY posted_date DESC"
+        "ORDER BY posted_date DESC, msg_id DESC"
     )
     return _rows_to_dicts(cur)
 

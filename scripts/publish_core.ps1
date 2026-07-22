@@ -47,6 +47,7 @@ try {
         Write-Host ("(dry run) WOULD publish: {0} new, photos {1}, frames {2}" -f `
             $check.new_count, $check.referenced_photos.Count, $check.referenced_frames.Count)
     } else {
+      try {
         # 3. export + stage + commit
         $noteArg = @()
         if ($Note) { $noteArg = @("--note", $Note) }
@@ -74,6 +75,14 @@ try {
         git commit -m $msg
         if ($LASTEXITCODE -ne 0) { Write-Error "local publish commit failed" }
         $published = $true
+      } catch {
+        # A failure after export leaves martyrs.json/covers/photos STAGED, which
+        # would wedge the NEXT run's Phase-0 'index clean' guard. Unstage so a
+        # failed publish self-recovers next run (the version is re-derived from
+        # the DB; only the number increments).
+        git reset -q 2>$null
+        throw
+      }
     }
 
     # 4. private backup push (every run, even unchanged)

@@ -46,6 +46,20 @@ if ($DryRun) {
     return
 }
 
+# Safety: this sync mirror+prunes the target repo to the referenced-only file
+# set. If SITE_REPO_URL is the SAME GitHub repo as origin's push URL, the target
+# IS the private full-backup repo, and the prune would delete the unpublished-
+# people / backup-only files the two-repo design exists to preserve. Refuse.
+# (Pre-migration, origin still points at the public repo which is also the
+# default site URL, so this fires until origin is repointed to the private
+# backup — exactly the intended guard.)
+$originPush = (git -C $repo remote get-url --push origin 2>$null)
+if ($LASTEXITCODE -eq 0 -and $originPush -and ($originPush.Trim() -eq $siteUrl.Trim())) {
+    Write-Error ("SITE_REPO_URL ($siteUrl) equals origin's push URL - refusing to sync " +
+        "(it would mirror/prune the backup repo). Complete the migration first: repoint " +
+        "origin to the private backup and set SITE_REPO_URL to the distinct public site repo.")
+}
+
 # --- ensure a clean clone (skipped in -Bootstrap: caller owns the branch) ---
 if ($Bootstrap) {
     if (-not (Test-Path (Join-Path $siteDir ".git"))) {
