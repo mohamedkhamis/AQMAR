@@ -637,10 +637,8 @@ html[dir="rtl"] .lifeline-life { background: linear-gradient(to left, var(--oliv
   font-size: 12px; color: var(--forest); background: var(--gold-dim);
   border: 1px solid var(--gold-dim-2); border-radius: 999px; padding: 1px 10px 2px;
 }
-.tag-ongoing {
-  font-size: 11px; color: var(--olive-2); background: var(--olive-dim);
-  border: 1px solid var(--olive-dim-2); border-radius: 999px; padding: 1px 9px 2px;
-}
+/* .tag-ongoing removed 2026-07-23 with end_date — an event is a point in
+   time, so nothing is ever "ongoing at his martyrdom". */
 
 /* Vertical (≤480px) layout — birth at top, events in order, martyrdom last. */
 .lifeline-v { display: none; position: relative; padding-inline-start: 34px; }
@@ -900,3 +898,66 @@ html[dir="rtl"] .lifeline-life { background: linear-gradient(to left, var(--oliv
   transition: transform .2s ease;
 }
 .filters-chevron.is-open { transform: rotate(0deg); }
+
+/* ===== Lifespan-line design switcher (2026-07-23) =====
+   The visitor picks between the designs the admin offers (data/settings.json
+   -> lifeline.enabled). Markup is in index.html above #lifeline-root; the
+   designs themselves ship their own scoped CSS from webui/lifeline/. */
+.lifeline-switch {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  margin-bottom: 20px; padding-bottom: 16px;
+  border-bottom: 1px dashed var(--divider);
+}
+.lifeline-switch-lbl {
+  font-family: var(--font-latin-sans); font-size: 11px; letter-spacing: 0.16em;
+  text-transform: uppercase; color: var(--olive);
+}
+.lifeline-switch-opts { display: flex; gap: 6px; flex-wrap: wrap; }
+.lifeline-switch-btn {
+  font-family: inherit; font-size: 12.5px; color: var(--muted);
+  background: transparent; border: 1px solid var(--divider);
+  border-radius: 999px; padding: 4px 13px 5px; cursor: pointer;
+  transition: color .15s ease, border-color .15s ease, background-color .15s ease;
+}
+.lifeline-switch-btn:hover { color: var(--ink-2); border-color: var(--olive); }
+.lifeline-switch-btn[aria-pressed="true"] {
+  color: var(--forest); background: var(--gold-dim);
+  border-color: var(--gold-dim-2); font-weight: 600;
+}
+.lifeline-switch-btn:focus-visible { outline: 2px solid var(--forest); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) { .lifeline-switch-btn { transition: none; } }
+
+/* Designs are DESKTOP-ONLY. Below the mobile breakpoint every design is
+   hidden and the existing vertical layout (.lifeline-v) takes over, so mobile
+   renders identically whichever design is selected. !important is required
+   here: each design's own stylesheet is injected into <head> at runtime, so
+   it lands after this file and would otherwise win on source order. */
+@media (max-width: 480px) {
+  .lfd-w, .lfd-a, .lfd-b, .lfd-c, .lfd-d, .lfd-e { display: none !important; }
+  .lifeline-switch { display: none !important; }
+}
+
+/* Admin Settings → lifespan-line designs: offered (checkbox) + default
+   (radio) per design. Grid keeps the two controls in aligned columns. */
+.lifeline-admin { border: 1px solid var(--divider); border-radius: 8px; overflow: hidden; }
+.lifeline-admin-head,
+.lifeline-admin-row {
+  display: grid; grid-template-columns: 64px 74px 1fr; align-items: center;
+  gap: 8px; padding: 9px 14px;
+}
+.lifeline-admin-head {
+  background: var(--bg-2); border-bottom: 1px solid var(--divider);
+  font-family: var(--font-latin-sans); font-size: 10.5px; letter-spacing: 0.12em;
+  text-transform: uppercase; color: var(--faint);
+}
+.lifeline-admin-row { border-bottom: 1px dashed var(--divider); cursor: pointer; }
+.lifeline-admin-row:last-child { border-bottom: 0; }
+.lifeline-admin-row:hover { background: var(--bg-2); }
+.lifeline-admin-row input { accent-color: var(--forest); width: 16px; height: 16px; cursor: pointer; }
+.lifeline-admin-row input:disabled { cursor: not-allowed; opacity: 0.4; }
+.lifeline-admin-name { display: flex; flex-direction: column; gap: 1px; }
+.lifeline-admin-name b { font-size: 14px; font-weight: 600; color: var(--ink); }
+.lifeline-admin-name i {
+  font-style: normal; font-size: 11.5px; color: var(--muted);
+  font-family: var(--font-latin-sans);
+}

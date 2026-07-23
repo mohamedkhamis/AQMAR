@@ -24,7 +24,7 @@ admin_app.cfg = _test_cfg
 VALID_TOKEN_HEADER = {"X-Admin-Token": "t3st-t0k3n"}
 
 EV = {"name_ar": "معركة طوفان الأقصى", "name_en": "7 October War",
-      "start_date": "2023-10-07", "end_date": None}
+      "start_date": "2023-10-07"}
 
 
 @pytest.fixture
@@ -72,11 +72,14 @@ def test_put_validation_error_is_422_with_detail(client):
     assert "start_date" in r.json()["detail"]
 
 
-def test_put_end_before_start_is_422(client):
-    bad = dict(EV, end_date="2023-01-01")
-    r = client.put("/api/settings", json={"version": 1, "events": [bad]},
+def test_put_strips_legacy_end_date(client):
+    # end_date was retired 2026-07-23 — an event is a single point in time.
+    # A payload still carrying one saves fine, minus the field.
+    legacy = dict(EV, end_date="2023-01-01")
+    r = client.put("/api/settings", json={"version": 1, "events": [legacy]},
                    headers=VALID_TOKEN_HEADER)
-    assert r.status_code == 422
+    assert r.status_code == 200
+    assert "end_date" not in r.json()["events"][0]
 
 
 def test_put_preserves_unknown_top_level_keys(client):

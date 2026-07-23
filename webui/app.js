@@ -49,8 +49,23 @@ function aqmar() {
     // ----- global settings (data/settings.json) -----
     events: [],            // global events, sorted ascending by start_date
     settingsVersion: 1,
+    // Lifespan-line design config from settings.json: {default, enabled} —
+    // which designs the admin offers and which one new visitors land on.
+    // null until loaded (and when the file predates the feature), which
+    // AQMAR_LIFELINE treats as "offer everything".
+    lifelineConfig: null,
+    // The visitor's own pick, restored from localStorage. null = follow the
+    // admin default. Only honored while the admin still offers that design.
+    lifelineChoice: readStoredDesign(),
+    // Admin Settings page working copy — not applied until Save, so an
+    // half-made selection never reaches visitors.
+    lifelineEnabledDraft: [],
+    lifelineDefaultDraft: null,
+    lifelineSaving: false,
+    lifelineSaved: false,
+    lifelineError: '',
     // Admin events editor. eventForm null = closed; otherwise a working copy
-    // {id, name_ar, name_en, start_date, end_date} (empty strings for blank).
+    // {id, name_ar, name_en, start_date} (empty strings for blank).
     eventForm: null,
     eventError: '',
     eventSaving: false,
@@ -244,19 +259,22 @@ function aqmar() {
           : null;
       });
 
-      // Lifespan line: label positions are pixel-measured, so re-run the
-      // dodge pass when the viewport resizes (no re-render needed).
+      // Each lifespan-line design ships its own scoped stylesheet; inject them
+      // once here, before the first detail view can render one.
+      if (window.AQMAR_LIFELINE) window.AQMAR_LIFELINE.injectStyles();
+
+      // Lifespan line: designs measure pixels, so re-run the active design's
+      // mount pass when the viewport resizes (no re-render needed). Every
+      // design's mount() is required to be idempotent for exactly this.
       window.addEventListener('resize', () => {
-        const el = document.getElementById('lifeline-root');
-        if (el) dodgeTimelineLabels(el);
+        this.mountTimeline(document.getElementById('lifeline-root'));
       });
 
-      // Re-run the label dodge once webfonts finish loading — cold-cache
-      // first paint can measure label widths against fallback fonts.
+      // Re-run once webfonts finish loading — cold-cache first paint measures
+      // label widths against fallback fonts, which lays them out too narrow.
       if (document.fonts && document.fonts.ready) {
         document.fonts.ready.then(() => {
-          const el = document.getElementById('lifeline-root');
-          if (el) dodgeTimelineLabels(el);
+          this.mountTimeline(document.getElementById('lifeline-root'));
         });
       }
     },
@@ -321,17 +339,118 @@ function aqmar() {
       const s = await loadSettings();
       this.events = s.events;
       this.settingsVersion = s.version;
+      this.lifelineConfig = s.lifeline;
+    },
+
+    // ---- Lifespan-line design switcher (desktop only) ----
+
+    // The designs this visitor may switch between, per the admin's settings.
+    // Empty or one-item means the switcher hides itself — nothing to choose.
+    get lifelineOptions() {
+      const L = window.AQMAR_LIFELINE;
+      return L ? L.offered({ lifeline: this.lifelineConfig }) : [];
+    },
+
+    // The design key actually being drawn right now.
+    get lifelineActive() {
+      const L = window.AQMAR_LIFELINE;
+      return L ? L.resolve(this.lifelineChoice, { lifeline: this.lifelineConfig }) : null;
+    },
+
+    // ---- Admin: which designs are offered + the site default ----
+
+    // Every design that loaded, for the admin's checkbox/radio list. Unlike
+    // lifelineOptions this is NOT filtered by the current settings — the admin
+    // has to be able to switch a disabled design back on.
+    get allLifelineDesigns() {
+      const L = window.AQMAR_LIFELINE;
+      return L ? L.all() : [];
+    },
+
+    // Seed the working copy from the saved settings. Called when the Settings
+    // page opens so a cancelled edit leaves nothing behind.
+    resetLifelineDraft() {
+      const L = window.AQMAR_LIFELINE;
+      const cfg = this.lifelineConfig || {};
+      const known = L ? L.ORDER.filter((k) => L.has(k)) : [];
+      const enabled = (cfg.enabled || []).filter((k) => known.includes(k));
+      this.lifelineEnabledDraft = enabled.length ? enabled : known.slice();
+      this.lifelineDefaultDraft = this.lifelineEnabledDraft.includes(cfg.default)
+        ? cfg.default : (this.lifelineEnabledDraft[0] || null);
+      this.lifelineError = '';
+      this.lifelineSaved = false;
+    },
+
+    // Tick/untick a design. Unticking the current default moves the default to
+    // the first still-offered design, so the pair can never be saved in the
+    // state the API rejects (default must be inside enabled).
+    toggleLifelineEnabled(key) {
+      const i = this.lifelineEnabledDraft.indexOf(key);
+      if (i === -1) this.lifelineEnabledDraft.push(key);
+      else this.lifelineEnabledDraft.splice(i, 1);
+      // Keep canonical order so the saved file diff is stable.
+      const L = window.AQMAR_LIFELINE;
+      if (L) {
+        this.lifelineEnabledDraft = L.ORDER.filter(
+          (k) => this.lifelineEnabledDraft.includes(k));
+      }
+      if (!this.lifelineEnabledDraft.includes(this.lifelineDefaultDraft)) {
+        this.lifelineDefaultDraft = this.lifelineEnabledDraft[0] || null;
+      }
+      this.lifelineSaved = false;
+    },
+
+    // Save the design config. Sends the current events alongside it because
+    // PUT /api/settings takes the whole settings object.
+    async saveLifelineSettings() {
+      this.lifelineError = '';
+      this.lifelineSaved = false;
+      if (!this.lifelineEnabledDraft.length) {
+        this.lifelineError = this.lang === 'ar'
+          ? 'اختر شكلاً واحداً على الأقل.' : 'Offer at least one design.';
+        return;
+      }
+      this.lifelineSaving = true;
+      try {
+        const saved = await saveSettingsViaApi({
+          version: this.settingsVersion,
+          events: this.events,
+          lifeline: {
+            default: this.lifelineDefaultDraft,
+            enabled: this.lifelineEnabledDraft,
+          },
+        });
+        this.lifelineConfig = saved.lifeline || null;
+        this.lifelineSaved = true;
+      } catch (e) {
+        this.lifelineError = e.message || String(e);
+      } finally {
+        this.lifelineSaving = false;
+      }
+    },
+
+    // Visitor picks a design. Persisted so it survives navigation and revisits;
+    // a failed write (private mode, quota) must never break the switch itself.
+    setLifelineDesign(key) {
+      const L = window.AQMAR_LIFELINE;
+      if (!L || !L.has(key)) return;
+      this.lifelineChoice = key;
+      try {
+        localStorage.setItem(LIFELINE_STORAGE_KEY, key);
+      } catch (e) {
+        console.warn('Could not remember the lifespan-line choice:', e.message);
+      }
     },
 
     // ---- Global events admin (settings.json) ----
     newEvent() {
       this.eventError = '';
-      this.eventForm = { id: null, name_ar: '', name_en: '', start_date: '', end_date: '' };
+      this.eventForm = { id: null, name_ar: '', name_en: '', start_date: '' };
     },
     editEvent(ev) {
       this.eventError = '';
       this.eventForm = { id: ev.id, name_ar: ev.name_ar, name_en: ev.name_en || '',
-                         start_date: ev.start_date, end_date: ev.end_date || '' };
+                         start_date: ev.start_date };
     },
     cancelEventForm() {
       this.eventForm = null;
@@ -349,17 +468,12 @@ function aqmar() {
         this.eventError = this.lang === 'ar' ? 'تاريخ البداية مطلوب' : 'Start date is required';
         return;
       }
-      if (f.end_date && f.end_date < f.start_date) {
-        this.eventError = this.lang === 'ar' ? 'تاريخ النهاية قبل تاريخ البداية' : 'End date is before start date';
-        return;
-      }
       const next = this.events.filter(e => e.id !== f.id);
       next.push({
         id: f.id,                       // null → server assigns evt-<n>
         name_ar: f.name_ar.trim(),
         name_en: f.name_en.trim() || null,
         start_date: f.start_date,
-        end_date: f.end_date || null,
       });
       await this._putEvents(next, true);
     },
@@ -510,6 +624,9 @@ function aqmar() {
       // Lazy-load the email notification settings the first time the admin
       // opens the Settings page (keeps public/home boot untouched).
       if (v === 'admin-settings' && !this.notifySettings) this.loadNotifySettings();
+      // Re-seed the design working copy from the saved settings every time the
+      // page opens, so an abandoned edit is never picked back up.
+      if (v === 'admin-settings') this.resetLifelineDraft();
       window.scrollTo({ top: 0, behavior: 'smooth' });
     },
     openMartyr(id) {
@@ -1273,7 +1390,6 @@ function aqmar() {
     // HELPERS (also exposed for templates)
     // ============================================================
     formatDate(iso) { return formatDate(iso, this.lang); },
-    formatDateRange(startIso, endIso) { return formatDateRange(startIso, endIso, this.lang); },
     computeAge(birth, martyrdom) {
       // Calendar-accurate age (delegates to filter-logic.js's computeAge)
       // with the 0–120 OCR sanity bound. Year-subtraction until 2026-07-22 —
@@ -1461,10 +1577,10 @@ function aqmar() {
     // Falls back to '—' for null / unparseable values (rows loaded from the
     // published JSON snapshot won't carry created_at).
     formatDateTime(iso) { return formatDateTime(iso, this.lang); },
-    toArDigits(n) {
-      const map = ['٠','١','٢','٣','٤','٥','٦','٧','٨','٩'];
-      return String(n).replace(/\d/g, d => map[+d]);
-    },
+    // Delegates to the free function (same idiom as formatDateTime above) so
+    // the lifespan-line designs, which are plain modules with no Alpine
+    // context, can call toArDigits() as a global.
+    toArDigits(n) { return toArDigits(n); },
 
     // ============================================================
     // RENDER HELPERS (returning HTML strings for x-html)
@@ -1500,104 +1616,62 @@ function aqmar() {
           <span class="corner bl"></span><span class="corner br"></span>
         </div>`;
     },
-
-    // Lifespan line — day-precision axis from birth to today, with the
-    // global events (data/settings.json) that fall inside this person's
-    // lifetime. Emits BOTH the horizontal desktop layout and the vertical
-    // ≤480px layout; CSS swaps them. All positions are PHYSICAL left
-    // percentages computed here — the old inset-inline-start +
-    // translateX(-50%) mix sat markers off-center by half their width in
-    // Arabic, and the 90deg gradient ran backwards in RTL (now CSS per-dir).
+    // Lifespan line — dispatches to the design the visitor/admin selected
+    // (webui/lifeline/design-*.js) and ALSO emits the vertical ≤480px layout.
+    // CSS swaps them, so the mobile view is identical whichever design is
+    // active; designs are desktop-only by contract, which is why the vertical
+    // layout is not pluggable.
     // Every event name passes through esc(): settings.json is admin-authored
     // content entering x-html markup.
     renderTimeline(m) {
       if (!m.birth || !m.martyrdom) return '';
+      const design = this.lifelineDesignObj();
+      let html = '';
+      if (design) {
+        try {
+          html = design.render(m, this.events, this.lang) || '';
+        } catch (e) {
+          // A broken design must not blank the section — the vertical layout
+          // below still carries every fact.
+          console.error(`Lifespan design "${design.key}" failed to render:`, e);
+        }
+      }
+      return html + this.renderTimelineVertical(m);
+    },
+
+    // The active design object, or null when none loaded.
+    lifelineDesignObj() {
+      const L = window.AQMAR_LIFELINE;
+      const key = this.lifelineActive;
+      return L && key ? L.get(key) : null;
+    },
+
+    // Runs the active design's mount() after its markup is in the DOM. Skipped
+    // while the design is hidden (≤480px shows the vertical layout instead):
+    // a mount that measures a display:none subtree reads every width as 0 and
+    // would lay the labels out against a zero-width axis.
+    mountTimeline(root) {
+      const design = this.lifelineDesignObj();
+      if (!root || !design || typeof design.mount !== 'function') return;
+      const el = root.querySelector(`.lfd-${design.key}`);
+      if (!el || el.offsetParent === null) return;
+      try {
+        design.mount(root, this.current, this.events, this.lang);
+      } catch (e) {
+        console.error(`Lifespan design "${design.key}" failed to mount:`, e);
+      }
+    },
+
+    // Vertical layout — birth, then events in order, then martyrdom. Shown
+    // ≤480px under every design. Kept verbatim from the pre-designs
+    // implementation: mobile is deliberately unchanged by this feature.
+    renderTimelineVertical(m) {
       const ar = this.lang === 'ar';
-      const t0 = new Date(String(m.birth).slice(0, 10) + 'T00:00:00').getTime();
-      const tMart = new Date(String(m.martyrdom).slice(0, 10) + 'T00:00:00').getTime();
-      if (!Number.isFinite(t0) || !Number.isFinite(tMart) || tMart <= t0) return '';
-      const t1 = Math.max(Date.now(), tMart);
-      const span = Math.max(t1 - t0, 86400000);
-      const pct = (iso) => {
-        const t = new Date(String(iso).slice(0, 10) + 'T00:00:00').getTime();
-        return Math.min(Math.max(((t - t0) / span) * 100, 0), 100);
-      };
-      const phys = (p) => (ar ? 100 - p : p);
-      const pBirth = pct(m.birth), pMart = pct(m.martyrdom);
       const birthY = String(m.birth).slice(0, 4);
       const martY = String(m.martyrdom).slice(0, 4);
-      const days = Math.floor((tMart - t0) / 86400000);
-      const ageStr = Number.isFinite(m.age) ? m.age : '—';
       const evs = eventsForPerson(this.events, m.birth, m.martyrdom);
       const ageLine = (n) => n == null ? '' : (ar ? `عمره ${n} عاماً` : `Age ${n}`);
-
-      // ---- header: lived line + legend ----
-      let h = `
-        <div class="lifeline-head">
-          <div>
-            <div class="lifeline-kicker">${ar ? 'خطّ الحياة' : 'Lifespan'}</div>
-            <div class="lifeline-lived">
-              ${ar
-                ? `عاشَ <b>${ageStr}</b> عاماً <span class="days">(${days.toLocaleString('ar-EG')} يوماً)</span>`
-                : `Lived <b>${ageStr}</b> years <span class="days">(${days.toLocaleString()} days)</span>`}
-            </div>
-          </div>
-          <div class="lifeline-legend">
-            <span><span class="sw sw-birth"></span>${ar ? 'الميلاد' : 'Birth'}</span>
-            <span><span class="sw sw-mart"></span>${ar ? 'الاستشهاد' : 'Martyrdom'}</span>
-            ${evs.length ? `
-            <span><span class="sw sw-event"></span>${ar ? 'حدث' : 'Event'}</span>
-            <span><span class="sw sw-band"></span>${ar ? 'فترة حدث' : 'Event period'}</span>` : ''}
-          </div>
-        </div>`;
-
-      // ---- horizontal layout (hidden ≤480px) ----
-      h += `<div class="lifeline"><svg class="lifeline-leaders" aria-hidden="true"></svg>`;
-      h += `<div class="lifeline-base"></div>`;
-      h += `<div class="lifeline-life" style="left:${Math.min(phys(pBirth), phys(pMart))}%; width:${pMart - pBirth}%;"></div>`;
-      evs.forEach((e) => {
-        const ps = pct(e.start_date);
-        const pe = Math.min(pct(e.end_date || m.martyrdom), pMart); // ongoing/overrunning → clamp
-        h += `<div class="lifeline-band" style="left:${Math.min(phys(ps), phys(pe))}%; width:${Math.abs(pe - ps)}%;"></div>`;
-      });
-      const markerPcts = [pBirth, pMart, ...evs.map(e => pct(e.start_date))];
-      const yStart = Math.ceil(parseInt(birthY, 10) / 5) * 5;
-      const yEnd = new Date().getFullYear();
-      for (let y = yStart; y <= yEnd; y += 5) {
-        const tp = pct(`${y}-01-01`);
-        if (markerPcts.some(mp => Math.abs(mp - tp) < 3)) continue; // don't collide
-        h += `<div class="lifeline-tick" style="left:${phys(tp)}%;"><span>${y}</span></div>`;
-      }
-      h += `<div class="mk mk-birth" style="left:${phys(pBirth)}%;"></div>
-            <div class="mk-year mk-year-birth" style="left:${phys(pBirth)}%;">${birthY}</div>
-            <div class="mk mk-mart" style="left:${phys(pMart)}%;"></div>
-            <div class="mk-year mk-year-mart" style="left:${phys(pMart)}%;">${martY}</div>`;
-      evs.forEach((e, i) => {
-        const x = phys(pct(e.start_date));
-        const side = i % 2 === 0 ? 'above' : 'below';
-        h += `<div class="mk mk-event" style="left:${x}%;"></div>
-              <div class="ev-label" data-x="${x}" data-side="${side}">
-                <div class="n">${esc(eventDisplayName(e, this.lang))}</div>
-                ${e.age_at_start != null ? `<div class="a">${ageLine(e.age_at_start)}</div>` : ''}
-              </div>`;
-      });
-      h += `</div>`;
-
-      // ---- event detail list (hidden ≤480px with the line) ----
-      if (evs.length) {
-        h += `<div class="ev-list">` + evs.map((e) => `
-          <div class="ev-row">
-            <span class="bullet"></span>
-            <span class="n">${esc(eventDisplayName(e, this.lang))}</span>
-            <span class="d">${e.end_date
-              ? formatDateRange(e.start_date, e.end_date, this.lang)
-              : `${formatDate(e.start_date, this.lang)} — ${ar ? 'مستمر' : 'ongoing'}`}</span>
-            ${e.age_at_start != null ? `<span class="age-pill">${ageLine(e.age_at_start)}</span>` : ''}
-          </div>`).join('') + `</div>`;
-      }
-
-      // ---- vertical layout (shown ≤480px) ----
-      h += `<div class="lifeline-v">
+      let h = `<div class="lifeline-v">
         <div class="v-entry">
           <span class="v-mk"><span class="sw sw-birth"></span></span>
           <div class="v-year v-year-birth">${birthY}</div>
@@ -1607,12 +1681,9 @@ function aqmar() {
         h += `<div class="v-entry">
           <span class="v-mk"><span class="sw sw-event"></span></span>
           <div class="v-name">${esc(eventDisplayName(e, this.lang))}</div>
-          <div class="v-date">${e.end_date
-            ? formatDateRange(e.start_date, e.end_date, this.lang)
-            : formatDate(e.start_date, this.lang)}</div>
+          <div class="v-date">${formatDate(e.start_date, this.lang)}</div>
           <div class="v-meta">
             ${e.age_at_start != null ? `<span class="age-pill">${ageLine(e.age_at_start)}</span>` : ''}
-            ${!e.end_date ? `<span class="tag-ongoing">${ar ? 'استمرّ حتى استشهاده' : 'Ongoing at his martyrdom'}</span>` : ''}
           </div>
         </div>`;
       });
@@ -1629,6 +1700,28 @@ function aqmar() {
 }
 
 // ===== Free functions ===========================================
+
+// Arabic-Indic numerals. A free function (not only an Alpine method) because
+// the lifespan-line design modules render outside any Alpine context.
+function toArDigits(n) {
+  const map = ['٠','١','٢','٣','٤','٥','٦','٧','٨','٩'];
+  return String(n).replace(/\d/g, d => map[+d]);
+}
+
+// Where the visitor's lifespan-line design choice is remembered. Their pick
+// outlives the session and applies to every martyr they open; it is only
+// honored while the admin still offers that design (AQMAR_LIFELINE.resolve).
+const LIFELINE_STORAGE_KEY = 'aqmar.lifelineDesign';
+
+// Restore the stored choice. localStorage throws in some privacy modes, and a
+// design preference is never worth breaking boot over.
+function readStoredDesign() {
+  try {
+    return localStorage.getItem(LIFELINE_STORAGE_KEY) || null;
+  } catch (e) {
+    return null;
+  }
+}
 
 // Inverse of normalizePhotoPath() in data-loader.js. Strips the leading "../"
 // that the loader prepends so paths resolve from /webui/ → /data/photos/...
@@ -1723,66 +1816,4 @@ function formatDate(iso, locale = 'ar') {
 // Date-range display for events: same-month ranges compact to
 // "24 – 30 نوفمبر 2023"; cross-month ranges join both full dates with an
 // arrow matching the reading direction. Falls back to whichever date is
-// valid when one side is malformed.
-function formatDateRange(startIso, endIso, locale = 'ar') {
-  const fs = formatDate(startIso, locale);
-  const fe = formatDate(endIso, locale);
-  if (fs === '—' || fe === '—') return fs !== '—' ? fs : fe;
-  if (String(startIso).slice(0, 7) === String(endIso).slice(0, 7)) {
-    const startDay = parseInt(String(startIso).slice(8, 10), 10);
-    return `${startDay} – ${fe}`;
-  }
-  return locale === 'en' ? `${fs} → ${fe}` : `${fs} ← ${fe}`;
-}
 
-// Y of the horizontal line inside .lifeline, in px. MUST match the CSS tops
-// in the "Lifespan line + global events" block of styles.css.
-const LIFELINE_TOP = 112;
-
-// Post-render label layout for the lifespan line. Event labels keep their
-// side (above/below) but may slide horizontally so they never overlap; an
-// SVG leader line connects each label back to its true marker position.
-// Runs after every renderTimeline() insertion (x-effect + $nextTick in
-// index.html) and on window resize. No-op while the horizontal layout is
-// hidden (≤480px shows the vertical layout instead).
-function dodgeTimelineLabels(root) {
-  if (!root) return;
-  const tl = root.querySelector('.lifeline');
-  if (!tl || tl.offsetParent === null) return;
-  const svg = tl.querySelector('.lifeline-leaders');
-  const labels = Array.from(tl.querySelectorAll('.ev-label'));
-  if (!svg || labels.length === 0) return;
-  const W = tl.clientWidth;
-  svg.setAttribute('viewBox', `0 0 ${W} ${tl.clientHeight}`);
-  svg.innerHTML = '';
-  const GAP = 14;
-  ['above', 'below'].forEach((side) => {
-    const group = labels
-      .filter((l) => l.dataset.side === side)
-      .map((l) => ({ el: l, target: (parseFloat(l.dataset.x) / 100) * W, w: l.offsetWidth }))
-      .sort((a, b) => a.target - b.target);
-    // Two sweeps: push right off earlier labels, then clamp back from the
-    // container edge — labels end up as close to their true x as fits.
-    let prevRight = 0;
-    group.forEach((g) => {
-      g.c = Math.max(g.target, prevRight + g.w / 2);
-      prevRight = g.c + g.w / 2 + GAP;
-    });
-    let nextLeft = W;
-    for (let i = group.length - 1; i >= 0; i--) {
-      const g = group[i];
-      g.c = Math.min(g.c, nextLeft - g.w / 2);
-      nextLeft = g.c - g.w / 2 - GAP;
-    }
-    group.forEach((g) => {
-      g.el.style.left = `${g.c - g.w / 2}px`;
-      g.el.style.visibility = 'visible';
-      const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-      line.setAttribute('x1', g.target);
-      line.setAttribute('y1', side === 'above' ? LIFELINE_TOP - 12 : LIFELINE_TOP + 12);
-      line.setAttribute('x2', g.c);
-      line.setAttribute('y2', side === 'above' ? LIFELINE_TOP - 34 : LIFELINE_TOP + 28);
-      svg.appendChild(line);
-    });
-  });
-}

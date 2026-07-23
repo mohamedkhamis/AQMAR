@@ -50,6 +50,7 @@ from src.settings_store import (
     merge_settings,
     save_settings,
     validate_events,
+    validate_lifeline,
 )
 from src import notifier
 from src.notify_store import (
@@ -249,6 +250,8 @@ def put_settings(
         raise HTTPException(status_code=422,
                             detail="Settings payload too large (max 256 KB)")
     errors = validate_events(body.get("events", []))
+    if "lifeline" in body:
+        errors += validate_lifeline(body["lifeline"])
     if errors:
         raise HTTPException(status_code=422, detail="; ".join(errors))
     try:

@@ -9,18 +9,19 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from src.settings_store import (
     DEFAULT_SETTINGS,
+    LIFELINE_DESIGNS,
     assign_ids,
     load_settings,
     merge_settings,
     save_settings,
     validate_events,
+    validate_lifeline,
 )
 
 
 def _ev(**over):
     base = {"id": "evt-1", "name_ar": "معركة طوفان الأقصى",
-            "name_en": "7 October War", "start_date": "2023-10-07",
-            "end_date": None}
+            "name_en": "7 October War", "start_date": "2023-10-07"}
     base.update(over)
     return base
 
@@ -75,11 +76,18 @@ def test_start_date_must_be_real_date():
     assert validate_events([_ev(start_date=None)]) != []
 
 
-def test_end_date_optional_but_validated():
-    assert validate_events([_ev(end_date=None)]) == []
-    assert validate_events([_ev(end_date="2023-10-06")]) != []     # before start
-    assert validate_events([_ev(end_date="2023-10-07")]) == []     # same day OK
-    assert validate_events([_ev(end_date="nope")]) != []
+def test_end_date_is_no_longer_part_of_an_event():
+    # An event is a single point in time (2026-07-23). A legacy end_date on an
+    # incoming payload is tolerated by the validator...
+    assert validate_events([_ev(end_date="2023-11-30")]) == []
+    assert validate_events([_ev(end_date="nonsense")]) == []
+
+
+def test_merge_strips_legacy_end_date():
+    # ...and stripped on save, so one save migrates the whole list.
+    merged = merge_settings({}, {"events": [_ev(end_date="2023-11-30")]})
+    assert "end_date" not in merged["events"][0]
+    assert merged["events"][0]["start_date"] == "2023-10-07"
 
 
 def test_duplicate_ids_rejected():
@@ -147,3 +155,61 @@ def test_save_creates_parent_dir_and_leaves_no_temp_files(tmp_path):
     assert json.loads(p.read_text(encoding="utf-8")) == DEFAULT_SETTINGS
     leftovers = [f.name for f in p.parent.iterdir() if f.name != "settings.json"]
     assert leftovers == []
+
+
+# ---- validate_lifeline (selectable lifespan-line designs) ----
+
+def test_lifeline_valid_config_has_no_errors():
+    assert validate_lifeline({"default": "w", "enabled": ["w", "a", "e"]}) == []
+
+
+def test_lifeline_rejects_unknown_design_key():
+    errors = validate_lifeline({"default": "w", "enabled": ["w", "nope"]})
+    assert any("unknown design" in e for e in errors)
+
+
+def test_lifeline_rejects_default_outside_enabled():
+    # Booting into a design the visitor is not allowed to select would strand
+    # them on a design the switcher cannot represent.
+    errors = validate_lifeline({"default": "e", "enabled": ["w", "a"]})
+    assert any("must also be in lifeline.enabled" in e for e in errors)
+
+
+def test_lifeline_rejects_empty_or_missing_enabled():
+    assert validate_lifeline({"default": "w", "enabled": []})
+    assert validate_lifeline({"default": "w"})
+
+
+def test_lifeline_rejects_duplicate_design():
+    errors = validate_lifeline({"default": "w", "enabled": ["w", "w"]})
+    assert any("duplicate design" in e for e in errors)
+
+
+def test_lifeline_rejects_non_object():
+    assert validate_lifeline(["w"]) == ["'lifeline' must be an object"]
+
+
+def test_every_known_design_is_accepted():
+    for key in LIFELINE_DESIGNS:
+        assert validate_lifeline({"default": key, "enabled": [key]}) == []
+
+
+# ---- merge_settings + lifeline ----
+
+def test_merge_stores_enabled_in_canonical_order():
+    merged = merge_settings({}, {"events": [], "lifeline": {
+        "default": "a", "enabled": ["e", "a", "w"]}})
+    assert merged["lifeline"]["enabled"] == ["w", "a", "e"]   # LIFELINE_DESIGNS order
+
+
+def test_merge_leaves_lifeline_untouched_when_not_sent():
+    existing = {"version": 1, "events": [],
+                "lifeline": {"default": "c", "enabled": ["c"]}}
+    merged = merge_settings(existing, {"events": [_ev()]})
+    assert merged["lifeline"] == {"default": "c", "enabled": ["c"]}
+
+
+def test_merge_drops_unknown_keys_from_enabled():
+    merged = merge_settings({}, {"events": [], "lifeline": {
+        "default": "w", "enabled": ["w", "bogus"]}})
+    assert merged["lifeline"]["enabled"] == ["w"]

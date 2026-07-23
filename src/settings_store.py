@@ -8,8 +8,14 @@ dict logic (no FastAPI, no DB) so it unit-tests in isolation.
 Shape:
     {"version": 1, "events": [
         {"id": "evt-1", "name_ar": "معركة طوفان الأقصى",
-         "name_en": "7 October War", "start_date": "2023-10-07",
-         "end_date": null}]}
+         "name_en": "7 October War", "start_date": "2023-10-07"}],
+     "lifeline": {"default": "w", "enabled": ["w", "a"]}}
+
+An event is a single point in time — there is no end_date (2026-07-23).
+Every event the channel commemorates is dated to its start, and the old
+nullable end_date only ever produced wrong output: null was read as
+"still running", which drew a band to the martyrdom date and labelled a
+one-day event like اتفاقية أوسلو as ongoing.
 """
 import json
 import os
@@ -19,6 +25,12 @@ from datetime import date
 from pathlib import Path
 
 DEFAULT_SETTINGS = {"version": 1, "events": []}
+
+# Keys of the selectable lifespan-line designs. MUST stay in sync with ORDER
+# in webui/lifeline-designs.js — the admin may only offer designs the SPA can
+# actually render, so an unknown key here is a validation error, not a
+# silently-ignored value.
+LIFELINE_DESIGNS = ("w", "a", "b", "c", "d", "e")
 
 # PUT payloads above this are rejected so the settings file (git-tracked and
 # publicly served) can't be abused as a blob store.
@@ -70,12 +82,9 @@ def validate_events(events) -> list[str]:
         start = ev.get("start_date")
         if not _valid_iso_date(start):
             errors.append(f"{label}: start_date must be a real YYYY-MM-DD date")
-        end = ev.get("end_date")
-        if end is not None:
-            if not _valid_iso_date(end):
-                errors.append(f"{label}: end_date must be null or a real YYYY-MM-DD date")
-            elif _valid_iso_date(start) and end < start:
-                errors.append(f"{label}: end_date must be on or after start_date")
+        # No end_date: an event is a single point in time (2026-07-23). A
+        # legacy end_date on an incoming payload is not an error — it is
+        # stripped by merge_settings.
         ev_id = ev.get("id")
         if ev_id is not None:
             if not isinstance(ev_id, str) or not ev_id.strip():
@@ -84,6 +93,42 @@ def validate_events(events) -> list[str]:
                 errors.append(f"{label}: duplicate id '{ev_id}'")
             else:
                 seen_ids.add(ev_id)
+    return errors
+
+
+def validate_lifeline(cfg) -> list[str]:
+    """Human-readable validation errors for the 'lifeline' block; [] means
+    valid. Shape: {"default": "w", "enabled": ["w", "a", ...]}.
+
+    'enabled' is the set of designs a visitor may switch between and
+    'default' is what a visitor sees before choosing — so default must
+    itself be enabled, otherwise the site would boot into a design nobody
+    is allowed to select.
+    """
+    if not isinstance(cfg, dict):
+        return ["'lifeline' must be an object"]
+    errors: list[str] = []
+
+    enabled = cfg.get("enabled")
+    if not isinstance(enabled, list) or not enabled:
+        errors.append("lifeline.enabled must be a non-empty list of design keys")
+        enabled = []
+    else:
+        seen: set[str] = set()
+        for k in enabled:
+            if not isinstance(k, str) or k not in LIFELINE_DESIGNS:
+                errors.append(f"lifeline.enabled: unknown design {k!r}; "
+                              f"known: {list(LIFELINE_DESIGNS)}")
+            elif k in seen:
+                errors.append(f"lifeline.enabled: duplicate design {k!r}")
+            else:
+                seen.add(k)
+
+    default = cfg.get("default")
+    if not isinstance(default, str) or default not in LIFELINE_DESIGNS:
+        errors.append(f"lifeline.default must be one of {list(LIFELINE_DESIGNS)}")
+    elif enabled and default not in enabled:
+        errors.append(f"lifeline.default {default!r} must also be in lifeline.enabled")
     return errors
 
 
@@ -114,8 +159,21 @@ def merge_settings(existing: dict, incoming: dict) -> dict:
     if not isinstance(version, int) or isinstance(version, bool):
         raise ValueError("'version' must be an integer")
     merged["version"] = version
-    events = assign_ids(incoming.get("events") or [])
+    # Events carry no end_date; strip it off legacy payloads and off whatever
+    # is already in the file so a single save migrates the whole list.
+    events = [{k: v for k, v in ev.items() if k != "end_date"}
+              for ev in assign_ids(incoming.get("events") or [])]
     merged["events"] = sorted(events, key=lambda e: e.get("start_date") or "")
+    # Only touched when the caller sends it, so an events-only save leaves the
+    # design config alone. 'enabled' is rewritten in LIFELINE_DESIGNS order so
+    # the file diff is stable however the admin UI ordered the checkboxes.
+    if "lifeline" in incoming:
+        cfg = incoming["lifeline"] or {}
+        picked = cfg.get("enabled") or []
+        merged["lifeline"] = {
+            "default": cfg.get("default"),
+            "enabled": [k for k in LIFELINE_DESIGNS if k in picked],
+        }
     return merged
 
 

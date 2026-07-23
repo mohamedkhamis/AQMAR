@@ -126,10 +126,11 @@
 
     // ===== global events (filter-logic.js) =====
 
+    // Events are single points in time — no end_date (2026-07-23).
     const EVS = [
-      { id: "evt-1", name_ar: "أ", start_date: "2023-10-07", end_date: null },
-      { id: "evt-2", name_ar: "ب", start_date: "2023-11-24", end_date: "2023-11-30" },
-      { id: "evt-3", name_ar: "ج", start_date: "2025-01-19", end_date: "2025-03-18" },
+      { id: "evt-1", name_ar: "أ", start_date: "2023-10-07" },
+      { id: "evt-2", name_ar: "ب", start_date: "2023-11-24" },
+      { id: "evt-3", name_ar: "ج", start_date: "2025-01-19" },
     ];
 
     test("eventsForPerson keeps only events inside the lifetime", () => {

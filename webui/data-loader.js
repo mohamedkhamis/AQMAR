@@ -59,7 +59,20 @@
     const events = raw && Array.isArray(raw.events) ? raw.events : [];
     const sorted = [...events].sort((a, b) =>
       String(a.start_date || "").localeCompare(String(b.start_date || "")));
-    return { version: raw && Number.isInteger(raw.version) ? raw.version : 1, events: sorted };
+    // Lifespan-line design config: which designs the admin offers and which
+    // is the site default. Shape-checked only — AQMAR_LIFELINE.resolve() is
+    // what reconciles the keys against the designs that actually loaded, so a
+    // stale key here degrades to the default instead of blanking the line.
+    const lf = raw && raw.lifeline && typeof raw.lifeline === "object" ? raw.lifeline : null;
+    return {
+      version: raw && Number.isInteger(raw.version) ? raw.version : 1,
+      events: sorted,
+      lifeline: lf ? {
+        default: typeof lf.default === "string" ? lf.default : null,
+        enabled: Array.isArray(lf.enabled)
+          ? lf.enabled.filter((k) => typeof k === "string") : [],
+      } : null,
+    };
   }
 
   // Global settings (events). Same API-first strategy as loadData(), but any

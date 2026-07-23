@@ -50,7 +50,7 @@
 <!-- Design tokens + components. ?v bumped 2026-06-15 (combined filters,
      offline cache, admin flag) so returning visitors don't run a stale
      app.js against the new markup. -->
-<link rel="stylesheet" href="styles.css?v=20260722">
+<link rel="stylesheet" href="styles.css?v=20260723">
 
 <!-- Site config -->
 <script src="config.js?v=20260722"></script>
@@ -59,9 +59,20 @@
 
 <!-- Preserved helpers from v1: schema adapter, search predicate, admin diff logic.
      Load BEFORE Alpine + app.js so their globals are available at init time. -->
-<script src="data-loader.js?v=20260722"></script>
+<script src="data-loader.js?v=20260723"></script>
 <script src="filter-logic.js?v=20260722"></script>
 <script src="admin-edit.js?v=20260722"></script>
+<!-- Selectable lifespan-line designs. Each design module registers itself on
+     window.AQMAR_LIFELINE_DESIGNS; lifeline-designs.js adapts them and MUST
+     load last of this group. Adding a design = one file + one script tag +
+     its key in LIFELINE_DESIGNS (src/settings_store.py). -->
+<script src="lifeline/design-w.js?v=20260723"></script>
+<script src="lifeline/design-a.js?v=20260723"></script>
+<script src="lifeline/design-b.js?v=20260723"></script>
+<script src="lifeline/design-c.js?v=20260723"></script>
+<script src="lifeline/design-d.js?v=20260723"></script>
+<script src="lifeline/design-e.js?v=20260723"></script>
+<script src="lifeline-designs.js?v=20260723"></script>
 
 <!-- Alpine + focus plugin (plugin must load BEFORE the core). -->
 <script defer src="https://unpkg.com/@alpinejs/focus@3.x.x/dist/cdn.min.js"></script>
@@ -772,9 +783,28 @@
              missing (renderTimeline would return '' and leave an empty box). -->
         <section class="mt-7 bg-paper border border-divider rounded-lg" style="padding: 28px 36px;"
                  x-show="current.birth && current.martyrdom">
+          <!-- Design switcher. Desktop only (CSS hides it ≤480px, where every
+               design defers to the vertical layout) and hidden when the admin
+               offers fewer than two designs — nothing to choose. -->
+          <div class="lifeline-switch" x-show="lifelineOptions.length > 1" x-cloak>
+            <span class="lifeline-switch-lbl"
+                  x-text="lang === 'ar' ? 'شكل خطّ الحياة' : 'Lifespan-line design'"></span>
+            <div class="lifeline-switch-opts" role="group"
+                 :aria-label="lang === 'ar' ? 'اختيار شكل خطّ الحياة' : 'Choose the lifespan-line design'">
+              <template x-for="d in lifelineOptions" :key="d.key">
+                <button type="button" class="lifeline-switch-btn"
+                        :aria-pressed="d.key === lifelineActive"
+                        @click="setLifelineDesign(d.key)"
+                        x-text="lang === 'ar' ? d.nameAr : d.nameEn"></button>
+              </template>
+            </div>
+          </div>
+          <!-- Reading lifelineActive here is what makes x-effect re-run when the
+               visitor switches design or the admin's settings arrive. -->
           <div id="lifeline-root"
-               x-effect="$el.innerHTML = (view === 'detail' && current) ? renderTimeline(current) : '';
-                         $nextTick(() => dodgeTimelineLabels($el))"></div>
+               x-effect="lifelineActive;
+                         $el.innerHTML = (view === 'detail' && current) ? renderTimeline(current) : '';
+                         $nextTick(() => mountTimeline($el))"></div>
         </section>
 
         <!-- Media & source — the selected video-card frame (lead image) + the
@@ -1561,9 +1591,7 @@
             <span class="font-body font-bold text-ink text-[15px]" x-text="ev.name_ar"></span>
             <span class="text-muted text-[13px] font-latin-sans" x-text="ev.name_en || ''"></span>
             <span class="text-muted text-[13px]" style="font-variant-numeric: tabular-nums;"
-                  x-text="ev.end_date
-                    ? formatDateRange(ev.start_date, ev.end_date)
-                    : `${formatDate(ev.start_date)} — ${lang === 'ar' ? 'مستمر' : 'ongoing'}`"></span>
+                  x-text="formatDate(ev.start_date)"></span>
             <span class="flex gap-2" style="margin-inline-start: auto;">
               <button @click="editEvent(ev)" class="btn btn-ghost"
                       x-text="lang === 'ar' ? 'تحرير' : 'Edit'"></button>
@@ -1585,12 +1613,8 @@
             <input class="input" dir="ltr" x-model="eventForm.name_en">
           </label>
           <label class="block mb-4">
-            <div class="field-label" x-text="lang === 'ar' ? 'تاريخ البداية (مطلوب)' : 'Start date (required)'"></div>
+            <div class="field-label" x-text="lang === 'ar' ? 'التاريخ (مطلوب)' : 'Date (required)'"></div>
             <input class="input" dir="ltr" type="date" x-model="eventForm.start_date">
-          </label>
-          <label class="block mb-4">
-            <div class="field-label" x-text="lang === 'ar' ? 'تاريخ النهاية (اختياري)' : 'End date (optional)'"></div>
-            <input class="input" dir="ltr" type="date" x-model="eventForm.end_date">
           </label>
           <div class="flex items-center gap-3 flex-wrap" style="grid-column: 1 / -1;">
             <button @click="saveEventForm()" class="btn btn-primary" :disabled="eventSaving"
@@ -1601,6 +1625,51 @@
           </div>
         </div>
       </template>
+    </div>
+
+    <!-- Lifespan-line designs (data/settings.json -> lifeline). The admin
+         picks which designs visitors may switch between and which one they
+         land on first. Desktop only — mobile always uses the vertical
+         layout, whatever is selected here. -->
+    <div class="bg-paper border border-divider rounded-lg mb-7" style="padding: 22px 26px;">
+      <div class="font-latin-sans text-[11px] tracking-[0.2em] text-olive uppercase"
+           x-text="lang === 'ar' ? 'شكل خطّ الحياة' : 'Lifespan-line design'"></div>
+      <div class="font-body text-[13px] text-muted mt-1"
+           x-text="lang === 'ar'
+             ? 'اختر الأشكال المتاحة للزائر والشكل الافتراضي. يظهر مبدّل الأشكال للزائر فقط إذا أتحتَ أكثر من شكل واحد. لا يؤثّر هذا على عرض الجوال — يبقى كما هو.'
+             : 'Choose which designs visitors may switch between and which is the default. The visitor switcher only appears when more than one is offered. Mobile is unaffected — it keeps the vertical layout.'"></div>
+
+      <div class="lifeline-admin mt-4">
+        <div class="lifeline-admin-head">
+          <span x-text="lang === 'ar' ? 'مُتاح' : 'Offered'"></span>
+          <span x-text="lang === 'ar' ? 'الافتراضي' : 'Default'"></span>
+          <span x-text="lang === 'ar' ? 'الشكل' : 'Design'"></span>
+        </div>
+        <template x-for="d in allLifelineDesigns" :key="d.key">
+          <label class="lifeline-admin-row">
+            <input type="checkbox" :value="d.key"
+                   :checked="lifelineEnabledDraft.includes(d.key)"
+                   @change="toggleLifelineEnabled(d.key)">
+            <input type="radio" name="lifeline-default" :value="d.key"
+                   :checked="lifelineDefaultDraft === d.key"
+                   :disabled="!lifelineEnabledDraft.includes(d.key)"
+                   @change="lifelineDefaultDraft = d.key">
+            <span class="lifeline-admin-name">
+              <b x-text="lang === 'ar' ? d.nameAr : d.nameEn"></b>
+              <i x-text="lang === 'ar' ? d.nameEn : d.nameAr"></i>
+            </span>
+          </label>
+        </template>
+      </div>
+
+      <div class="flex items-center gap-3 mt-4 flex-wrap">
+        <button @click="saveLifelineSettings()" class="btn btn-primary" :disabled="lifelineSaving"
+                x-text="lifelineSaving ? '…' : (lang === 'ar' ? 'حفظ شكل الخط' : 'Save design settings')"></button>
+        <span class="text-[13px]" style="color: var(--forest);"
+              x-show="lifelineSaved" x-cloak
+              x-text="lang === 'ar' ? 'تمّ الحفظ ✓' : 'Saved ✓'"></span>
+        <span class="text-[13px]" style="color: var(--crimson);" x-text="lifelineError"></span>
+      </div>
     </div>
 
     <!-- Email notifications (data/notify_settings.json — local only) -->
@@ -1806,6 +1875,6 @@
 </div>
 
 <style>[x-cloak]{display:none!important}</style>
-<script src="app.js?v=20260722"></script>
+<script src="app.js?v=20260723"></script>
 </body>
 </html>
