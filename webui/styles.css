@@ -409,6 +409,25 @@ html[data-theme="dark"] body::before { mix-blend-mode: screen; opacity: 0.4; }
 }
 .grid-filters    { grid-template-columns: 1.4fr 1fr 1fr 1fr 1fr auto; align-items: end; }
 .grid-detail     { grid-template-columns: 200px 1fr; }
+/* Detail hero (2026-07-23, layout B): the swappable media pair on one side,
+   the identity on the other. The media column is capped at the slot's own
+   max-width so the identity keeps the remaining space; minmax(0,…) lets a
+   long Arabic name wrap instead of forcing the grid wider.
+   Three direct children — .hero-media, .tg-watch, .hero-identity — placed by
+   CSS rather than source order, so the Telegram button can sit under the
+   identity on desktop and under the picture on mobile without duplicating it
+   in the markup. Gaps are set here (not Tailwind's gap-10) because the row
+   gap wants to be much tighter than the column gap. */
+.detail-hero {
+  grid-template-columns: minmax(0, 380px) minmax(0, 1fr);
+  column-gap: 40px;
+  row-gap: 14px;
+}
+/* The picture spans both rows; the identity and the button stack beside it,
+   so the button no longer adds its height to the media column. */
+.detail-hero > .hero-media    { grid-column: 1; grid-row: 1 / span 2; }
+.detail-hero > .hero-identity { grid-column: 2; grid-row: 1; }
+.detail-hero > .tg-watch      { grid-column: 2; grid-row: 2; align-self: start; }
 /* Admin edit panel: image carousel on the right (first column in RTL), form on
    the left. 2fr/3fr = ~40%/60% — picked over 50/50 and 60/40 by the user
    2026-05-25 because it gives a big carousel image without cramping the
@@ -428,12 +447,12 @@ html[data-theme="dark"] body::before { mix-blend-mode: screen; opacity: 0.4; }
 .footer-grid     { grid-template-columns: 1.5fr 1fr 1fr 1fr; }
 .grid-pair       { grid-template-columns: 1fr 1fr; }
 
-/* ===== Person-detail "Media & source" block (2026-06-16) =====
-   Selected video-card frame as the lead image + portrait photo beside it +
-   "Watch on Telegram" button (Option B). Flex (not grid) so the layout
-   collapses cleanly when a row has only a photo or only a frame: a lone
-   .media-side keeps its own width instead of stretching to full width. */
-.media-block { display: flex; gap: 18px; align-items: flex-start; flex-wrap: wrap; }
+/* ===== Person-detail media (2026-06-16, reworked 2026-07-23) =====
+   The separate "Media & source" section is gone: the portrait and the video
+   card now share one swappable slot inside the detail hero (.media-swap
+   below). .media-figure / .media-imgbox are still that slot's frame; the old
+   .media-block / .media-figure-lead / .media-side / .media-cap rules were
+   removed with the two-column section they styled. */
 .media-figure {
   margin: 0;
   background: var(--paper);
@@ -441,9 +460,6 @@ html[data-theme="dark"] body::before { mix-blend-mode: screen; opacity: 0.4; }
   border-radius: 12px;
   overflow: hidden;
 }
-.media-figure-lead { flex: 0 1 380px; max-width: 420px; }
-.media-side { flex: 0 1 240px; display: flex; flex-direction: column; gap: 14px; }
-.media-side .media-figure { width: 100%; }
 
 /* --- Merged media slot (2026-07-23): portrait + video card, one place ---
    The box is the PORTRAIT's exact shape (7:10 — every portrait is 896x1280
@@ -511,18 +527,22 @@ html[data-theme="dark"] body::before { mix-blend-mode: screen; opacity: 0.4; }
   background: rgba(0, 0, 0, 0.55); color: var(--ink);
   pointer-events: none;
 }
+
+/* Recorded fields under the dates strip. Only populated fields are emitted
+   (detailFacts in app.js), so this list is never padded with em-dashes and
+   simply disappears for the 16 rows that have none. */
+.detail-facts { margin-top: 22px; border-top: 1px dashed var(--divider); }
+.detail-facts > div {
+  display: grid; grid-template-columns: 120px 1fr; gap: 12px;
+  padding: 10px 0; border-bottom: 1px dashed var(--divider);
+  font-size: 14px;
+}
+.detail-facts .k { color: var(--muted); }
+.detail-facts .v { color: var(--ink-2); font-weight: 600; }
 /* Show the whole image — no crop, no zoom. The box height follows the image's
    natural aspect ratio instead of forcing 4:5 with object-fit:cover. */
 .media-imgbox { width: 100%; background: var(--bg); }
 .media-imgbox img { width: 100%; height: auto; display: block; }
-.media-cap {
-  padding: 9px 12px;
-  font-size: var(--text-xs);
-  color: var(--muted);
-  text-align: center;
-  border-top: 1px solid var(--divider);
-}
-
 /* "Watch on Telegram" button — dark-forest gradient card with a gold ▶ disc,
    two-line label, ↗ tail. Tokens only; the gold disc tint is mixed from
    --forest so it tracks the brand color. */
@@ -730,6 +750,18 @@ html[dir="rtl"] .lifeline-life { background: linear-gradient(to left, var(--oliv
   .grid-filters { grid-template-columns: 1fr 1fr 1fr; }
   .grid-detail, .grid-detail.is-admin { grid-template-columns: 1fr; }
   .grid-detail-portrait { justify-self: center; }
+  /* Media above identity once there isn't room beside it; the slot centres
+     rather than stretching to a full-width letterbox. The desktop row/column
+     placement is cleared and `order` restores the phone reading order —
+     picture, Telegram button, then the identity — so mobile is unchanged by
+     the desktop button move. */
+  .detail-hero { grid-template-columns: 1fr; row-gap: 20px; }
+  .detail-hero > .hero-media,
+  .detail-hero > .hero-identity,
+  .detail-hero > .tg-watch { grid-column: 1; grid-row: auto; }
+  .detail-hero > .hero-media    { order: 1; justify-self: center; width: 100%; max-width: 420px; }
+  .detail-hero > .tg-watch      { order: 2; }
+  .detail-hero > .hero-identity { order: 3; }
 }
 @media (max-width: 768px) {
   /* Birthday-match grid: date picker, window pills, submit each get their
@@ -739,9 +771,6 @@ html[dir="rtl"] .lifeline-life { background: linear-gradient(to left, var(--oliv
   .grid-bday > .grid-bday-submit { grid-column: 1 / -1; }
   .grid-filters { grid-template-columns: 1fr 1fr; }
   .grid-2col { grid-template-columns: 1fr; }
-  /* Media block stacks: frame, then photo + Telegram button, each full width. */
-  .media-block { flex-direction: column; }
-  .media-figure-lead, .media-side { flex: 1 1 auto; width: 100%; max-width: 100%; }
   .stats-strip { grid-template-columns: 1fr 1fr; }
   /* AI stats strip folds 4 cells into 2×2; the 3rd cell starts a new visual
      row so it loses its start-border and gains a top one. */

@@ -50,7 +50,7 @@
 <!-- Design tokens + components. ?v bumped 2026-06-15 (combined filters,
      offline cache, admin flag) so returning visitors don't run a stale
      app.js against the new markup. -->
-<link rel="stylesheet" href="styles.css?v=20260727">
+<link rel="stylesheet" href="styles.css?v=20260730">
 
 <!-- Site config -->
 <script src="config.js?v=20260722"></script>
@@ -726,11 +726,69 @@
           <template x-if="current.city"><span x-text="current.city"></span></template>
         </div>
 
-        <!-- Hero -->
-        <article class="bg-paper border border-divider rounded-lg p-12 relative overflow-hidden" style="padding: 44px 48px;">
-          <div class="grid-detail grid gap-10 items-start">
-            <div class="grid-detail-portrait" x-html="renderPortrait(current, 200, true)"></div>
-            <div>
+        <!-- Hero — the two images on one side, the identity on the other
+             (layout B, chosen 2026-07-23 from a four-option preview). The old
+             200px portrait is gone: the media pair IS the image now, so the
+             page shows each face once, large. The separate "Media & source"
+             section and the Personal/Military details grid were folded in
+             here — every row of that grid was either a duplicate of this
+             block or a permanent "—" (city and weapon are empty for all 867
+             rows). -->
+        <article class="bg-paper border border-divider rounded-lg p-12 relative overflow-hidden hero-pad" style="padding: 44px 48px;">
+          <div class="detail-hero grid items-start">
+            <div class="hero-media">
+              <template x-if="mediaPair(current).main">
+                <figure class="media-figure media-swap" style="margin:0">
+                  <div class="media-imgbox">
+                    <img :src="mediaPair(current).main.src" :alt="current.name"
+                         loading="lazy" decoding="async">
+                    <span class="media-badge" x-text="mediaPair(current).main.label"></span>
+                    <template x-if="mediaPair(current).other">
+                      <button type="button" class="media-inset" @click="swapMedia()"
+                              :title="mediaPair(current).other.label"
+                              :aria-label="(lang === 'ar' ? 'عرض ' : 'Show ') + mediaPair(current).other.label">
+                        <img :src="mediaPair(current).other.src" alt=""
+                             loading="lazy" decoding="async">
+                      </button>
+                    </template>
+                  </div>
+                </figure>
+              </template>
+
+              <!-- Optional inline Archive.org player (dormant unless a row is
+                   mirrored). Genuine inline video, not a preview. -->
+              <template x-if="current.archiveOrgId">
+                <div class="rounded-lg overflow-hidden mt-3.5"
+                     style="border:1px solid var(--divider); aspect-ratio:16/9;">
+                  <iframe :src="`https://archive.org/embed/${current.archiveOrgId}`"
+                          class="w-full h-full" style="border:0;"
+                          allowfullscreen webkitallowfullscreen mozallowfullscreen
+                          loading="lazy"></iframe>
+                </div>
+              </template>
+
+            </div>
+
+            <!-- Watch on Telegram. A DIRECT grid child, not nested in either
+                 column, so CSS alone can place it: on desktop it sits under
+                 the identity (beside the picture, which no longer grows to
+                 fit it); ≤1024px `order` puts it back directly under the
+                 picture, so the phone layout is unchanged. -->
+            <template x-if="current.source">
+              <a :href="current.source" target="_blank" rel="noopener noreferrer"
+                 class="tg-watch">
+                <span class="tg-watch-ic" aria-hidden="true">▶</span>
+                <span class="tg-watch-txt">
+                  <span class="tg-watch-title"
+                        x-text="lang === 'ar' ? 'مشاهدة الفيديو على تيليجرام' : 'Watch on Telegram'"></span>
+                  <span class="tg-watch-sub"
+                        x-text="lang === 'ar' ? 'يفتح المنشور الأصلي في القناة' : 'Opens the original post'"></span>
+                </span>
+                <span class="tg-watch-tail" aria-hidden="true">↗</span>
+              </a>
+            </template>
+
+            <div class="hero-identity">
               <div class="font-body text-[14px] text-olive tracking-[0.15em] mb-2"
                    x-text="lang === 'ar' ? 'الشهيد' : 'Martyr'"></div>
               <h1 class="font-display font-bold text-ink m-0 leading-[1.1]" style="font-size: var(--text-2xl); overflow-wrap: break-word; word-break: break-word;" x-text="current.name"></h1>
@@ -758,6 +816,19 @@
                        x-text="lang === 'ar' ? 'العمر عند الاستشهاد' : 'Age'"></div>
                   <div class="font-body text-[18px] font-bold text-ink mt-1.5" x-text="ageLabel(current)"></div>
                 </div>
+              </div>
+
+              <!-- Recorded fields. detailFacts() emits ONLY populated ones,
+                   so an empty field renders no value, no label and no row —
+                   city and weapon are empty for every published row, and used
+                   to print "—" on every page. -->
+              <div class="detail-facts" x-show="detailFacts(current).length">
+                <template x-for="f in detailFacts(current)" :key="f.k">
+                  <div>
+                    <div class="k" x-text="f.k"></div>
+                    <div class="v" x-text="f.v"></div>
+                  </div>
+                </template>
               </div>
 
               <div x-show="isAdmin && adminAllowed" class="mt-6 flex gap-2.5">
@@ -807,98 +878,6 @@
                          $nextTick(() => mountTimeline($el))"></div>
         </section>
 
-        <!-- Media & source — the selected video-card frame (lead image) + the
-             portrait photo (smaller, beside it) + a "Watch on Telegram" button.
-             Replaced the old inline Telegram embed preview on 2026-06-16:
-             Telegram refuses inline playback for these large videos, so the
-             button just opens the original post. archiveOrgId (Phase-2 hybrid
-             hosting, currently always null) still plays INLINE above when set. -->
-        <template x-if="current && (current.selectedFrame || current.photo || current.source || current.archiveOrgId)">
-          <section class="mt-7">
-            <div class="font-display text-[14px] text-olive tracking-[0.2em] uppercase mb-3"
-                 x-text="lang === 'ar' ? 'الوسائط والمصدر' : 'Media & source'"></div>
-
-            <!-- Optional inline Archive.org player (dormant unless a row is
-                 mirrored). Genuine inline video, not a preview. -->
-            <template x-if="current.archiveOrgId">
-              <div class="rounded-lg overflow-hidden mb-4"
-                   style="border:1px solid var(--divider); aspect-ratio:16/9; max-width:760px;">
-                <iframe :src="`https://archive.org/embed/${current.archiveOrgId}`"
-                        class="w-full h-full" style="border:0;"
-                        allowfullscreen webkitallowfullscreen mozallowfullscreen
-                        loading="lazy"></iframe>
-              </div>
-            </template>
-
-            <div class="media-block">
-              <!-- Portrait photo and video card share ONE slot in the
-                   portrait's exact shape; the one not in front sits as a
-                   tappable inset in the corner. 804 of 814 rows have both;
-                   the 10 with only a portrait get no inset and no swap
-                   control rather than a dead button. -->
-              <template x-if="mediaPair(current).main">
-                <figure class="media-figure media-swap">
-                  <div class="media-imgbox">
-                    <img :src="mediaPair(current).main.src" :alt="current.name"
-                         loading="lazy" decoding="async">
-                    <span class="media-badge" x-text="mediaPair(current).main.label"></span>
-                    <template x-if="mediaPair(current).other">
-                      <button type="button" class="media-inset" @click="swapMedia()"
-                              :title="mediaPair(current).other.label"
-                              :aria-label="(lang === 'ar' ? 'عرض ' : 'Show ') + mediaPair(current).other.label">
-                        <img :src="mediaPair(current).other.src" alt=""
-                             loading="lazy" decoding="async">
-                      </button>
-                    </template>
-                  </div>
-                </figure>
-              </template>
-
-              <div class="media-side">
-                <!-- Watch on Telegram — opens the original post in a new tab. -->
-                <template x-if="current.source">
-                  <a :href="current.source" target="_blank" rel="noopener noreferrer" class="tg-watch">
-                    <span class="tg-watch-ic" aria-hidden="true">▶</span>
-                    <span class="tg-watch-txt">
-                      <span class="tg-watch-title"
-                            x-text="lang === 'ar' ? 'مشاهدة الفيديو على تيليجرام' : 'Watch on Telegram'"></span>
-                      <span class="tg-watch-sub"
-                            x-text="lang === 'ar' ? 'يفتح المنشور الأصلي في القناة' : 'Opens the original post'"></span>
-                    </span>
-                    <span class="tg-watch-tail" aria-hidden="true">↗</span>
-                  </a>
-                </template>
-              </div>
-            </div>
-          </section>
-        </template>
-
-        <!-- Details grid -->
-        <section class="grid-2col grid gap-5 mt-7">
-          <div class="bg-paper border border-divider rounded-md p-6">
-            <h4 class="font-display text-[14px] font-medium text-olive m-0 mb-3.5 uppercase tracking-[0.2em]"
-                x-text="lang === 'ar' ? 'البيانات الشخصية' : 'Personal'"></h4>
-            <template x-for="row in personalRows(current)" :key="row.k">
-              <div class="grid py-2.5 text-[14px]" style="grid-template-columns: 140px 1fr; border-bottom: 1px dashed var(--divider);">
-                <div class="text-muted" x-text="row.k"></div>
-                <div class="text-ink-2 font-body font-bold" x-text="row.v"></div>
-              </div>
-            </template>
-          </div>
-          <div class="bg-paper border border-divider rounded-md p-6">
-            <h4 class="font-display text-[14px] font-medium text-olive m-0 mb-3.5 uppercase tracking-[0.2em]"
-                x-text="lang === 'ar' ? 'البيانات العسكرية' : 'Military'"></h4>
-            <template x-for="row in militaryRows(current)" :key="row.k">
-              <div class="grid py-2.5 text-[14px]" style="grid-template-columns: 140px 1fr; border-bottom: 1px dashed var(--divider);">
-                <div class="text-muted" x-text="row.k"></div>
-                <div class="text-ink-2 font-body font-bold" x-text="row.v"></div>
-              </div>
-            </template>
-            <!-- The old "Source on Telegram" text link was removed 2026-06-16;
-                 the "Watch on Telegram" button in the Media & source section is
-                 now the single source link. -->
-          </div>
-        </section>
 
         <!-- Related -->
         <section class="mt-14" x-show="related.length > 0">
@@ -1870,6 +1849,6 @@
 </div>
 
 <style>[x-cloak]{display:none!important}</style>
-<script src="app.js?v=20260724"></script>
+<script src="app.js?v=20260729"></script>
 </body>
 </html>

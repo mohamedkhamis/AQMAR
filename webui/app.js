@@ -886,21 +886,23 @@ function aqmar() {
         .filter(m => m.battalion === this.current.battalion && m.id !== this.current.id)
         .slice(0, 4);
     },
-    personalRows(m) {
+    // Recorded fields for the detail page, POPULATED ONES ONLY (2026-07-23).
+    // Replaces personalRows/militaryRows, which printed a label and an em-dash
+    // for every empty field: city and weapon are empty for all 867 published
+    // rows, so those two labels rendered "—" on every page ever served. The
+    // rest of that grid (name, birth, age, rank, battalion, brigade) merely
+    // repeated the hero heading, the dates strip and the badges beside it.
+    // Blank-but-present values are trimmed, so "   " counts as empty.
+    detailFacts(m) {
+      if (!m) return [];
+      const ar = this.lang === 'ar';
       return [
-        { k: this.lang === 'ar' ? 'الاسم' : 'Name', v: m.name || '—' },
-        { k: this.lang === 'ar' ? 'تاريخ الميلاد' : 'Born', v: this.formatDate(m.birth) },
-        { k: this.lang === 'ar' ? 'المدينة' : 'City', v: m.city || '—' },
-        { k: this.lang === 'ar' ? 'العمر' : 'Age', v: this.ageLabel(m) },
-      ];
-    },
-    militaryRows(m) {
-      return [
-        { k: this.lang === 'ar' ? 'الرتبة' : 'Rank', v: m.rank || '—' },
-        { k: this.lang === 'ar' ? 'السلاح' : 'Weapon', v: m.weapon || '—' },
-        { k: this.lang === 'ar' ? 'الكتيبة' : 'Battalion', v: m.battalion || '—' },
-        { k: this.lang === 'ar' ? 'اللواء' : 'Brigade', v: m.brigade || '—' },
-      ];
+        { k: ar ? 'المدينة' : 'City', v: m.city },
+        { k: ar ? 'الرتبة' : 'Rank', v: m.rank },
+        { k: ar ? 'السلاح' : 'Weapon', v: m.weapon },
+        { k: ar ? 'الكتيبة' : 'Battalion', v: m.battalion },
+        { k: ar ? 'اللواء' : 'Brigade', v: m.brigade },
+      ].filter(f => typeof f.v === 'string' && f.v.trim());
     },
 
     // ============================================================
