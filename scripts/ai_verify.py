@@ -42,9 +42,9 @@ Two subcommands:
       Dump the distinct values + row counts of the closed-ish metadata
       columns (default: military_rank, battalion) as compact TEXT — the input
       for an AI canonicalization pass. No frames, no per-row data (low token
-      cost). The AI writes a mapping file {col: [{"from","to","count"?,
-      "confidence"?,"note"?}]} where every `to` is an existing DB value, so it
-      maps OCR variants onto the current canon (new values follow current).
+      cost). The AI writes a mapping file {col: [{"from","to","confidence"?,
+      "note"?}]} where every `to` is an existing DB value, so it maps OCR
+      variants onto the current canon (new values follow current).
 
   canon-apply mapping.json [--apply]
       Apply an AI-proposed canon mapping. Dry-run by default (prints each
@@ -90,6 +90,26 @@ from src.field_canon import build_dump, plan_canon_updates
 CANON_COLUMNS = ("military_rank", "battalion")
 
 
+def _reject_bad_columns(columns) -> bool:
+    """Fail-fast UX check before opening a connection; the DB layer enforces
+    the same whitelist (_check_normalize_column) as the real guard."""
+    bad = [c for c in columns if c not in ALLOWED_NORMALIZE_COLUMNS]
+    if bad:
+        print(f"error: unsupported column(s): {bad}; "
+              f"allowed: {list(ALLOWED_NORMALIZE_COLUMNS)}")
+    return bool(bad)
+
+
+def _emit_json(payload, json_path, summary):
+    text = json.dumps(payload, ensure_ascii=False, indent=2)
+    if json_path:
+        Path(json_path).parent.mkdir(parents=True, exist_ok=True)
+        Path(json_path).write_text(text, encoding="utf-8")
+        print(summary)
+    else:
+        print(text)
+
+
 def cmd_pending(args) -> int:
     conn = make_conn(load_config())
     try:
@@ -100,13 +120,7 @@ def cmd_pending(args) -> int:
     for r in rows:
         r["frame_paths"] = parse_frame_paths(r.get("frame_paths"))
     payload = {"count": len(rows), "rows": rows}
-    text = json.dumps(payload, ensure_ascii=False, indent=2)
-    if args.json:
-        Path(args.json).parent.mkdir(parents=True, exist_ok=True)
-        Path(args.json).write_text(text, encoding="utf-8")
-        print(f"{len(rows)} pending rows -> {args.json}")
-    else:
-        print(text)
+    _emit_json(payload, args.json, f"{len(rows)} pending rows -> {args.json}")
     return 0
 
 
@@ -164,10 +178,7 @@ def cmd_apply(args) -> int:
 
 def cmd_normalize_fields(args) -> int:
     columns = args.columns or list(NORMALIZE_COLUMNS)
-    bad = [c for c in columns if c not in ALLOWED_NORMALIZE_COLUMNS]
-    if bad:
-        print(f"error: not normalizable: {bad}; "
-              f"allowed: {list(ALLOWED_NORMALIZE_COLUMNS)}")
+    if _reject_bad_columns(columns):
         return 2
 
     conn = make_conn(load_config())
@@ -225,10 +236,7 @@ def cmd_normalize_fields(args) -> int:
 
 def cmd_canon_dump(args) -> int:
     columns = args.columns or list(CANON_COLUMNS)
-    bad = [c for c in columns if c not in ALLOWED_NORMALIZE_COLUMNS]
-    if bad:
-        print(f"error: not dumpable: {bad}; "
-              f"allowed: {list(ALLOWED_NORMALIZE_COLUMNS)}")
+    if _reject_bad_columns(columns):
         return 2
     conn = make_conn(load_config())
     try:
@@ -236,38 +244,31 @@ def cmd_canon_dump(args) -> int:
     finally:
         conn.close()
     payload = build_dump(distinct)
-    text = json.dumps(payload, ensure_ascii=False, indent=2)
-    if args.json:
-        Path(args.json).parent.mkdir(parents=True, exist_ok=True)
-        Path(args.json).write_text(text, encoding="utf-8")
-        counts = {c: len(v) for c, v in payload.items()}
-        print(f"distinct values -> {args.json}  {counts}")
-    else:
-        print(text)
+    counts = {c: len(v) for c, v in payload.items()}
+    _emit_json(payload, args.json, f"distinct values -> {args.json}  {counts}")
     return 0
 
 
 def cmd_canon_apply(args) -> int:
     mapping = json.loads(Path(args.results).read_text(encoding="utf-8"))
     columns = list(mapping.keys())
-    bad = [c for c in columns if c not in ALLOWED_NORMALIZE_COLUMNS]
-    if bad:
-        print(f"error: not applicable columns: {bad}; "
-              f"allowed: {list(ALLOWED_NORMALIZE_COLUMNS)}")
+    if _reject_bad_columns(columns):
         return 2
 
     conn = make_conn(load_config())
     try:
         existing = {
-            c: {v for v, _ in get_distinct_field_values(conn, c)}
+            c: dict(get_distinct_field_values(conn, c))
             for c in columns
         }
         plan = plan_canon_updates(mapping, existing)
 
         for col in columns:
             print(f"\n=== {col} ===")
-            for e in (e for e in plan.entries if e.column == col):
-                if e.action == "apply":
+            for e in plan.entries:
+                if e.column != col:
+                    continue
+                if not e.reason:
                     tag = f"[{e.confidence or 'n/a'}]"
                     print(f'  "{e.from_value}" -> "{e.to_value}" '
                           f'({e.count}) {tag} — {e.note}')

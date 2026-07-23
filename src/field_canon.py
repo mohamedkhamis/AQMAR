@@ -27,11 +27,10 @@ class CanonEntry:
     column: str
     from_value: str
     to_value: str
-    count: int          # 0 when the proposal omitted it
+    count: int          # rows currently holding from_value (0 when absent)
     confidence: str     # "" when omitted
     note: str           # "" when omitted
-    action: str         # "apply" | "skip"
-    reason: str = ""    # skip reason: "no-op" | "to-missing" | "from-absent"
+    reason: str = ""    # "" = apply; else skip: "no-op" | "to-missing" | "from-absent"
 
 
 @dataclass
@@ -41,17 +40,21 @@ class CanonPlan:
 
     @property
     def to_apply(self):
-        return [e for e in self.entries if e.action == "apply"]
+        # A plan with hard errors must never write, whatever the caller checks.
+        if self.errors:
+            return []
+        return [e for e in self.entries if not e.reason]
 
 
 def plan_canon_updates(mapping, existing):
     """Validate a proposed mapping.
 
-    mapping:  {col: [{"from","to","count"?,"confidence"?,"note"?}, ...]}
-    existing: {col: set(distinct values currently in that column)}
+    mapping:  {col: [{"from","to","confidence"?,"note"?}, ...]}
+    existing: {col: {value: row_count}} — what's currently in that column
 
     A value that is both a `to` and a `from` within one column is a chain —
-    a hard error (recorded in plan.errors; the CLI aborts before writing).
+    a hard error (recorded in plan.errors; to_apply is then empty, so the
+    plan itself refuses to write).
     Per entry: from==to -> skip 'no-op'; to not in DB -> skip 'to-missing';
     from not in DB -> skip 'from-absent'; otherwise -> apply.
     """
@@ -65,21 +68,24 @@ def plan_canon_updates(mapping, existing):
                 f"{col}: chain(s) not allowed — value(s) appear as both "
                 f"'from' and 'to': {sorted(chained)}"
             )
-        col_existing = existing.get(col, set())
+        col_existing = existing.get(col, {})
         for i in items:
             frm, to = i["from"], i["to"]
-            count = int(i.get("count") or 0)
-            confidence = i.get("confidence") or ""
-            note = i.get("note") or ""
             if frm == to:
-                action, reason = "skip", "no-op"
+                reason = "no-op"
             elif to not in col_existing:
-                action, reason = "skip", "to-missing"
+                reason = "to-missing"
             elif frm not in col_existing:
-                action, reason = "skip", "from-absent"
+                reason = "from-absent"
             else:
-                action, reason = "apply", ""
-            plan.entries.append(
-                CanonEntry(col, frm, to, count, confidence, note, action, reason)
-            )
+                reason = ""
+            plan.entries.append(CanonEntry(
+                column=col,
+                from_value=frm,
+                to_value=to,
+                count=col_existing.get(frm, 0),
+                confidence=i.get("confidence") or "",
+                note=i.get("note") or "",
+                reason=reason,
+            ))
     return plan

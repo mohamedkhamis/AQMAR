@@ -3,8 +3,127 @@
   "events": [
     {
       "id": "evt-1",
+      "name_ar": "قرار التقسيم",
+      "name_en": "UN Partition Plan for Palestine",
+      "start_date": "1947-11-29",
+      "end_date": null
+    },
+    {
+      "id": "evt-2",
+      "name_ar": "قيام الكيان الصهيوني",
+      "name_en": "Establishment of Israel (The Nakba)",
+      "start_date": "1948-05-14",
+      "end_date": null
+    },
+    {
+      "id": "evt-3",
+      "name_ar": "حرب 1956 (العدوان الثلاثي)",
+      "name_en": "Suez Crisis / 1956 War",
+      "start_date": "1956-10-29",
+      "end_date": null
+    },
+    {
+      "id": "evt-4",
+      "name_ar": "حرب 1967 (النكسة)",
+      "name_en": "Six-Day War (The Naksa)",
+      "start_date": "1967-06-05",
+      "end_date": null
+    },
+    {
+      "id": "evt-5",
+      "name_ar": "حرب أكتوبر 1973",
+      "name_en": "October War",
+      "start_date": "1973-10-06",
+      "end_date": null
+    },
+    {
+      "id": "evt-6",
+      "name_ar": "حرب لبنان 1982 (اجتياح بيروت)",
+      "name_en": "1982 Lebanon War (Invasion of Beirut)",
+      "start_date": "1982-06-06",
+      "end_date": null
+    },
+    {
+      "id": "evt-7",
+      "name_ar": "الانتفاضة الفلسطينية الأولى (انتفاضة الحجارة)",
+      "name_en": "First Intifada",
+      "start_date": "1987-12-08",
+      "end_date": null
+    },
+    {
+      "id": "evt-8",
+      "name_ar": "اتفاقية أوسلو",
+      "name_en": "Oslo Accords",
+      "start_date": "1993-09-13",
+      "end_date": null
+    },
+    {
+      "id": "evt-9",
+      "name_ar": "انتفاضة الأقصى (الانتفاضة الثانية)",
+      "name_en": "Al-Aqsa Intifada",
+      "start_date": "2000-09-28",
+      "end_date": null
+    },
+    {
+      "id": "evt-10",
+      "name_ar": "اغتيال الشيخ أحمد ياسين",
+      "name_en": "Assassination of Sheikh Ahmed Yassin",
+      "start_date": "2004-03-22",
+      "end_date": null
+    },
+    {
+      "id": "evt-11",
+      "name_ar": "معركة جباليا (أيام الغضب)",
+      "name_en": "Battle of Jabalia (Days of Penitence)",
+      "start_date": "2004-09-30",
+      "end_date": null
+    },
+    {
+      "id": "evt-12",
+      "name_ar": "أسر الجندي جلعاد شاليط",
+      "name_en": "Capture of Gilad Shalit",
+      "start_date": "2006-06-25",
+      "end_date": null
+    },
+    {
+      "id": "evt-13",
+      "name_ar": "معركة الفرقان (الحرب على غزة الأولى)",
+      "name_en": "First Gaza War (Operation Cast Lead)",
+      "start_date": "2008-12-27",
+      "end_date": null
+    },
+    {
+      "id": "evt-14",
+      "name_ar": "معركة حجارة السجيل",
+      "name_en": "Battle of Stones of Baked Clay (Operation Pillar of Defense)",
+      "start_date": "2012-11-14",
+      "end_date": null
+    },
+    {
+      "id": "evt-15",
+      "name_ar": "معركة العصف المأكول",
+      "name_en": "Battle of Eaten Storm / Decisive Storm (Operation Protective Edge)",
+      "start_date": "2014-07-08",
+      "end_date": null
+    },
+    {
+      "id": "evt-16",
+      "name_ar": "معركة حد السيف (مقتل نور الدين بركة)",
+      "name_en": "Sword's Edge Battle",
+      "start_date": "2018-11-11",
+      "end_date": null
+    },
+    {
+      "id": "evt-17",
+      "name_ar": "معركة سيف القدس",
+      "name_en": "Sword of Jerusalem Battle (Operation Guardian of the Walls)",
+      "start_date": "2021-05-10",
+      "end_date": null
+    },
+    {
+      "id": "evt-18",
       "name_ar": "معركة طوفان الأقصى",
-      "name_en": "7 October War",
+      "name_en": "Operation Al-Aqsa Flood",
       "start_date": "2023-10-07",
       "end_date": null
     }

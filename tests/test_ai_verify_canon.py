@@ -29,13 +29,15 @@ def test_canon_dump_writes_sorted_json(tmp_path, monkeypatch):
 
 
 def _setup_conn(monkeypatch, existing, calls):
+    def fake_bulk_update(conn, col, frm, to):
+        calls.append((col, frm, to))
+        return 1
+
     monkeypatch.setattr(ai_verify, "load_config", lambda: None)
     monkeypatch.setattr(ai_verify, "make_conn", lambda cfg: FakeConn())
     monkeypatch.setattr(ai_verify, "get_distinct_field_values",
                         lambda conn, col: [(v, 1) for v in existing[col]])
-    monkeypatch.setattr(
-        ai_verify, "bulk_update_field_value",
-        lambda conn, col, frm, to: (calls.append((col, frm, to)), 1)[1])
+    monkeypatch.setattr(ai_verify, "bulk_update_field_value", fake_bulk_update)
 
 
 def _write(tmp_path, mapping):
