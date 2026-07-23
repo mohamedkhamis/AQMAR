@@ -1,0 +1,300 @@
+<!doctype html>
+<!-- TEMPORARY preview page — lifespan-line redesign options (2026-07-23).
+     Delete this file (and _preview_lifeline_*.js) once an option is chosen.
+     Serve with:  .\scripts\serve.ps1   →  http://localhost:8000/webui/_preview_lifeline.html -->
+<html lang="ar" dir="rtl" data-theme="dark">
+<head>
+<meta charset="utf-8" />
+<title>اختيار تصميم خطّ الحياة — أقمار الطوفان</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=El+Messiri:wght@400;500;600;700&family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<style>
+  /* Harness chrome only — every option's own styles are scoped under .v-<key>. */
+  body { background: var(--bg); color: var(--ink); font-family: var(--font-body); margin: 0; }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 28px 20px 90px; }
+  .ph-kicker { font-family: var(--font-latin-sans); font-size: 11px; letter-spacing: .2em;
+               text-transform: uppercase; color: var(--olive); }
+  .ph-title { font-family: var(--font-display); font-size: 30px; margin: 6px 0 10px; }
+  .ph-sub { color: var(--muted); font-size: 14px; line-height: 1.9; max-width: 780px; margin: 0 0 20px; }
+  .ph-facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px;
+              margin: 0 0 26px; }
+  .ph-fact { background: var(--paper); border: 1px solid var(--divider); border-radius: 8px;
+             padding: 12px 14px; }
+  .ph-fact b { display: block; font-family: var(--font-display); font-size: 21px; color: var(--forest);
+               margin-bottom: 2px; }
+  .ph-fact span { font-size: 12.5px; color: var(--muted); line-height: 1.6; }
+
+  .ph-bar { position: sticky; top: 0; z-index: 20; background: var(--bg-2);
+            border: 1px solid var(--divider); border-radius: 10px; padding: 12px 14px;
+            margin-bottom: 22px; display: flex; flex-wrap: wrap; gap: 18px; align-items: center; }
+  .ph-group { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .ph-group > .lbl { font-size: 11.5px; color: var(--faint); letter-spacing: .08em; }
+  .ph-btn { font-family: inherit; font-size: 13px; color: var(--ink-2); background: transparent;
+            border: 1px solid var(--divider); border-radius: 999px; padding: 5px 13px; cursor: pointer; }
+  .ph-btn:hover { border-color: var(--olive); color: var(--ink); }
+  .ph-btn[aria-pressed="true"] { background: var(--gold-dim); border-color: var(--gold-dim-2);
+                                 color: var(--forest); font-weight: 600; }
+  .ph-btn:focus-visible { outline: 2px solid var(--forest); outline-offset: 2px; }
+
+  .ph-opt { margin-bottom: 34px; }
+  .ph-opt-head { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; margin-bottom: 4px; }
+  .ph-opt-key { font-family: var(--font-latin-sans); font-size: 12px; font-weight: 700;
+                letter-spacing: .18em; color: var(--forest); background: var(--gold-dim);
+                border: 1px solid var(--gold-dim-2); border-radius: 6px; padding: 2px 9px; }
+  .ph-opt-name { font-family: var(--font-display); font-size: 21px; }
+  .ph-opt-name .en { font-family: var(--font-latin-sans); font-size: 13px; color: var(--muted);
+                     margin-inline-start: 8px; }
+  .ph-opt-blurb { color: var(--ink-2); font-size: 14px; line-height: 1.85; max-width: 820px;
+                  margin: 0 0 4px; }
+  .ph-opt-trade { color: var(--muted); font-size: 13px; line-height: 1.8; max-width: 820px;
+                  margin: 0 0 14px; }
+  .ph-opt-trade::before { content: "المقابل: "; color: var(--olive); }
+  html[lang="en"] .ph-opt-trade::before { content: "Trade-off: "; }
+
+  .ph-stage { background: var(--bg-3); border: 1px dashed var(--divider); border-radius: 12px;
+              padding: 16px; overflow-x: auto; }
+  .ph-frame { margin: 0 auto; background: var(--paper); border: 1px solid var(--divider);
+              border-radius: 10px; padding: 26px 30px; transition: max-width .18s ease; }
+  .ph-frame-note { text-align: center; font-size: 11px; color: var(--faint); margin-top: 10px;
+                   font-family: var(--font-latin-sans); }
+  .ph-err { color: var(--crimson); font-size: 13px; padding: 10px 0; }
+  @media (max-width: 700px) { .ph-frame { padding: 18px 14px; } .wrap { padding: 18px 12px 70px; } }
+  @media (prefers-reduced-motion: reduce) { .ph-frame { transition: none; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="ph-kicker">AQMAR · lifespan line</div>
+  <h1 class="ph-title" id="phTitle">اختَر شكل خطّ الحياة</h1>
+  <p class="ph-sub" id="phSub">
+    الأحداث العامة صارت ١٨ حدثاً نهائياً. النتيجة: كل شهيد على الموقع تقع في حياته
+    <b>٧ إلى ١٥ حدثاً</b> — والتصميم الحالي مبني على حفنة أحداث، فينهار. بالأسفل ستّة أشكال
+    على نفس البيانات الحقيقية. جرّب كل شكل على الحالة الأصعب (١٥ حدثاً) وعلى عرض الجوال،
+    ثم قل لي الحرف.
+  </p>
+
+  <div class="ph-facts">
+    <div class="ph-fact"><b>١١</b><span>الوسيط: عدد الأحداث في حياة الشهيد الواحد</span></div>
+    <div class="ph-fact"><b>٣٧٫٨ سنة</b><span>أقصى انحراف لاسم حدث عن تاريخه الحقيقي اليوم (١٥ حدثاً، عرض ٨٢٠px)</span></div>
+    <div class="ph-fact"><b>١٫٥×</b><span>عرض الأسماء مقابل المساحة المتاحة — تخرج خارج البطاقة</span></div>
+    <div class="ph-fact"><b>١١ شريطاً</b><span>أشرطة ذهبية متراكبة تُرسم بالخطأ فوق خط العمر كاملاً</span></div>
+  </div>
+
+  <div class="ph-bar">
+    <div class="ph-group">
+      <span class="lbl" data-i18n="opt">الشكل</span>
+      <span id="phTabs"></span>
+    </div>
+    <div class="ph-group">
+      <span class="lbl" data-i18n="person">الحالة</span>
+      <button class="ph-btn" data-person="1663">١٥ حدثاً (الأصعب)</button>
+      <button class="ph-btn" data-person="866">١١ (الوسيط)</button>
+      <button class="ph-btn" data-person="172">٧ (الأسهل)</button>
+    </div>
+    <div class="ph-group">
+      <span class="lbl" data-i18n="width">العرض</span>
+      <button class="ph-btn" data-width="0">كامل</button>
+      <button class="ph-btn" data-width="1024">1024</button>
+      <button class="ph-btn" data-width="768">768</button>
+      <button class="ph-btn" data-width="360">360</button>
+    </div>
+    <div class="ph-group">
+      <span class="lbl">اللغة</span>
+      <button class="ph-btn" data-lang="ar">عربي</button>
+      <button class="ph-btn" data-lang="en">EN</button>
+    </div>
+  </div>
+
+  <div id="phOptions"></div>
+</div>
+
+<script>
+// ===== Fixture (real published data — 18 final events + 3 stress-case people) =====
+const FIXTURE = {"events": [{"id": "evt-1", "name_ar": "قرار التقسيم", "name_en": "UN Partition Plan for Palestine", "start_date": "1947-11-29", "end_date": null}, {"id": "evt-2", "name_ar": "قيام الكيان الصهيوني", "name_en": "Establishment of Israel (The Nakba)", "start_date": "1948-05-14", "end_date": null}, {"id": "evt-3", "name_ar": "حرب 1956 (العدوان الثلاثي)", "name_en": "Suez Crisis / 1956 War", "start_date": "1956-10-29", "end_date": null}, {"id": "evt-4", "name_ar": "حرب 1967 (النكسة)", "name_en": "Six-Day War (The Naksa)", "start_date": "1967-06-05", "end_date": null}, {"id": "evt-5", "name_ar": "حرب أكتوبر 1973", "name_en": "October War", "start_date": "1973-10-06", "end_date": null}, {"id": "evt-6", "name_ar": "حرب لبنان 1982 (اجتياح بيروت)", "name_en": "1982 Lebanon War (Invasion of Beirut)", "start_date": "1982-06-06", "end_date": null}, {"id": "evt-7", "name_ar": "الانتفاضة الفلسطينية الأولى (انتفاضة الحجارة)", "name_en": "First Intifada", "start_date": "1987-12-08", "end_date": null}, {"id": "evt-8", "name_ar": "اتفاقية أوسلو", "name_en": "Oslo Accords", "start_date": "1993-09-13", "end_date": null}, {"id": "evt-9", "name_ar": "انتفاضة الأقصى (الانتفاضة الثانية)", "name_en": "Al-Aqsa Intifada", "start_date": "2000-09-28", "end_date": null}, {"id": "evt-10", "name_ar": "اغتيال الشيخ أحمد ياسين", "name_en": "Assassination of Sheikh Ahmed Yassin", "start_date": "2004-03-22", "end_date": null}, {"id": "evt-11", "name_ar": "معركة جباليا (أيام الغضب)", "name_en": "Battle of Jabalia (Days of Penitence)", "start_date": "2004-09-30", "end_date": null}, {"id": "evt-12", "name_ar": "أسر الجندي جلعاد شاليط", "name_en": "Capture of Gilad Shalit", "start_date": "2006-06-25", "end_date": null}, {"id": "evt-13", "name_ar": "معركة الفرقان (الحرب على غزة الأولى)", "name_en": "First Gaza War (Operation Cast Lead)", "start_date": "2008-12-27", "end_date": null}, {"id": "evt-14", "name_ar": "معركة حجارة السجيل", "name_en": "Battle of Stones of Baked Clay (Operation Pillar of Defense)", "start_date": "2012-11-14", "end_date": null}, {"id": "evt-15", "name_ar": "معركة العصف المأكول", "name_en": "Battle of Eaten Storm / Decisive Storm (Operation Protective Edge)", "start_date": "2014-07-08", "end_date": null}, {"id": "evt-16", "name_ar": "معركة حد السيف (مقتل نور الدين بركة)", "name_en": "Sword's Edge Battle", "start_date": "2018-11-11", "end_date": null}, {"id": "evt-17", "name_ar": "معركة سيف القدس", "name_en": "Sword of Jerusalem Battle (Operation Guardian of the Walls)", "start_date": "2021-05-10", "end_date": null}, {"id": "evt-18", "name_ar": "معركة طوفان الأقصى", "name_en": "Operation Al-Aqsa Flood", "start_date": "2023-10-07", "end_date": null}], "people": [{"id": 1663, "name": "أكرم رمضان قويدر", "birth": "1967-02-17", "martyrdom": "2023-12-27", "city": null, "rank": "قائد سرية", "battalion": "كتيبة التفاح والدرج", "n_events": 15}, {"id": 866, "name": "محمود خليل فرحات", "birth": "1992-07-04", "martyrdom": "2024-08-03", "city": null, "rank": "قائد فصيل", "battalion": "كتيبة الرضوان", "n_events": 11}, {"id": 172, "name": "مصطفى عبد الحميد الأسطل", "birth": "2005-02-23", "martyrdom": "2024-09-26", "city": null, "rank": "مجاهد قسامي", "battalion": "كتيبة الصحابي أسامة بن زيد", "n_events": 7}]};
+
+// ===== Helpers — copied verbatim from the production code so the preview
+// behaves exactly like the site (app.js esc/formatDate/toArDigits,
+// filter-logic.js computeAge/eventsForPerson). =====
+function esc(s) {
+  return String(s).replace(/[&<>"']/g, c => ({
+    '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'
+  }[c]));
+}
+function computeAge(birthDate, deathDate) {
+  if (!birthDate || !deathDate) return null;
+  const b = new Date(birthDate), d = new Date(deathDate);
+  if (isNaN(b.getTime()) || isNaN(d.getTime())) return null;
+  let age = d.getFullYear() - b.getFullYear();
+  const md = d.getMonth() - b.getMonth();
+  if (md < 0 || (md === 0 && d.getDate() < b.getDate())) age--;
+  return age;
+}
+function fmtDate(iso, locale = 'ar') {
+  if (!iso || typeof iso !== 'string') return '—';
+  const m = iso.match(/^(\d{4})-(\d{1,2})-(\d{1,2})\b/);
+  if (!m) return '—';
+  const y = m[1], mIdx = parseInt(m[2], 10) - 1, d = parseInt(m[3], 10);
+  if (mIdx < 0 || mIdx > 11 || d < 1 || d > 31) return '—';
+  if (locale === 'en') {
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    return `${d} ${months[mIdx]} ${y}`;
+  }
+  const ar = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+  return `${d} ${ar[mIdx]} ${y}`;
+}
+function toArDigits(n) {
+  const map = ['٠','١','٢','٣','٤','٥','٦','٧','٨','٩'];
+  return String(n).replace(/\d/g, d => map[+d]);
+}
+function isoDayPrefix(s) {
+  return (typeof s === "string" && /^\d{4}-\d{2}-\d{2}/.test(s)) ? s.slice(0, 10) : null;
+}
+function eventsForPerson(events, birthIso, martyrdomIso) {
+  const birth = isoDayPrefix(birthIso), mart = isoDayPrefix(martyrdomIso);
+  if (!birth || !mart) return [];
+  return (events || [])
+    .filter(e => { const s = isoDayPrefix(e && e.start_date); return s && s >= birth && s <= mart; })
+    .map(e => ({ ...e, age_at_start: computeAge(birth, e.start_date.slice(0, 10)) }))
+    .sort((a, b) => a.start_date < b.start_date ? -1 : a.start_date > b.start_date ? 1 : 0);
+}
+function eventDisplayName(event, lang) {
+  if (!event) return "";
+  if (lang === "en" && typeof event.name_en === "string" && event.name_en.trim()) return event.name_en;
+  return event.name_ar || "";
+}
+
+// ===== Harness =====
+const state = { key: 'all', personId: 1663, width: 0, lang: 'ar' };
+
+function personById(id) { return FIXTURE.people.find(p => p.id === id); }
+
+function variantList() {
+  const order = ['now', 'w', 'a', 'b', 'c', 'd', 'e'];
+  const vs = window.VARIANTS || {};
+  return order.filter(k => vs[k]).map(k => vs[k]);
+}
+
+function injectStyles() {
+  variantList().forEach(v => {
+    if (document.getElementById('css-' + v.key) || !v.css) return;
+    const s = document.createElement('style');
+    s.id = 'css-' + v.key;
+    s.textContent = v.css;
+    document.head.appendChild(s);
+  });
+}
+
+function buildTabs() {
+  const host = document.getElementById('phTabs');
+  host.innerHTML = '';
+  const mk = (key, label) => {
+    const b = document.createElement('button');
+    b.className = 'ph-btn';
+    b.dataset.key = key;
+    b.textContent = label;
+    b.addEventListener('click', () => { state.key = key; render(); });
+    host.appendChild(b);
+  };
+  mk('all', state.lang === 'ar' ? 'الكل' : 'All');
+  variantList().forEach(v => {
+    const letter = v.key === 'now' ? (state.lang === 'ar' ? 'الحالي' : 'Current') : v.key.toUpperCase();
+    mk(v.key, letter);
+  });
+}
+
+function syncPressed() {
+  document.querySelectorAll('#phTabs .ph-btn').forEach(b =>
+    b.setAttribute('aria-pressed', String(b.dataset.key === state.key)));
+  document.querySelectorAll('[data-person]').forEach(b =>
+    b.setAttribute('aria-pressed', String(+b.dataset.person === state.personId)));
+  document.querySelectorAll('[data-width]').forEach(b =>
+    b.setAttribute('aria-pressed', String(+b.dataset.width === state.width)));
+  document.querySelectorAll('[data-lang]').forEach(b =>
+    b.setAttribute('aria-pressed', String(b.dataset.lang === state.lang)));
+}
+
+function renderOne(v, person, host) {
+  const ar = state.lang === 'ar';
+  const wrap = document.createElement('section');
+  wrap.className = 'ph-opt';
+  const isNow = v.key === 'now';
+  wrap.innerHTML =
+    '<div class="ph-opt-head">' +
+      '<span class="ph-opt-key">' + (isNow ? (ar ? 'الحالي' : 'CURRENT') : v.key.toUpperCase()) + '</span>' +
+      '<span class="ph-opt-name">' + esc(ar ? v.labelAr : v.labelEn) +
+        '<span class="en">' + esc(ar ? v.labelEn : v.labelAr) + '</span></span>' +
+    '</div>' +
+    '<p class="ph-opt-blurb">' + esc(ar ? v.blurbAr : v.blurbEn) + '</p>' +
+    '<p class="ph-opt-trade">' + esc(ar ? v.tradeoffAr : v.tradeoffEn) + '</p>' +
+    '<div class="ph-stage"><div class="ph-frame"></div>' +
+      '<div class="ph-frame-note"></div></div>';
+  const frame = wrap.querySelector('.ph-frame');
+  frame.style.maxWidth = state.width ? state.width + 'px' : 'none';
+  wrap.querySelector('.ph-frame-note').textContent =
+    (state.width ? state.width + 'px' : 'full width') + ' · ' +
+    eventsForPerson(FIXTURE.events, person.birth, person.martyrdom).length + ' events';
+  // Attach BEFORE render/mount: variants that measure (offsetWidth, clientWidth)
+  // need the node in the document, and mount() bails on a detached subtree.
+  host.appendChild(wrap);
+  try {
+    frame.innerHTML = v.render(person, FIXTURE.events, state.lang);
+    if (typeof v.mount === 'function') v.mount(frame, person, FIXTURE.events, state.lang);
+  } catch (err) {
+    frame.innerHTML = '<div class="ph-err">render error: ' + esc(err && err.message) + '</div>';
+    console.error('[variant ' + v.key + ']', err);
+  }
+}
+
+function render() {
+  const host = document.getElementById('phOptions');
+  host.innerHTML = '';
+  const person = personById(state.personId);
+  if (!person) { host.innerHTML = '<div class="ph-err">fixture person missing</div>'; return; }
+  const list = state.key === 'all' ? variantList() : variantList().filter(v => v.key === state.key);
+  if (!list.length) {
+    host.innerHTML = '<div class="ph-err">No variant files loaded yet.</div>';
+  }
+  list.forEach(v => renderOne(v, person, host));
+  syncPressed();
+}
+
+function applyLang() {
+  const ar = state.lang === 'ar';
+  document.documentElement.lang = ar ? 'ar' : 'en';
+  document.documentElement.dir = ar ? 'rtl' : 'ltr';
+  document.getElementById('phTitle').textContent = ar ? 'اختَر شكل خطّ الحياة' : 'Choose the lifespan-line design';
+  buildTabs();
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  if (!FIXTURE) {
+    document.getElementById('phOptions').innerHTML =
+      '<div class="ph-err">fixture not injected</div>';
+    return;
+  }
+  injectStyles();
+  applyLang();
+  document.querySelectorAll('[data-person]').forEach(b =>
+    b.addEventListener('click', () => { state.personId = +b.dataset.person; render(); }));
+  document.querySelectorAll('[data-width]').forEach(b =>
+    b.addEventListener('click', () => { state.width = +b.dataset.width; render(); }));
+  document.querySelectorAll('[data-lang]').forEach(b =>
+    b.addEventListener('click', () => { state.lang = b.dataset.lang; applyLang(); render(); }));
+  render();
+  let t;
+  window.addEventListener('resize', () => { clearTimeout(t); t = setTimeout(render, 160); });
+});
+</script>
+<!-- Option files (temporary, deleted with this page) -->
+<script src="_preview_lifeline_now.js"></script>
+<script src="_preview_lifeline_w.js"></script>
+<script src="_preview_lifeline_a.js"></script>
+<script src="_preview_lifeline_b.js"></script>
+<script src="_preview_lifeline_c.js"></script>
+<script src="_preview_lifeline_d.js"></script>
+<script src="_preview_lifeline_e.js"></script>
+</body>
+</html>
