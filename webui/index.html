@@ -50,7 +50,7 @@
 <!-- Design tokens + components. ?v bumped 2026-06-15 (combined filters,
      offline cache, admin flag) so returning visitors don't run a stale
      app.js against the new markup. -->
-<link rel="stylesheet" href="styles.css?v=20260723">
+<link rel="stylesheet" href="styles.css?v=20260727">
 
 <!-- Site config -->
 <script src="config.js?v=20260722"></script>
@@ -541,7 +541,7 @@
           <span class="sr-only" x-text="lang === 'ar' ? 'جاري تحميل السجلّ…' : 'Loading registry…'"></span>
           <template x-for="i in 12" :key="i">
             <div class="card overflow-hidden flex flex-col">
-              <div class="skeleton" style="aspect-ratio: 4/5; border-radius: 0;"></div>
+              <div class="skeleton" style="aspect-ratio: 7/10; border-radius: 0;"></div>
               <div class="flex-1 flex flex-col gap-2.5" style="padding: 14px 16px;">
                 <div class="skeleton" style="height: 18px; width: 75%;"></div>
                 <div class="skeleton" style="height: 12px; width: 45%;"></div>
@@ -597,7 +597,7 @@
               <!-- ===== GRID MODE ===== -->
               <template x-if="viewMode === 'grid'">
                 <div class="contents">
-                  <div class="relative" style="aspect-ratio: 4/5; background: var(--bg-3);">
+                  <div class="relative" style="aspect-ratio: 7/10; background: var(--bg-3);">
                     <div x-html="renderPortrait(m, 0, false, 'fill')"></div>
                     <div x-show="Number.isFinite(m.delta)"
                          class="absolute top-3 start-3 font-latin-sans text-[11px] tracking-[0.12em] px-2 py-0.5 rounded-full"
@@ -831,35 +831,30 @@
             </template>
 
             <div class="media-block">
-              <!-- Lead image: the admin-picked cover frame (the video card that
-                   shows name + birth/martyrdom dates). Omitted when none picked
-                   → photo takes over as the only image (no fallback to frame 0). -->
-              <template x-if="current.selectedFrame">
-                <figure class="media-figure media-figure-lead">
+              <!-- Portrait photo and video card share ONE slot in the
+                   portrait's exact shape; the one not in front sits as a
+                   tappable inset in the corner. 804 of 814 rows have both;
+                   the 10 with only a portrait get no inset and no swap
+                   control rather than a dead button. -->
+              <template x-if="mediaPair(current).main">
+                <figure class="media-figure media-swap">
                   <div class="media-imgbox">
-                    <img :src="current.selectedFrame" :alt="current.name"
-                         loading="lazy" decoding="async"
-                         onerror="this.closest('.media-figure').style.display='none'">
+                    <img :src="mediaPair(current).main.src" :alt="current.name"
+                         loading="lazy" decoding="async">
+                    <span class="media-badge" x-text="mediaPair(current).main.label"></span>
+                    <template x-if="mediaPair(current).other">
+                      <button type="button" class="media-inset" @click="swapMedia()"
+                              :title="mediaPair(current).other.label"
+                              :aria-label="(lang === 'ar' ? 'عرض ' : 'Show ') + mediaPair(current).other.label">
+                        <img :src="mediaPair(current).other.src" alt=""
+                             loading="lazy" decoding="async">
+                      </button>
+                    </template>
                   </div>
-                  <figcaption class="media-cap"
-                              x-text="lang === 'ar' ? 'بطاقة الفيديو' : 'Video card'"></figcaption>
                 </figure>
               </template>
 
               <div class="media-side">
-                <!-- Portrait photo (smaller). -->
-                <template x-if="current.photo">
-                  <figure class="media-figure">
-                    <div class="media-imgbox">
-                      <img :src="current.photo" :alt="current.name"
-                           loading="lazy" decoding="async"
-                           onerror="this.closest('.media-figure').style.display='none'">
-                    </div>
-                    <figcaption class="media-cap"
-                                x-text="lang === 'ar' ? 'الصورة الشخصية' : 'Portrait'"></figcaption>
-                  </figure>
-                </template>
-
                 <!-- Watch on Telegram — opens the original post in a new tab. -->
                 <template x-if="current.source">
                   <a :href="current.source" target="_blank" rel="noopener noreferrer" class="tg-watch">
@@ -1875,6 +1870,6 @@
 </div>
 
 <style>[x-cloak]{display:none!important}</style>
-<script src="app.js?v=20260723"></script>
+<script src="app.js?v=20260724"></script>
 </body>
 </html>

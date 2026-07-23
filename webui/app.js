@@ -46,6 +46,9 @@ function aqmar() {
     dataSource: null,         // 'api' | 'static-json' | 'sample-data' | null — drives the banner copy
     publishedVersion: null,   // version number from data/martyrs.json if loaded from snapshot
 
+    // Detail media slot: false = video card in front, true = portrait.
+    mediaSwapped: false,
+
     // ----- global settings (data/settings.json) -----
     events: [],            // global events, sorted ascending by start_date
     settingsVersion: 1,
@@ -632,8 +635,27 @@ function aqmar() {
     openMartyr(id) {
       this.selectedId = id;
       this.view = 'detail';
+      this.mediaSwapped = false;   // every profile opens on the video card
       window.scrollTo({ top: 0, behavior: 'smooth' });
     },
+
+    // ---- Detail media: portrait + video card in one slot ----
+
+    // Which of the two images is in front. Reset per person by openMartyr.
+    // The pair is derived, not stored, so it always tracks `lang`.
+    mediaPair(m) {
+      const ar = this.lang === 'ar';
+      const card = m && m.selectedFrame
+        ? { src: m.selectedFrame, label: ar ? 'بطاقة الفيديو' : 'Video card' } : null;
+      const photo = m && m.photo
+        ? { src: m.photo, label: ar ? 'الصورة الشخصية' : 'Portrait' } : null;
+      // Card leads by default; swapping puts the portrait in front. filter()
+      // collapses the pair when a row has only one image, so `other` is null
+      // and the template drops the inset instead of rendering a dead button.
+      const shown = (this.mediaSwapped ? [photo, card] : [card, photo]).filter(Boolean);
+      return { main: shown[0] || null, other: shown[1] || null };
+    },
+    swapMedia() { this.mediaSwapped = !this.mediaSwapped; },
 
     // ============================================================
     // DERIVED — on-this-day
