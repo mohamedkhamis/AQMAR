@@ -126,8 +126,10 @@ AQMAR/
 │   ├── reprocess.py           · re-run one msg through OCR + upsert
 │   ├── setup_sqlserver_schema.sql · DDL for the aqmar database
 │   ├── setup_daily_trigger.ps1     · register Windows Task Scheduler
-├── tests/                · pytest suite (103+ tests)
+├── tests/                · pytest suite (221 tests)
 ├── webui/                · static SPA (Alpine + Tailwind)
+│   ├── lifeline/             · selectable lifespan-line designs (desktop)
+│   ├── lifeline-designs.js   · design registry + admin/visitor resolution
 ├── data/                 · martyrs.xlsx (legacy snapshot), martyrs.json, photos/
 └── .env.example          · template for credentials + DB conn string
 ```
@@ -249,7 +251,7 @@ browser session.
 
 ```powershell
 .venv\Scripts\activate
-pytest                        # Python suite (103+ tests)
+pytest                        # Python suite (221 tests)
 ```
 
 Browser-side tests are in `webui/tests.html` — open in any browser to run
