@@ -50,7 +50,7 @@
 <!-- Design tokens + components. ?v bumped 2026-06-15 (combined filters,
      offline cache, admin flag) so returning visitors don't run a stale
      app.js against the new markup. -->
-<link rel="stylesheet" href="styles.css?v=20260730">
+<link rel="stylesheet" href="styles.css?v=20260731">
 
 <!-- Site config -->
 <script src="config.js?v=20260722"></script>
@@ -792,12 +792,21 @@
               <div class="font-body text-[14px] text-olive tracking-[0.15em] mb-2"
                    x-text="lang === 'ar' ? 'الشهيد' : 'Martyr'"></div>
               <h1 class="font-display font-bold text-ink m-0 leading-[1.1]" style="font-size: var(--text-2xl); overflow-wrap: break-word; word-break: break-word;" x-text="current.name"></h1>
-              <div class="mt-4 flex gap-2.5 flex-wrap">
-                <span x-show="current.rank" class="badge badge-forest" x-text="current.rank"></span>
-                <span x-show="current.weapon" class="badge badge-olive" x-text="current.weapon"></span>
-                <!-- x-show guards so empty rows don't render pill placeholders -->
-                <span x-show="current.battalion" class="badge" x-text="current.battalion"></span>
-                <span x-show="current.brigade" class="badge" x-text="current.brigade"></span>
+              <!-- Recorded fields as labelled chips (2026-07-23). Each field
+                   appears ONCE, with its own label inside the chip
+                   ("الكتيبة · كتيبة القدس") so a value like "لواء الوسطى" is
+                   self-explaining. detailFacts() emits only populated fields,
+                   so empty ones (city + weapon are empty for every row) render
+                   nothing — no chip, no label. Replaces the old badges (which
+                   carried no label) AND the separate facts list (which
+                   repeated the same three values). -->
+              <div class="detail-chips mt-4" x-show="detailFacts(current).length">
+                <template x-for="(f, i) in detailFacts(current)" :key="f.k">
+                  <span class="detail-chip" :class="i === 0 ? 'is-lead' : ''">
+                    <span class="ck" x-text="f.k"></span>
+                    <span class="cv" x-text="f.v"></span>
+                  </span>
+                </template>
               </div>
 
               <div class="dates-strip grid mt-7">
@@ -816,19 +825,6 @@
                        x-text="lang === 'ar' ? 'العمر عند الاستشهاد' : 'Age'"></div>
                   <div class="font-body text-[18px] font-bold text-ink mt-1.5" x-text="ageLabel(current)"></div>
                 </div>
-              </div>
-
-              <!-- Recorded fields. detailFacts() emits ONLY populated ones,
-                   so an empty field renders no value, no label and no row —
-                   city and weapon are empty for every published row, and used
-                   to print "—" on every page. -->
-              <div class="detail-facts" x-show="detailFacts(current).length">
-                <template x-for="f in detailFacts(current)" :key="f.k">
-                  <div>
-                    <div class="k" x-text="f.k"></div>
-                    <div class="v" x-text="f.v"></div>
-                  </div>
-                </template>
               </div>
 
               <div x-show="isAdmin && adminAllowed" class="mt-6 flex gap-2.5">
@@ -1849,6 +1845,6 @@
 </div>
 
 <style>[x-cloak]{display:none!important}</style>
-<script src="app.js?v=20260729"></script>
+<script src="app.js?v=20260731"></script>
 </body>
 </html>

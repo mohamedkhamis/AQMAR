@@ -528,17 +528,26 @@ html[data-theme="dark"] body::before { mix-blend-mode: screen; opacity: 0.4; }
   pointer-events: none;
 }
 
-/* Recorded fields under the dates strip. Only populated fields are emitted
-   (detailFacts in app.js), so this list is never padded with em-dashes and
-   simply disappears for the 16 rows that have none. */
-.detail-facts { margin-top: 22px; border-top: 1px dashed var(--divider); }
-.detail-facts > div {
-  display: grid; grid-template-columns: 120px 1fr; gap: 12px;
-  padding: 10px 0; border-bottom: 1px dashed var(--divider);
-  font-size: 14px;
+/* Recorded fields as labelled chips (2026-07-23), replacing the old badges +
+   facts-list pair that showed rank/battalion/brigade twice. Each chip carries
+   its own label so the value is self-explaining. Only populated fields are
+   emitted (detailFacts in app.js), so the row simply disappears for the 16
+   rows that have none — never padded with em-dashes. */
+.detail-chips { display: flex; flex-wrap: wrap; gap: 9px; }
+.detail-chip {
+  display: inline-flex; align-items: baseline; gap: 8px;
+  background: var(--bg-3); border: 1px solid var(--divider);
+  border-radius: 999px; padding: 6px 14px;
 }
-.detail-facts .k { color: var(--muted); }
-.detail-facts .v { color: var(--ink-2); font-weight: 600; }
+.detail-chip .ck {
+  font-size: 11px; letter-spacing: .1em; color: var(--muted);
+  white-space: nowrap;
+}
+.detail-chip .cv { font-size: 13.5px; font-weight: 600; color: var(--ink); }
+/* First chip (rank) leads in the gold accent, keeping the warm note the old
+   badge row gave the space under the name. */
+.detail-chip.is-lead { background: var(--gold-dim); border-color: var(--gold-dim-2); }
+.detail-chip.is-lead .cv { color: var(--forest); }
 /* Show the whole image — no crop, no zoom. The box height follows the image's
    natural aspect ratio instead of forcing 4:5 with object-fit:cover. */
 .media-imgbox { width: 100%; background: var(--bg); }
