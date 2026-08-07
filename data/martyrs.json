@@ -1,8 +1,8 @@
 {
-  "version": 27,
-  "generated_at": "2026-08-06T12:02:45Z",
+  "version": 28,
+  "generated_at": "2026-08-06T12:45:54Z",
   "channel": "AqmarTofan",
-  "note": "nightly auto (4 new, 1 fixed)",
+  "note": "verify msg 2020 (birth fix) + 2144; 2140 rejected as duplicate",
   "martyrs": [
     {
       "msg_id": 2150,
