@@ -931,3 +931,134 @@ inside 2023-10 … today+1month, and ages at martyrdom span 22 (2340,
 frame. 2344 was the one row where the choice mattered visibly — its `_30` still
 carried the animated title lettering across the portrait — which is why `_30` is
 read and `_28` is taken as the cover, not the other way round.
+
+## 2026-08-25_1059 nightly p1 - 33 processed
+
+**21 exact matches · 8 swap fixes · 3 NULL fills · 1 OCR-digit fix · 0 needs-human**
+Msg 2446 was excluded from the work list (previously noted needs-human). Every
+other row in range 2430–2500 read clean on two frames each (`_30` + `_28`, with
+`_32` pulled as a third opinion on 2466 and 2486).
+
+| msg | field | was | now | card shows |
+|---|---|---|---|---|
+| 2432 | birth | 1989-11-09 | **1989-09-11** | 1989 - 09 - 11 (day/month swap) |
+| 2450 | birth | NULL | **1982-06-26** | 1982 - 06 - 26 |
+| 2454 | martyrdom | NULL | **2023-12-30** | 2023 - 12 - 30 (old ocr_martyrdom_date was garbage "3020") |
+| 2456 | birth | 1990-07-09 | **1990-09-07** | 1990 - 09 - 07 (day/month swap) |
+| 2458 | birth | 1990-06-08 | **1990-08-06** | 1990 - 08 - 06 (day/month swap) |
+| 2466 | birth | 1996-03-10 | **1996-10-03** | 1996 - 10 - 03 (day/month swap; cover is `_30`, `_28` is missing the martyrdom label and `_32` carries a sparkle-title overlay) |
+| 2472 | birth | NULL | **1994-11-12** | 1994 - 11 - 12 |
+| 2476 | birth | 1988-03-09 | **1988-09-03** | 1988 - 09 - 03 (day/month swap) |
+| 2482 | martyrdom | NULL | **2025-07-01** | 2025 - 07 - 01 (old ocr_martyrdom_date was garbage OCR text) |
+| 2486 | birth | 1938-12-23 | **1988-12-23** | 1988 - 12 - 23 (OCR digit error, not a swap — confirmed on all three frames; the old 1938 value failed the age-sanity check at 86–87, the corrected value gives a plausible 36) |
+| 2498 | birth | 1988-11-09 | **1988-09-11** | 1988 - 09 - 11 (day/month swap) |
+| 2500 | birth | 1989-09-02 | **1989-02-09** | 1989 - 02 - 09 (day/month swap) |
+
+2492 (محمد نبيل أبو عرجة) is notable for card layout, not content: it's the
+first row in this stretch to print `DD-MM-YYYY` instead of the usual
+year-first order — `04-05-1986` / `05-11-2023` — but the middle-group-is-month
+rule still resolves it cleanly and both dates matched the DB as stored
+(1986-05-04 / 2023-11-05), so no change was needed.
+
+Exact matches: 2430, 2436, 2438, 2442, 2444, 2448, 2452, 2460, 2462, 2464,
+2468, 2470, 2474, 2478, 2480, 2484, 2488, 2490, 2492, 2494, 2496.
+
+Sanity passes across the batch: martyrdom dates run 2023-10-14 … 2026-05-07,
+all inside 2023-10 … today (2026-08-25)+1month, and ages at martyrdom span 22
+(2436, أحمد إسماعيل أبو القمصان) to 87→37 (2486, corrected). All 33 cover
+frames are the `_28` frame except 2466 (`_30`, for the reason above).
+
+## 2026-08-25_1059 nightly p2 - 2 processed
+
+**1 exact match · 1 NULL fill · 0 needs-human**
+This clears the two rows left over from p1 (2446, previously excluded as
+needs-human and re-queued; 2502, newly scraped). Both read clean on two
+frames each, `_28` and `_30` agreeing.
+
+| msg | field | was | now | card shows |
+|---|---|---|---|---|
+| 2446 | martyrdom | NULL | **2023-11-14** | 2023 - 11 - 14 (birth 1987-02-25 already matched DB) |
+
+Exact matches: 2502 (card birth 1975-01-29 / martyrdom 2025-05-09, poster
+confirms martyrdom 2025-05-09).
+
+Sanity: 2446 age at martyrdom 36 (1987-02-25 → 2023-11-14); 2502 age at
+martyrdom 50 (1975-01-29 → 2025-05-09). Both cover frames are `_28`.
+
+## 2026-08-27_2230 nightly p1 - 10 processed
+
+**5 exact matches · 5 corrections · 0 needs-human**
+All 10 rows (2504–2522) read clean on two frames each (`_28`/`_30`
+agreeing). Every correction this run is a day/month swap between the DB
+value and the card — no NULL fills, no conflicts, no day-less dates.
+
+| msg | field | was | now | card shows |
+|---|---|---|---|---|
+| 2504 | martyrdom | 2026-02-08 | **2026-08-02** | 2026 - 08 - 02 (day/month swap) |
+| 2508 | birth | 1992-07-11 | **1992-11-07** | 1992 - 11 - 07 (day/month swap) |
+| 2510 | martyrdom | 2025-06-09 | **2025-09-06** | 2025 - 09 - 06 (day/month swap) |
+| 2514 | birth | 1991-09-01 | **1991-01-09** | 1991 - 01 - 09 (day/month swap) |
+| 2520 | birth | 1990-03-01 | **1990-01-03** | 1990 - 01 - 03 (day/month swap) |
+
+Exact matches: 2506, 2512, 2516, 2518, 2522.
+
+Sanity: ages at martyrdom span 24 (2512, 1998-10-08 → 2023-10-07) to 50
+(2510, 1975-01-05 → 2025-09-06); all martyrdom dates fall inside
+2023-10 … today (2026-08-27)+1month. All 10 cover frames are the `_28`
+frame.
+
+## 2026-08-28_2230 nightly p1 - 20 processed
+
+**13 exact matches · 5 corrections · 2 NULL fills · 0 needs-human**
+All 20 rows (2524–2564, msg 2562 not in this batch) read clean on two
+frames each (`_28`/`_30` agreeing). Four corrections are day/month swaps
+between the DB value and the card; msg 2560 combines a NULL birth fill with
+a martyrdom swap.
+
+| msg | field | was | now | card shows |
+|---|---|---|---|---|
+| 2528 | birth | 1992-09-06 | **1992-06-09** | 1992 - 06 - 09 (day/month swap) |
+| 2530 | martyrdom | 2024-06-11 | **2024-11-06** | 2024 - 11 - 06 (day/month swap) |
+| 2536 | martyrdom | NULL | **2025-09-08** | 2025 - 09 - 08 |
+| 2552 | birth | 1957-04-07 | **1957-07-04** | 1957 - 07 - 04 (day/month swap) |
+| 2554 | martyrdom | 2025-10-07 | **2025-07-10** | 2025 - 07 - 10 (day/month swap) |
+| 2556 | birth | 2004-11-10 | **2004-10-11** | 2004 - 10 - 11 (day/month swap) |
+| 2560 | birth | NULL | **2002-12-18** | 2002 - 12 - 18 |
+| 2560 | martyrdom | 2024-10-04 | **2024-04-10** | 2024 - 04 - 10 (day/month swap) |
+
+Exact matches: 2524, 2526, 2532, 2534, 2538, 2540, 2542, 2544, 2546, 2548,
+2550, 2558, 2564.
+
+Sanity: ages at martyrdom span 19 (2556, 2004-10-11 → 2023-11-12) to 66
+(2552, 1957-07-04 → 2023-11-23); all martyrdom dates fall inside
+2023-10 … today (2026-08-28)+1month. All 20 cover frames are the `_28`
+frame.
+
+## 2026-08-30_0251 nightly p1 - 15 processed
+
+**13 exact matches · 2 corrections · 0 NULL fills · 0 needs-human**
+All 15 rows (2569–2597) read from the middle video frame (`_28`/`_30`
+agreeing); msg 2587 is a poster-only post with no video frames. Both
+corrections are day/month swaps between the DB value and the card — no
+NULL fills, no conflicts, no day-less dates. Cover frame set to `_28` on
+14 rows (2587 has no frames).
+
+| msg | field | was | now | card shows |
+|---|---|---|---|---|
+| 2589 | martyrdom | 2024-10-08 | **2024-08-10** | 2024 - 08 - 10 (day/month swap); poster 10-08-2024 confirms |
+| 2591 | birth | 1992-01-06 | **1992-06-01** | 1992 - 06 - 01 (day/month swap; month is the middle group) |
+
+**Needs human:** none.
+
+**Exact matches (13):** 2569, 2571, 2573, 2575, 2577, 2579, 2581, 2583,
+2585, 2587, 2593, 2595, 2597.
+
+Note on 2587 (ياسر محمد موسى أبوسعود): poster-only post, no memorial-card
+frames. The poster prints only تاريخ الاستشهاد / 16-12-2023, which matches
+the DB; no birth date is printed and the DB birth is NULL, so the row is
+verified with birth still unset.
+
+Sanity: ages at martyrdom span 20 (2583, 2003-02-09 → 2023-12-23) and
+2597 (1999-12-12 → 2023-10-07, age 23) to 36 (2575, 1989-05-03 →
+2025-05-25); all martyrdom dates fall inside 2023-10 … today
+(2026-08-30)+1month.
