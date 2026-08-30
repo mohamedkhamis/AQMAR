@@ -13,6 +13,7 @@ Used by:
 """
 import re
 from dataclasses import asdict
+from src.name_normalizer import normalize_arabic_name
 
 
 # Columns the scraper / migration writes. Order matches the schema in
@@ -219,30 +220,47 @@ def mark_rejected(conn, msg_id: int, verified_by: str) -> None:
 # from the human verification_status workflow — neither touches the other.
 # =============================================================================
 
-# The AI batch may only ever correct the two date columns.
-_AI_EDITABLE_FIELDS = {"birth_date", "martyrdom_date"}
+# The AI batch may correct the two date columns and the name. The name is
+# only ever read off that row's OWN memorial card (see the nightly verify
+# prompt) - it is never inferred by comparing rows to each other, which is
+# what makes editing it safe here but not in the canon/clustering path.
+_AI_DATE_FIELDS = {"birth_date", "martyrdom_date"}
+_AI_EDITABLE_FIELDS = _AI_DATE_FIELDS | {"name"}
 
 
 def mark_ai_verified(conn, msg_id: int, edits: dict, note: str) -> None:
     """Set ai_verified=1 (+timestamp +note), optionally fixing the date
-    columns. Strict yyyy-mm-dd enforced — raises ValueError on anything else
+    columns and/or the name (which also rewrites name_normalized, so dedup
+    keeps matching). Strict yyyy-mm-dd enforced on dates — raises ValueError on anything else
     (fail loud: a malformed date here means the batch results file is wrong).
     """
     edits = edits or {}
     unknown = set(edits) - _AI_EDITABLE_FIELDS
     if unknown:
-        raise ValueError(f"AI batch may only edit dates, got: {sorted(unknown)}")
+        raise ValueError(
+            f"AI batch may only edit dates/name, got: {sorted(unknown)}")
 
     set_parts = ["ai_verified = 1",
                  "ai_verified_at = SYSUTCDATETIME()",
                  "ai_note = ?"]
     params = [note]
     for k, v in edits.items():
-        clean = _sanitize_date(v)
-        if clean is None:
-            raise ValueError(f"{k} must be strict YYYY-MM-DD, got: {v!r}")
-        set_parts.append(f"{k} = ?")
-        params.append(clean)
+        if k in _AI_DATE_FIELDS:
+            clean = _sanitize_date(v)
+            if clean is None:
+                raise ValueError(f"{k} must be strict YYYY-MM-DD, got: {v!r}")
+            set_parts.append(f"{k} = ?")
+            params.append(clean)
+        else:  # name
+            clean = (v or "").strip()
+            if not clean:
+                raise ValueError(f"name must be non-empty, got: {v!r}")
+            set_parts.append("name = ?")
+            params.append(clean)
+            # name_normalized is what dedup matches on; it must never be
+            # left pointing at the old spelling.
+            set_parts.append("name_normalized = ?")
+            params.append(normalize_arabic_name(clean))
     params.append(msg_id)
 
     cur = conn.cursor()

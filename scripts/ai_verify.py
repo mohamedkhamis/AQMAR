@@ -141,7 +141,7 @@ def cmd_apply(args) -> int:
                 raise ValueError(f"msg {msg_id}: empty note — every row needs an audit note")
             if r.get("verified"):
                 edits = {
-                    k: r[k] for k in ("birth_date", "martyrdom_date")
+                    k: r[k] for k in ("birth_date", "martyrdom_date", "name")
                     if r.get(k)
                 }
                 mark_ai_verified(conn, msg_id, edits, note)

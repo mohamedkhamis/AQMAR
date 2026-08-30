@@ -259,12 +259,30 @@ def test_mark_ai_verified_rejects_malformed_dates():
             mark_ai_verified(mock_conn, msg_id=1, edits={"birth_date": bad}, note="x")
 
 
-def test_mark_ai_verified_rejects_non_date_fields():
-    """AI batch is dates-only; any other field in edits is a bug upstream."""
+def test_mark_ai_verified_rejects_unlisted_fields():
+    """AI batch may edit dates + name only; anything else is a bug upstream."""
     import pytest
     mock_conn = MagicMock()
     with pytest.raises(ValueError):
-        mark_ai_verified(mock_conn, msg_id=1, edits={"name": "X"}, note="x")
+        mark_ai_verified(mock_conn, msg_id=1, edits={"city": "X"}, note="x")
+
+
+def test_mark_ai_verified_name_also_updates_normalized():
+    """A name fix read off the card must carry name_normalized with it:
+    dedup matches on the normalized column, so a stale value there would
+    split one person into two."""
+    mock_cur = MagicMock()
+    mock_conn = MagicMock(cursor=MagicMock(return_value=mock_cur))
+
+    mark_ai_verified(mock_conn, msg_id=7, edits={"name": "أحمد"}, note="name fixed")
+
+    sql = mock_cur.execute.call_args[0][0]
+    params = list(mock_cur.execute.call_args[0][1:])
+    assert "name = ?" in sql
+    assert "name_normalized = ?" in sql
+    # normalize_arabic_name folds the alef variants to bare alef.
+    assert "احمد" in params
+    assert "أحمد" in params
 
 
 def test_mark_ai_note_writes_note_without_flagging():

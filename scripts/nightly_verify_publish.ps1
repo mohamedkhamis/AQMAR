@@ -8,13 +8,15 @@
 # Runs hidden via scripts\_run_nightly_silent.vbs (Task Scheduler), which
 # redirects all output to logs\nightly_publish.log. Direct runs print to console.
 #
-# Usage: .\scripts\nightly_verify_publish.ps1 [-DryRun] [-SkipVerify]
+# Usage: .\scripts\nightly_verify_publish.ps1 [-DryRun] [-SkipVerify] [-SkipCanon]
 #   -DryRun     verify runs; publish + email only print what they would do
-#   -SkipVerify skip the Claude phase (publish + report only)
+#   -SkipVerify skip the date-verify Claude pass (canon still runs)
+#   -SkipCanon  skip only the rank/battalion canon pass
 
 param(
     [switch]$DryRun,
-    [switch]$SkipVerify
+    [switch]$SkipVerify,
+    [switch]$SkipCanon
 )
 
 $ErrorActionPreference = "Stop"
@@ -102,7 +104,7 @@ $pendingJson (birth_date / martyrdom_date per msg_id).
 FOR EACH row in the work list:
 1. Read the MIDDLE frame image with the Read tool, then Read ONE other frame
    and confirm the digits agree (single-frame photo posts: read carefully once).
-2. Read the dates printed next to the yellow labels:
+2. Read the martyr's NAME and the dates printed next to the labels:
    - birth.....: "تاريخ الميلاد" / "تاريخ الولادة"
    - martyrdom.: "تاريخ الشهادة" / "تاريخ الاستشهاد"
    Numeric rule (validated on 550+ cards): the MONTH is ALWAYS the middle
@@ -127,6 +129,14 @@ FOR EACH row in the work list:
    - no memorial card in any frame (ops video / speech / nasheed) ->
      verified FALSE, note "not a martyr post" (needs human)
    - the card ITSELF prints an impossible date -> verified FALSE, note it
+   NAME (compare the printed name with the DB name):
+   - identical                     -> do NOT include "name" in the result
+   - same person, OCR damage only (garbled letters, split or missing
+     space)                        -> fix to the card spelling, include
+                                      "name", note "name fixed: old -> new"
+   - name not legible on the card  -> do NOT include "name"; never guess
+   - the card names a DIFFERENT person than the DB row -> verified FALSE,
+     note "name mismatch (needs human)" - never silently rewrite a name
 4. COVER FRAME: for verified-true rows pick featured_frame_path = the
    sharpest fully-rendered frame showing the whole card (portrait + both
    dates + name clean, no animated title overlay). It is almost always the
@@ -140,6 +150,7 @@ THEN:
 6. Write $results as {"results":[{"msg_id":N,
      "birth_date":"yyyy-mm-dd" (only when fixing/filling),
      "martyrdom_date":"yyyy-mm-dd" (only when fixing/filling),
+     "name":"..." (ONLY to repair OCR damage read off this row's own card),
      "verified":true|false,
      "featured_frame_path":"data/frames/..." (verified-true rows, when a
        clean frame exists),
@@ -153,7 +164,7 @@ THEN:
    change (msg | field | was | now | card shows) and every needs-human row
    with its reason; list exact matches as one comma-separated msg_id line.
 
-HARD RULES: touch ONLY birth_date/martyrdom_date/featured_frame_path via
+HARD RULES: touch ONLY birth_date/martyrdom_date/name/featured_frame_path via
 scripts/ai_verify.py apply - never any other column or any file outside
 data/ai_batches and docs/ai-verify-daily-log.md.
 NEVER run git add/commit/push or any git state-changing command.
@@ -180,6 +191,91 @@ NEVER run git add/commit/push or any git state-changing command.
                 if ($claudeExit -ne 0) {
                     $errors += "verify:claude exited $claudeExit (pass $pass)"
                     break
+                }
+            }
+        }
+    }
+
+    # ---------- Phase 1b: canon (rank / battalion spelling consolidation) ----------
+    # OCR leaves letter-level variants - an inserted letter, a split or missing
+    # space - that the deterministic normalize-fields pass can never merge: its
+    # grouping key is defined to leave letters alone. Only a reader of the value
+    # list can propose those merges, so this is its own Claude pass.
+    # Blast radius is bounded by canon-apply itself: every `to` must already exist
+    # in that column, and a chained mapping is a hard error that empties the plan.
+    if (-not $SkipCanon) {
+        $canonClaude = (Get-Command claude -ErrorAction SilentlyContinue)
+        if (-not $canonClaude) {
+            Write-Host "claude CLI not found - skipping canon phase."
+            $errors += "canon:claude CLI not found on PATH"
+        } else {
+            $cstamp    = Get-Date -Format "yyyy-MM-dd_HHmm"
+            $canonDump = "data\ai_batches\canon_dump.json"
+            $canonMap  = "data\ai_batches\canon_map_$cstamp.json"
+
+            & $py scripts\ai_verify.py canon-dump --json $canonDump
+            if ($LASTEXITCODE -ne 0) {
+                $errors += "canon:dump failed"
+            } else {
+                $cprompt = @"
+You are running the AQMAR NIGHTLY FIELD-CANON cycle (repo: $repo).
+
+INPUT: $canonDump - {"military_rank":[{"value","count"},...],"battalion":[...]}.
+Those are the DISTINCT values currently in the database, with row counts. They
+come from OCR of memorial cards, so one real value often appears several times
+with letter damage, a missing space, or an inserted letter.
+
+TASK: propose merges folding each corrupted spelling into the correct one.
+
+RULES - read carefully, this rewrites a memorial database:
+1. "to" MUST be one of the "value" strings present in the SAME column of the
+   dump. Never invent a spelling. Prefer the variant with the highest count;
+   it is almost always the correct one.
+2. Merge ONLY when two strings are the SAME real value damaged by OCR - an
+   inserted or dropped letter, a split or missing space, a look-alike letter.
+3. NEVER merge values naming DIFFERENT things. For battalions this is critical:
+   two battalions honouring different people are different battalions, however
+   similar the names look - never fold one into the other. For ranks, platoon /
+   company / battalion / group commanders are FOUR distinct ranks, and a deputy
+   is a DIFFERENT rank from its principal - never merge a deputy into it.
+4. No chains: a value used as a "to" must never also appear as a "from".
+5. If unsure, leave the value out. Omission is safe; a wrong merge silently
+   rewrites real people's records.
+
+OUTPUT: write $canonMap as
+  {"military_rank":[{"from":"...","to":"...","confidence":"high|medium",
+                     "note":"why, <=120 chars"}],
+   "battalion":[ ...same shape... ]}
+Include a column key only when it has at least one merge, and write the file
+even when there is nothing to merge (an empty object) so the caller knows you
+finished.
+
+HARD RULES: write ONLY $canonMap. Do not modify the database yourself - the
+caller applies the mapping via scripts\ai_verify.py canon-apply.
+NEVER run git add/commit/push or any git state-changing command.
+"@
+                # Same allowlist posture as the verify phase: these values come
+                # from OCR of an external channel, so no blanket bypass.
+                $eap = $ErrorActionPreference
+                $ErrorActionPreference = 'Continue'
+                $cprompt | claude -p --output-format text `
+                    --allowedTools "Read" "Write" "Edit" "Glob" "Grep" "Bash(.venv*)" `
+                    --disallowedTools "Bash(git*)" 2>&1
+                $canonExit = $LASTEXITCODE
+                $ErrorActionPreference = $eap
+
+                if ($canonExit -ne 0) {
+                    $errors += "canon:claude exited $canonExit"
+                } elseif (-not (Test-Path $canonMap)) {
+                    $errors += "canon:no mapping file produced"
+                } else {
+                    # -DryRun leaves canon-apply in its default preview mode.
+                    if ($DryRun) {
+                        & $py scripts\ai_verify.py canon-apply $canonMap
+                    } else {
+                        & $py scripts\ai_verify.py canon-apply $canonMap --apply
+                    }
+                    if ($LASTEXITCODE -ne 0) { $errors += "canon:apply failed" }
                 }
             }
         }
