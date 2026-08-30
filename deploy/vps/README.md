@@ -1,104 +1,92 @@
 # AQMAR — VPS migration runbook
 
-Move the AQMAR admin site (IIS) + the two scheduled tasks + the SQL Server
-database onto your own Windows Server VPS, reachable publicly over HTTPS.
+Move the whole AQMAR back end onto your Windows Server 2022 VPS:
 
-This folder is **self-contained** and does not change the existing local
-scripts (`scripts/iis_deploy.ps1`, `scripts/setup_*_trigger.ps1`) — those keep
-working on your dev machine. Everything here is run **on the VPS** unless a step
-says *(run on your LOCAL machine)*.
+- **SQL Server** database (`aqmar`) — restored from a backup
+- **OCR pipeline** — ffmpeg + EasyOCR, run by the scheduled tasks
+- **IIS admin portal** — `http://localhost:8082`, reached by RDP (not public)
+- **2 scheduled tasks** — 2-hourly Telegram scrape · nightly verify → publish
+- **Publish** — `git push origin master` from the VPS updates both public sites
+
+The public sites (`https://aqmar.pages.dev`, `https://mohamedkhamis.github.io/AQMAR/`)
+are unaffected — they build from `master` on every push, whichever machine pushes.
+
+Everything here runs **on the VPS** unless a step says *(LOCAL machine)*.
+The existing dev-box scripts (`scripts/iis_deploy.ps1`, `scripts/setup_*_trigger.ps1`)
+are untouched and keep working on your dev machine.
 
 ---
 
-## What moves where
-
-```
-YOUR DEV MACHINE                         YOUR VPS (Windows Server)
-──────────────────                       ─────────────────────────
-SQL Server  aqmar  ──backup .bak──▶      SQL Server  aqmar   (restored)
-IIS admin :8082 (local)         ▶        IIS admin  https://<your-domain>
-2-hourly scrape task            ▶        2-hourly scrape   (headless)
-nightly verify+publish task     ▶        nightly verify+publish (headless)
-.env / session / notify_settings ─copy─▶ same files (gitignored — hand-carried)
-```
-
-The **public site** (`https://aqmar.pages.dev`, GitHub Pages) is unaffected —
-it still deploys from `master` on push. The VPS runs the *admin portal* (the
-live-data FastAPI app), which also serves the SPA read-only to anonymous
-visitors, so it can double as a public mirror if you ever drop Cloudflare.
-
-## Decisions baked into these files
+## Decisions baked into these scripts
 
 | Choice | Value |
 |---|---|
-| Database | Installed **on the VPS**; current DB restored from a backup |
-| Site access | **Public** — your domain, HTTPS via win-acme (Let's Encrypt) |
-| Tasks | **Both** — 2-hourly scrape + nightly verify→publish→email |
-| Task logon | **Headless** — a service account with a stored password (runs logged-out) |
+| IIS exposure | **Local only** — `http://localhost:8082`, reached via RDP. No domain, no TLS, no inbound ports. |
+| Database | **On the VPS**, restored from a `.bak` taken on the dev box |
+| Tasks | **Both** — 2-hourly scrape (00,02,…,22) + nightly verify→publish→email at **22:15** |
+| Task logon | **Headless** — runs as your existing VPS admin account, whether logged in or not (password stored by Task Scheduler), survives reboot |
+| AI date-verify | **Kept** — the nightly runs headless `claude` to fix/fill card dates before publishing |
+| Publish | `git push origin master` **is** the publish; the old redundant "second push" is skipped automatically |
+
+To publish the admin portal on the internet later, see **[If you go public later](#if-you-go-public-later)**.
 
 ---
 
-## Prerequisites to install on the VPS (once)
+## Prerequisites — install on the VPS once
 
-Install these **before** running any script here. `01_prerequisites.ps1` checks
-that they are all present and tells you what is missing.
+`01_prerequisites.ps1` checks every item below and prints `PASS` / `MISS`.
+Install the `MISS` items, then re-run it until it's all green.
 
-1. **Windows Server** with the **Web Server (IIS)** role, plus these IIS
-   features: *CGI is NOT needed*; you DO need the base IIS + the
-   **HttpPlatformHandler** module (separate download).
-   - IIS: `Install-WindowsFeature Web-Server, Web-Mgmt-Console`
-   - HttpPlatformHandler: <https://www.iis.net/downloads/microsoft/httpplatformhandler>
-2. **SQL Server** (Express is fine for this workload) with a default instance,
-   plus **sqlcmd** (SQL Server command-line tools).
-3. **Python 3.11+** (64-bit), on PATH.
-4. **ODBC Driver 17 for SQL Server**
-   (<https://learn.microsoft.com/sql/connect/odbc/download-odbc-driver-for-sql-server>).
-5. **ffmpeg** on PATH (frame extraction for OCR).
-6. **git** on PATH, with credentials that can `push` to your GitHub repo
-   (needed by the nightly publish). A credential manager or a PAT.
-7. **claude CLI** on PATH, **already authenticated** as the service account
-   (needed by the nightly AI-verify phase). Run `claude` once interactively as
-   that account to log in. *If you don't want AI verification on the VPS, you
-   can skip this — the nightly logs "claude CLI not found — skipping verify"
-   and still publishes already-verified rows.*
-8. **win-acme** (`wacs.exe`) for the TLS certificate
-   (<https://www.win-acme.com/>).
+| # | Item | Install (elevated PowerShell) |
+|---|---|---|
+| 1 | **IIS** + management console | `Install-WindowsFeature Web-Server, Web-Mgmt-Console` |
+| 2 | **HttpPlatformHandler** module | Download the x64 installer from <https://www.iis.net/downloads/microsoft/httpplatformhandler> (needs IIS first) |
+| 3 | **SQL Server 2022 Express**, default instance | Download from Microsoft. In setup: *Database Engine* only, instance name **`MSSQLSERVER`** (default), Windows auth. Add your admin account as **sysadmin**. |
+| 4 | **sqlcmd** (classic) | "Microsoft Command Line Utilities 15 for SQL Server" MSI (or tick the tools in SQL Server setup) |
+| 5 | **ODBC Driver 17 for SQL Server** (x64) | MSI from Microsoft. *(Driver 18 also works if you change the `DRIVER={…}` token in `.env` to match.)* |
+| 6 | **Python 3.11** (x64), on PATH | `winget install -e --id Python.Python.3.11` — matches the dev-box venv exactly |
+| 7 | **ffmpeg**, on PATH | `winget install -e --id Gyan.FFmpeg` |
+| 8 | **git**, on PATH, with push creds | You already have this ("my github work there"). Confirm with step 7 below. |
+| 9 | **Node.js LTS + claude CLI** | `winget install -e --id OpenJS.NodeJS.LTS` then `npm i -g @anthropic-ai/claude-code` |
 
-A **domain name** whose A record points at the VPS's public IP, and firewall
-access to ports **80** and **443** from the internet (ACME + HTTPS).
+No domain, no DNS, no firewall change, no win-acme — this is a local-only portal.
 
 ---
 
-## The service account
+## The run-as account
 
-Both scheduled tasks run **headless with stored credentials**, so they need a
-Windows account whose password you'll store in Task Scheduler. The simplest and
-recommended choice is to do the entire setup **while logged in as that account**
-so that its user profile holds everything the tasks rely on:
+Both tasks and the publish run **headless as one Windows account** whose profile holds:
 
-- the `.env`, `session/`, and `data/notify_settings.json` files (under the repo),
-- the **git** credentials (in the account's credential store),
-- the **claude CLI** login (in the account's home dir).
+- your **git** push credentials (Credential Manager),
+- the **claude CLI** login (`%USERPROFILE%\.claude`),
+- the `.env`, `session\`, `data\notify_settings.json`, `data\state.json` files under the repo.
 
-Use a dedicated local account (e.g. `AqmarSvc`) or your normal VPS admin
-account. Whatever you pick, log in as it for every step below and pass the same
-account to `05_setup_tasks_vps.ps1`.
+Use the **existing VPS admin account** you already log in with and that already
+does `git push`. **Log in as that account for every step below.**
+`05_setup_tasks_vps.ps1` defaults its `-RunAsUser` to whoever runs it.
 
 ---
 
 ## Steps (in order)
 
-> Open an **elevated** PowerShell (Run as administrator) on the VPS for the IIS,
-> firewall, and SQL steps.
+Open an **elevated PowerShell** (Run as administrator) on the VPS. If scripts are
+blocked: `Set-ExecutionPolicy -Scope Process Bypass`.
 
-### 0. Get the code onto the VPS
+### 0. The code is already on the VPS
+
+You've cloned it. Confirm and prep:
 
 ```powershell
-git clone https://github.com/mohamedkhamis/AQMAR.git C:\AQMAR
-cd C:\AQMAR
-```
+cd C:\AQMAR                    # wherever your clone is; scripts resolve the path
+git checkout master
+git pull
+New-Item -ItemType Directory -Force logs | Out-Null
 
-Any path works — the scripts resolve it. This runbook assumes `C:\AQMAR`.
+# The nightly runs `git commit`, so a git identity must be set on the VPS.
+git config user.email          # if this prints nothing, set both:
+#   git config --global user.name  "Your Name"
+#   git config --global user.email "you@example.com"
+```
 
 ### 1. Check prerequisites
 
@@ -106,38 +94,52 @@ Any path works — the scripts resolve it. This runbook assumes `C:\AQMAR`.
 .\deploy\vps\01_prerequisites.ps1
 ```
 
-Fix anything it reports as **MISSING** before continuing.
+Fix every `MISS` before continuing.
 
-### 2. Back up the database *(run on your LOCAL machine)*
+### 2. Back up the database *(LOCAL machine)*
 
 ```powershell
-.\deploy\vps\02_backup_db_local.ps1
+.\deploy\vps\02_backup_db_local.ps1        # -> deploy\vps\aqmar_<stamp>.bak
+.\deploy\vps\00_gather_secrets_local.ps1   # -> ..\AQMAR-secrets\  (the 5 gitignored files)
 ```
 
-This writes `aqmar_YYYYMMDD_HHMMSS.bak`. Copy that file to the VPS (RDP
-clipboard, a file share, or `scp`). Note the path where you drop it.
+A fresh `.bak` may already be sitting in `deploy\vps\` (shipped with this
+runbook). Take a new one if your local data has moved on since.
+
+Copy **both** the `.bak` and the `AQMAR-secrets` folder to the VPS (RDP drive
+redirection, a private file share, or `scp`). Treat them as secret.
 
 ### 3. Restore the database on the VPS
 
 ```powershell
-.\deploy\vps\03_restore_db_vps.ps1 -BakFile C:\path\to\aqmar_20260101_030405.bak
+.\deploy\vps\03_restore_db_vps.ps1 -BakFile C:\path\to\aqmar_<stamp>.bak
 ```
 
-Verifies the row count afterwards so you can confirm the data made it.
+It remaps the data/log file paths to this machine and prints the `dbo.martyrs`
+row count — **cross-check it against the dev box** before trusting it.
 
-### 4. Carry over the secrets (gitignored — not in the clone)
+### 4. Drop in the gitignored files + set a fresh token
 
-Copy these from your local repo to the **same relative paths** on the VPS:
+Copy the **contents** of the `AQMAR-secrets` folder into `C:\AQMAR\` (merge,
+keep the relative structure). That lands:
 
-| File / dir | What it is |
+| Path | What |
 |---|---|
 | `.env` | Telegram creds, DB conn string, `ADMIN_TOKEN` |
-| `session/` (and any `*.session`) | Authenticated Telegram session |
-| `data/notify_settings.json` | Gmail app password + report recipients |
+| `session\` (+ any `*.session`) | authenticated Telegram login |
+| `data\notify_settings.json` | Gmail app password + report recipients |
+| `data\state.json` | **scraper cursor — without it the VPS re-scrapes from msg 1 and overwrites corrected dates** |
+| `data\ai_batches\noted_ids.json` | nightly "reviewed, unverifiable" skip list |
 
-Then edit `.env` on the VPS from `deploy\vps\.env.vps.example` as a guide —
-the DB line stays `SERVER=localhost;...;Trusted_Connection=yes` because the DB
-now lives on the VPS.
+Then edit `.env` (use `deploy\vps\.env.vps.example` as the guide) and set a
+**fresh** `ADMIN_TOKEN` for this box:
+
+```powershell
+python -c "import secrets; print(secrets.token_urlsafe(32))"
+```
+
+The DB line stays `SERVER=localhost;…;Trusted_Connection=yes` — the database is
+local to the VPS now. Leave `SITE_REPO_URL` unset.
 
 ### 5. Build the Python environment
 
@@ -145,92 +147,145 @@ now lives on the VPS.
 python -m venv .venv
 .\.venv\Scripts\python.exe -m pip install --upgrade pip
 .\.venv\Scripts\python.exe -m pip install -r requirements.txt
-# Warm up EasyOCR's model download (first run pulls ~100 MB):
+# Warm EasyOCR's model download (~100 MB, one time):
 .\.venv\Scripts\python.exe -c "import easyocr; easyocr.Reader(['ar','en'])"
-# Smoke-test the DB connection:
+# Smoke test — prints the SQL Server row counts (no traceback) AND
+# "Last processed msg_id: <N>" which confirms data\state.json landed:
 .\.venv\Scripts\python.exe scripts\status.py
 ```
 
-### 6. Deploy IIS with your domain
+EasyOCR runs on **CPU** here (no GPU needed) — fine for ~5–10 new videos/day.
+
+### 6. Log the claude CLI in as this account
+
+```powershell
+claude          # complete the browser/device login, then exit
+```
+
+Needed for the nightly AI-verify phase. If you skip it, the nightly logs
+"claude CLI not found — skipping verify" and still publishes already-verified rows.
+
+### 7. Confirm git push works non-interactively
+
+```powershell
+git ls-remote origin -h refs/heads/master   # must succeed WITHOUT prompting
+```
+
+If it prompts, run `git push` once interactively so Git Credential Manager
+stores the credential for this account, then re-test.
+
+### 8. Deploy IIS (local-only)
+
+```powershell
+.\deploy\vps\04_iis_deploy_vps.ps1
+Invoke-WebRequest http://localhost:8082/api/health -UseBasicParsing   # -> {"ok": true, ...}
+```
+
+Generates `web.config` for this path, creates the `AqmarAdmin` app pool + site
+on **:8082**, and grants the pool identity `db_owner` on `aqmar`. Opens no ports.
+
+### 9. Register the two scheduled tasks (headless)
+
+```powershell
+.\deploy\vps\05_setup_tasks_vps.ps1
+# prompts for THIS account's password (stored encrypted by Task Scheduler)
+```
+
+Registers both tasks to run whether logged on or not, and grants this account
+its own SQL login + `db_owner` (the tasks connect as this account). Verify:
+
+```powershell
+schtasks /query /tn "AqmarTofan 2-Hourly Scrape"        /v /fo LIST | findstr "Next Run"
+schtasks /query /tn "AqmarTofan Nightly Verify+Publish"  /v /fo LIST | findstr "Next Run"
+```
+
+### 10. End-to-end smoke test
+
+```powershell
+# a) one scrape, watch it
+Start-ScheduledTask -TaskName "AqmarTofan 2-Hourly Scrape"
+Get-Content .\logs\scrape_2hourly.log -Wait -Tail 30      # Ctrl+C to stop watching
+
+# b) portal + live data
+Invoke-WebRequest http://localhost:8082/api/health -UseBasicParsing
+Start-Process http://localhost:8082/                       # log in with the new ADMIN_TOKEN
+
+# c) nightly WITHOUT publishing or emailing
+.\scripts\nightly_verify_publish.ps1 -DryRun
+```
+
+A real (non-dry) nightly should end with `PUBLISH_RESULT: published=… version=…`
+and no `errors`. The dead "second push" no longer appears.
+
+### 11. Cut over — stop the dev box from also publishing
+
+Once the VPS runs clean, **on the DEV BOX**:
+
+```powershell
+Disable-ScheduledTask -TaskName "AqmarTofan 2-Hourly Scrape"
+Disable-ScheduledTask -TaskName "AqmarTofan Nightly Verify+Publish"
+```
+
+Then **on the VPS** `git pull` once more (pick up any last dev-box publish), and
+let the VPS tasks take it from there. The dev box stays fully usable for
+development; just don't run `publish.ps1` there while the VPS owns publishing.
+
+---
+
+## Daily operation on the VPS
+
+- **Review / verify rows:** RDP in → `http://localhost:8082/` → *Editor login* →
+  paste the VPS `ADMIN_TOKEN` → work the unverified queue.
+- **Logs** (`C:\AQMAR\logs\`): `scrape_2hourly.log`, `nightly_publish.log`,
+  `daily.log`, `iis_stdout*`.
+- **Manual publish:** `.\scripts\publish.ps1 -Note "…"`.
+- **DB backups:** re-run `deploy\vps\02_backup_db_local.ps1` on the VPS on a
+  schedule if you want point-in-time copies (Express has no SQL Agent — use a
+  third scheduled task calling that script).
+
+---
+
+## If you go public later
 
 ```powershell
 .\deploy\vps\04_iis_deploy_vps.ps1 -Domain admin.yourdomain.com
 ```
 
-This generates a correct `web.config` for this machine's path, creates the app
-pool + site bound to your domain on port 80, opens the firewall for 80/443,
-and grants the IIS app-pool identity access to the `aqmar` DB. After it
-finishes, issue the certificate:
+Adds the host-header binding on :80, opens the firewall for 80/443, and prints
+the win-acme step for the HTTPS cert. Then also:
 
-```powershell
-# win-acme: pick "N" (new cert), the AQMAR site, http-01 validation.
-C:\path\to\win-acme\wacs.exe
-```
-
-win-acme adds the HTTPS (443) binding and a daily auto-renew task. Test:
-`https://admin.yourdomain.com/api/health`.
-
-### 7. Register the scheduled tasks (headless)
-
-```powershell
-.\deploy\vps\05_setup_tasks_vps.ps1 -RunAsUser "VPSNAME\AqmarSvc"
-# prompts for the account password (stored encrypted by Task Scheduler)
-```
-
-Registers **both** tasks to run whether logged on or not, and grants that
-service account its own SQL login + `db_owner` (the tasks connect with Windows
-auth as this account). Verify:
-
-```powershell
-schtasks /query /tn "AqmarTofan 2-Hourly Scrape" /v /fo LIST | findstr "Next Run"
-schtasks /query /tn "AqmarTofan Nightly Verify+Publish" /v /fo LIST | findstr "Next Run"
-```
-
-### 8. End-to-end verification
-
-```powershell
-# scrape once, watch the log
-Start-ScheduledTask -TaskName "AqmarTofan 2-Hourly Scrape"
-Get-Content .\logs\scrape_2hourly.log -Wait -Tail 30
-
-# admin site loads over HTTPS
-Invoke-WebRequest https://admin.yourdomain.com/api/health
-
-# nightly dry-run (no publish, no email) if the script supports -DryRun
-.\scripts\nightly_verify_publish.ps1 -DryRun
-```
+- point the domain's **A record** at the VPS public IP,
+- issue the cert: `wacs.exe` → new cert → `AqmarAdmin` site → http-01,
+- the portal is **write-capable** — keep `ADMIN_TOKEN` long/random, consider an
+  IIS IP allow-list on the write routes or front it with Cloudflare Access.
 
 ---
 
-## Security notes (public admin portal)
-
-- The admin portal is a **write-capable** interface. Every write endpoint is
-  gated by `ADMIN_TOKEN`, so make it long and random
-  (`python -c "import secrets; print(secrets.token_urlsafe(32))"`) and keep it
-  only in the VPS `.env` and your browser session.
-- HTTPS is mandatory here (chosen) — the token must never travel in clear text.
-- Even public, consider adding an IIS IP allow-list rule for the write routes,
-  or front the site with Cloudflare, if only you use the editor.
-- Keep the VPS patched; the box now holds the Telegram session, the Gmail app
-  password, and git push credentials.
-
 ## Rollback
 
-Nothing here is destructive to your local machine. To undo on the VPS:
+Nothing here touches the dev box (until you choose to in step 11). On the VPS:
 
 ```powershell
 Unregister-ScheduledTask -TaskName "AqmarTofan 2-Hourly Scrape" -Confirm:$false
 Unregister-ScheduledTask -TaskName "AqmarTofan Nightly Verify+Publish" -Confirm:$false
 & $env:windir\System32\inetsrv\appcmd.exe delete site AqmarAdmin
 & $env:windir\System32\inetsrv\appcmd.exe delete apppool AqmarAdmin
-# DB: DROP DATABASE aqmar   (only if abandoning the VPS entirely)
+# DROP DATABASE aqmar   # only if abandoning the VPS entirely
 ```
 
-## Known caveat carried from the main repo
+Re-enable the dev-box tasks: `Enable-ScheduledTask -TaskName "AqmarTofan …"`.
 
-`publish.ps1` / the nightly publish currently **abort at the public-site sync**
-because `SITE_REPO_URL` equals `origin`'s push URL (the two-repo split in
-`docs/superpowers/plans/2026-07-22-…` Task 12 was never done). Until that split
-is finished, the nightly will scrape + AI-verify + commit the private backup but
-stop before pushing the public site. See the main `CLAUDE.md` "Publish" note.
-That is a pre-existing condition, not something this migration introduces.
+---
+
+## What changed from the earlier (2026-08-06) kit
+
+- **Local-only IIS** is the default (`04_iis_deploy_vps.ps1` with no args →
+  `localhost:8082`). The public/domain path is now the opt-in `-Domain` flag.
+- **Tasks run as the current account** by default (was: a mandatory `-RunAsUser`).
+- **Nightly at 22:15** (was 22:30) — clear of the 22:00 scrape slot.
+- **`data\state.json` + `noted_ids.json`** added to the carry-over list and to
+  `00_gather_secrets_local.ps1` / `build_bundle.ps1`. Missing `state.json` was
+  the one gap that could corrupt data on first run.
+- **Publish simplified** (`scripts/publish_core.ps1`): the redundant second push
+  to a non-existent site repo is skipped cleanly instead of aborting every run.
+  `git push origin master` alone updates both public sites.

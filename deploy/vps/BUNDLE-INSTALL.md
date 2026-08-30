@@ -1,5 +1,10 @@
 # AQMAR — install on the VPS (from this bundle)
 
+> **You are using the git-clone flow — see [`README.md`](README.md), not this file.**
+> This bundle path is the alternative for a VPS with **no** GitHub access: it
+> carries the whole app + data + a `.bak` + secrets in one folder. The numbered
+> scripts it runs are the same ones `README.md` documents.
+
 This folder is a complete copy of the AQMAR admin site: the app, your data, a
 fresh database backup, your secrets, and the deploy scripts. **No git needed.**
 
@@ -130,8 +135,12 @@ Delete this bundle from the VPS (it holds secrets). Keep the copy at `C:\AQMAR`.
   on the VPS generate their own frames; only the admin "re-pick a cover" carousel
   for *pre-migration* rows needs the old raw frames. Re-run
   `build_bundle.ps1 -IncludeAllFrames` if you want them.
-- **Full reference:** `app\deploy\vps\README.md` is the long-form runbook (the
-  git-clone flow); the scripts it names are identical to the ones you're running.
-- **Known caveat (pre-existing):** the nightly publish stops before pushing the
-  public site while `SITE_REPO_URL` equals `origin`. See `app\CLAUDE.md`
-  "Publish". Not introduced by this migration.
+- **State:** `data\state.json` (scraper cursor) and
+  `data\ai_batches\noted_ids.json` are included — without `state.json` the VPS
+  would re-scrape from message 1 and overwrite corrected dates.
+- **Full reference:** `app\deploy\vps\README.md` is the authoritative runbook;
+  the scripts it names are identical to the ones you're running here.
+- **Publish:** `git push origin master` updates both public sites; the old
+  redundant "second push" is skipped automatically (`publish_core.ps1`). But the
+  bundle flow assumes **no GitHub access** — if this VPS genuinely can't push,
+  the nightly still verifies + commits locally; run `git push` when it can.

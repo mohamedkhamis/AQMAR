@@ -8,21 +8,26 @@
 # because the tasks connect to SQL with Windows auth AS THIS ACCOUNT (the app
 # pool's grant from step 6 does not cover it).
 #
-# The account you pass MUST be the same one whose profile holds the git push
+# The RUN-AS account MUST be the one whose profile holds the git push
 # credentials, the claude CLI login, and the .env/session/notify files - so run
-# the whole runbook logged in as it.  S4U ("/np", no stored password) is NOT
-# used on purpose: S4U tasks get no network access, and both tasks need the
-# network (Telegram, git push, SMTP).
+# the whole runbook logged in as it. It DEFAULTS to the account you're running
+# this script as ($env:USERDOMAIN\$env:USERNAME); pass -RunAsUser only to
+# override. S4U ("/np", no stored password) is NOT used on purpose: S4U tasks
+# get no network access, and both tasks need the network (Telegram, git, SMTP).
+#
+# Cadence: 2-hourly scrape at 00,02,...,22 ; nightly verify+publish at 22:15
+# (deliberately clear of the 22:00 scrape slot).
 #
 # Run ELEVATED. Idempotent - deletes + recreates both tasks and regenerates the
 # wrapper scripts (don't hand-edit those).
 #
 # Usage:
-#   .\deploy\vps\05_setup_tasks_vps.ps1 -RunAsUser "VPSNAME\AqmarSvc"
+#   .\deploy\vps\05_setup_tasks_vps.ps1            # runs as the current account
+#   .\deploy\vps\05_setup_tasks_vps.ps1 -RunAsUser "VPSNAME\otheruser"
 #   # prompts for the password; or pass -Password (plain) for automation
 
 param(
-    [Parameter(Mandatory = $true)][string]$RunAsUser,
+    [string]$RunAsUser = "$env:USERDOMAIN\$env:USERNAME",
     [string]$Password,
     [string]$DbServer = "localhost",
     [string]$DbName   = "aqmar"
@@ -34,6 +39,9 @@ $venvPy = Join-Path $repo ".venv\Scripts\python.exe"
 $logDir = Join-Path $repo "logs"
 if (-not (Test-Path $venvPy)) { Write-Error "Venv python missing at $venvPy (README step 5)." }
 if (-not (Test-Path $logDir)) { New-Item -ItemType Directory $logDir -Force | Out-Null }
+
+Write-Host "Run-as account: $RunAsUser" -ForegroundColor Cyan
+Write-Host "  (this account's profile must hold the git creds, claude login, and .env/session files)" -ForegroundColor DarkGray
 
 if (-not $Password) {
     $sec = Read-Host "Password for $RunAsUser" -AsSecureString
@@ -96,8 +104,8 @@ Write-Host "Registering scheduled tasks as $RunAsUser (headless)..." -Foreground
 Register-AqmarTask "AqmarTofan 2-Hourly Scrape" "HOURLY" @('/mo','2','/st','00:00') `
     ("`"$scrapeBat`"")
 
-# Nightly verify+publish: daily 22:30, hidden via wscript
-Register-AqmarTask "AqmarTofan Nightly Verify+Publish" "DAILY" @('/st','22:30') `
+# Nightly verify+publish: daily 22:15 (clear of the 22:00 scrape slot), hidden via wscript
+Register-AqmarTask "AqmarTofan Nightly Verify+Publish" "DAILY" @('/st','22:15') `
     ("wscript.exe `"$nightlyVbs`"")
 
 # ---------------------------------------------------------------------------

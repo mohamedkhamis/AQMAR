@@ -1,29 +1,37 @@
-﻿# deploy/vps/04_iis_deploy_vps.ps1
+# deploy/vps/04_iis_deploy_vps.ps1
 #
-# VPS variant of scripts/iis_deploy.ps1 - public, domain-bound, path-agnostic.
-# Differs from the local script in three ways:
-#   1. GENERATES web.config for THIS machine's path (the committed one hardcodes
-#      the dev box's D:\ path, which won't exist here).
-#   2. Binds the site to your DOMAIN on port 80 (host header) instead of a bare
-#      localhost:8082 - win-acme then adds the 443/HTTPS binding.
-#   3. Opens the Windows Firewall for 80 + 443.
-# It still creates the AqmarAdmin app pool + grants that pool identity db_owner
-# on the aqmar DB, same as local.
+# IIS site setup for the AQMAR admin portal on the VPS.
 #
-# Run ELEVATED (Run as administrator). Idempotent - safe to re-run.
+# DEFAULT (no -Domain): LOCAL-ONLY. Binds http://localhost:8082, exactly like
+# the dev box (scripts/iis_deploy.ps1). You reach the portal by RDP'ing into the
+# VPS. No firewall change, no TLS, nothing exposed to the internet. This is the
+# recommended mode for a single-editor setup — the portal is write-capable.
+#
+# OPT-IN (-Domain admin.example.com): PUBLIC. Adds a host-header binding on
+# port 80, opens the Windows Firewall for 80 + 443, and prints the win-acme
+# step for the HTTPS cert. Use only if you deliberately want the portal on the
+# internet (then also harden it — see README "If you go public later").
+#
+# Both modes: generate a correct web.config for THIS machine's path (the
+# committed web.config hardcodes the dev box's D:\ path), (re)create the
+# AqmarAdmin app pool, grant that pool identity Read+Execute on the repo and
+# Full Control on logs\ + data\, and give it a SQL login + db_owner on `aqmar`.
+#
+# Run ELEVATED (Run as administrator). Idempotent — safe to re-run.
 #
 # Usage:
-#   .\deploy\vps\04_iis_deploy_vps.ps1 -Domain admin.yourdomain.com
-#   .\deploy\vps\04_iis_deploy_vps.ps1 -Domain admin.yourdomain.com -DbServer localhost -KeepLocalPort
+#   .\deploy\vps\04_iis_deploy_vps.ps1                         # local-only :8082
+#   .\deploy\vps\04_iis_deploy_vps.ps1 -Domain admin.you.com   # public (opt-in)
 
 param(
-    [Parameter(Mandatory = $true)][string]$Domain,
-    [string]$DbServer   = "localhost",
-    [string]$DbName     = "aqmar",
-    [switch]$KeepLocalPort   # also bind http://localhost:8082 for on-box testing
+    [string]$Domain,
+    [string]$DbServer = "localhost",
+    [string]$DbName   = "aqmar",
+    [int]$LocalPort   = 8082
 )
 
 $ErrorActionPreference = "Continue"
+$Public = [bool]$Domain
 
 # --- elevation guard (relaunch as admin if needed) ---
 $isElevated = ([Security.Principal.WindowsPrincipal] `
@@ -33,9 +41,9 @@ if (-not $isElevated) {
     Write-Host "Re-launching elevated (UAC prompt)..." -ForegroundColor Yellow
     $reArgs = @(
         "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "`"$PSCommandPath`"",
-        "-Domain", $Domain, "-DbServer", $DbServer, "-DbName", $DbName
+        "-DbServer", $DbServer, "-DbName", $DbName, "-LocalPort", $LocalPort
     )
-    if ($KeepLocalPort) { $reArgs += "-KeepLocalPort" }
+    if ($Public) { $reArgs += @("-Domain", $Domain) }
     Start-Process powershell.exe -Verb RunAs -Wait -ArgumentList $reArgs
     exit
 }
@@ -50,7 +58,7 @@ $venvPy   = Join-Path $sitePath ".venv\Scripts\python.exe"
 function Log($m) { Write-Host ("  {0}" -f $m) }
 Write-Host "=== AQMAR VPS IIS deploy ===" -ForegroundColor Cyan
 Log "Site path: $sitePath"
-Log "Domain:    $Domain"
+Log ("Mode:      {0}" -f $(if ($Public) { "PUBLIC (host header $Domain :80, firewall 80/443 open)" } else { "LOCAL-ONLY (http://localhost:$LocalPort)" }))
 Log "DB:        $DbServer / $DbName"
 
 # --- sanity ---
@@ -116,30 +124,36 @@ if (-not (Test-Path "$sitePath\logs")) { New-Item -ItemType Directory "$sitePath
 Log "RX on repo, F on logs\ + data\"
 
 # ---------------------------------------------------------------------------
-# 4. Site + domain binding (+ optional localhost:8082)
+# 4. Site + binding
 # ---------------------------------------------------------------------------
-Write-Host "[4/6] Site '$siteName' bound to $Domain :80..." -ForegroundColor Cyan
+Write-Host "[4/6] Site '$siteName'..." -ForegroundColor Cyan
 & $appcmd list site $siteName *> $null
 if ($LASTEXITCODE -eq 0) { & $appcmd delete site $siteName *> $null }
-& $appcmd add site /name:$siteName /physicalPath:"$sitePath" /bindings:"http/*:80:$Domain" *> $null
-& $appcmd set site /site.name:$siteName /[path='/'].applicationPool:$poolName *> $null
-if ($KeepLocalPort) {
-    & $appcmd set site /site.name:$siteName /+bindings.[protocol='http',bindingInformation='*:8082:'] *> $null
-    Log "also bound http://localhost:8082 (on-box testing)"
+if ($Public) {
+    & $appcmd add site /name:$siteName /physicalPath:"$sitePath" /bindings:"http/*:80:$Domain" *> $null
+    & $appcmd set site /site.name:$siteName "/+bindings.[protocol='http',bindingInformation='*:${LocalPort}:']" *> $null
+    Log "bound http://$Domain (host header) + http://localhost:$LocalPort"
+} else {
+    & $appcmd add site /name:$siteName /physicalPath:"$sitePath" /bindings:"http/*:${LocalPort}:" *> $null
+    Log "bound http://localhost:$LocalPort (local only)"
 }
-Log "bound http://$Domain (host header)"
+& $appcmd set site /site.name:$siteName /[path='/'].applicationPool:$poolName *> $null
 
 # ---------------------------------------------------------------------------
-# 5. Firewall for 80 + 443
+# 5. Firewall — PUBLIC mode only
 # ---------------------------------------------------------------------------
-Write-Host "[5/6] Firewall rules for 80 + 443..." -ForegroundColor Cyan
-foreach ($p in 80, 443) {
-    $rule = "AQMAR HTTP $p"
-    Get-NetFirewallRule -DisplayName $rule -ErrorAction SilentlyContinue |
-        Remove-NetFirewallRule -ErrorAction SilentlyContinue
-    New-NetFirewallRule -DisplayName $rule -Direction Inbound -Action Allow `
-        -Protocol TCP -LocalPort $p -Profile Any | Out-Null
-    Log "allow inbound TCP $p"
+if ($Public) {
+    Write-Host "[5/6] Firewall rules for 80 + 443..." -ForegroundColor Cyan
+    foreach ($p in 80, 443) {
+        $rule = "AQMAR HTTP $p"
+        Get-NetFirewallRule -DisplayName $rule -ErrorAction SilentlyContinue |
+            Remove-NetFirewallRule -ErrorAction SilentlyContinue
+        New-NetFirewallRule -DisplayName $rule -Direction Inbound -Action Allow `
+            -Protocol TCP -LocalPort $p -Profile Any | Out-Null
+        Log "allow inbound TCP $p"
+    }
+} else {
+    Write-Host "[5/6] Firewall: skipped (local-only mode opens no ports)." -ForegroundColor DarkGray
 }
 
 # ---------------------------------------------------------------------------
@@ -157,7 +171,12 @@ Log "login + db_owner granted"
 
 Write-Host ""
 Write-Host "IIS deploy done." -ForegroundColor Green
-Write-Host "Next: issue the TLS cert with win-acme, then test:" -ForegroundColor Yellow
-Write-Host "  C:\path\to\win-acme\wacs.exe    # new cert -> AqmarAdmin site -> http-01"
-Write-Host "  Invoke-WebRequest https://$Domain/api/health"
-
+if ($Public) {
+    Write-Host "Next: issue the TLS cert with win-acme, then test:" -ForegroundColor Yellow
+    Write-Host "  C:\path\to\win-acme\wacs.exe    # new cert -> AqmarAdmin site -> http-01"
+    Write-Host "  Invoke-WebRequest https://$Domain/api/health"
+} else {
+    Write-Host "Test on the VPS:" -ForegroundColor Yellow
+    Write-Host "  Invoke-WebRequest http://localhost:$LocalPort/api/health -UseBasicParsing"
+    Write-Host "  Start-Process http://localhost:$LocalPort/"
+}

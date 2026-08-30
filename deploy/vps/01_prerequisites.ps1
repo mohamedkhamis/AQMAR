@@ -32,7 +32,7 @@ Check "Python on PATH"      (HasCmd "python")  "Install Python 3.11+ (64-bit), t
 Check "git on PATH"         (HasCmd "git")     "Install Git for Windows; configure push creds for GitHub"
 Check "ffmpeg on PATH"      (HasCmd "ffmpeg")  "Install ffmpeg and add its bin\ to PATH"
 Check "sqlcmd on PATH"      (HasCmd "sqlcmd")  "Install SQL Server command-line tools (mssql-tools)"
-Check "claude CLI on PATH"  (HasCmd "claude")  "Install + 'claude' once to log in (nightly AI verify). Optional."
+Check "claude CLI on PATH"  (HasCmd "claude")  "npm i -g @anthropic-ai/claude-code, then run 'claude' once as the task account to log in (nightly AI verify)."
 
 # --- ODBC Driver 17 for SQL Server ---
 $odbc = $false
@@ -67,10 +67,12 @@ if (HasCmd "sqlcmd") {
 }
 Check "SQL Server localhost (Windows auth)" $sql "Install SQL Server (Express OK) with a default instance"
 
-# --- project bits ---
+# --- project bits (gitignored — hand-carried from the local machine) ---
 Check ".env present"          (Test-Path "$repo\.env")          "Copy your local .env here (gitignored)"
 Check "requirements.txt"      (Test-Path "$repo\requirements.txt") $null
 Check "Telegram session dir"  ((Test-Path "$repo\session") -or (@(Get-ChildItem "$repo\*.session" -ErrorAction SilentlyContinue).Count -gt 0)) "Copy your local session/ (authenticated Telegram login)"
+Check "data\state.json (scraper cursor)" (Test-Path "$repo\data\state.json") "Copy your local data\state.json. WITHOUT it phase3_daily re-fetches from msg 1 and upsert_martyr overwrites every AI/admin-corrected date with raw OCR."
+Check "data\notify_settings.json" (Test-Path "$repo\data\notify_settings.json") "Copy your local data\notify_settings.json (nightly report email), or re-enter it later in the admin Settings page."
 
 Write-Host ""
 if ($missing -eq 0) {

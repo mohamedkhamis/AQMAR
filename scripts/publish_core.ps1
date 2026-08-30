@@ -93,18 +93,39 @@ try {
         if ($LASTEXITCODE -ne 0) { Write-Error "backup push to origin failed" }
     }
 
-    # 5. site sync + public push (only when something was published)
+    # 5. site sync + public push — ONLY when a DISTINCT public site repo is
+    #    configured. In the single-repo setup the step-4 `git push origin master`
+    #    already updates both Cloudflare Pages and GitHub Pages (both build from
+    #    master), so a second push is redundant; and sync_site_repo.ps1
+    #    deliberately Write-Errors when SITE_REPO_URL resolves to origin (its
+    #    backup-safety guard), which would abort every run. Detect "no distinct
+    #    site repo" here and skip cleanly instead.
     if ($published -or $DryRun) {
-        $msg2 = "publish v${version}"
-        if ($Note) { $msg2 = "publish v${version}: $Note" }
-        # Hashtable splat: PS 5.1 array splatting binds POSITIONALLY and does
-        # not honor -Name tokens when calling a .ps1, so @("-CheckJson", ...)
-        # throws PositionalParameterNotFound. A hashtable binds by name.
-        $syncArgs = @{ CheckJson = $checkJson; CommitMessage = $msg2 }
-        if ($DryRun) { $syncArgs.DryRun = $true }
-        # sync_site_repo.ps1 throws (Stop + Write-Error) on any failure, which
-        # propagates here — no $LASTEXITCODE guard (it would read a stale value).
-        & (Join-Path $PSScriptRoot "sync_site_repo.ps1") @syncArgs
+        $siteUrl = $null
+        $envFile = Join-Path $repo ".env"
+        if (Test-Path $envFile) {
+            foreach ($line in Get-Content $envFile) {
+                if ($line -match '^\s*SITE_REPO_URL\s*=\s*(.+)$') { $siteUrl = $Matches[1].Trim() }
+            }
+        }
+        $originPush = (git remote get-url --push origin 2>$null)
+        $distinctSite = $siteUrl -and $originPush -and ($siteUrl.Trim() -ne "$originPush".Trim())
+
+        if (-not $distinctSite) {
+            Write-Host ("Site auto-deploys from origin/master (Cloudflare Pages + GitHub Pages) - " +
+                        "no distinct SITE_REPO_URL set, skipping the separate site sync.")
+        } else {
+            $msg2 = "publish v${version}"
+            if ($Note) { $msg2 = "publish v${version}: $Note" }
+            # Hashtable splat: PS 5.1 array splatting binds POSITIONALLY and does
+            # not honor -Name tokens when calling a .ps1, so @("-CheckJson", ...)
+            # throws PositionalParameterNotFound. A hashtable binds by name.
+            $syncArgs = @{ CheckJson = $checkJson; CommitMessage = $msg2 }
+            if ($DryRun) { $syncArgs.DryRun = $true }
+            # sync_site_repo.ps1 throws (Stop + Write-Error) on any failure, which
+            # propagates here — no $LASTEXITCODE guard (it would read a stale value).
+            & (Join-Path $PSScriptRoot "sync_site_repo.ps1") @syncArgs
+        }
     }
 
     # Hand the result to the orchestrator via a FILE, not stdout. Write-Host

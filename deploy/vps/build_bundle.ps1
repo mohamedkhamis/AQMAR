@@ -73,6 +73,17 @@ foreach ($f in "martyrs.json", "settings.json", "notify_settings.json") {
     if (Test-Path $src) { Copy-Item $src (Join-Path $dataDst $f) -Force }
 }
 
+# state.json = the scraper cursor. WITHOUT it the VPS re-fetches + re-OCRs every
+# historical message and upsert_martyr overwrites AI/admin-corrected dates with
+# raw OCR. noted_ids.json = the nightly "reviewed, unverifiable" skip list.
+if (Test-Path (Join-Path $repo "data\state.json")) {
+    Copy-Item (Join-Path $repo "data\state.json") (Join-Path $dataDst "state.json") -Force
+}
+New-Item -ItemType Directory -Force (Join-Path $dataDst "ai_batches") | Out-Null
+if (Test-Path (Join-Path $repo "data\ai_batches\noted_ids.json")) {
+    Copy-Item (Join-Path $repo "data\ai_batches\noted_ids.json") (Join-Path $dataDst "ai_batches\noted_ids.json") -Force
+}
+
 # photos: all of them (each referenced by a row's photo_path)
 & robocopy (Join-Path $repo "data\photos") (Join-Path $dataDst "photos") /E /NFL /NDL /NJH /NJS /NP | Out-Null
 if ($LASTEXITCODE -ge 8) { Write-Error "robocopy (photos) failed with code $LASTEXITCODE" }
