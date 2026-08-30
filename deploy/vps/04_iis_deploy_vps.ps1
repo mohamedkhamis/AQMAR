@@ -137,7 +137,7 @@ if ($Public) {
     & $appcmd add site /name:$siteName /physicalPath:"$sitePath" /bindings:"http/*:${LocalPort}:" *> $null
     Log "bound http://localhost:$LocalPort (local only)"
 }
-& $appcmd set site /site.name:$siteName /[path='/'].applicationPool:$poolName *> $null
+& $appcmd set site /site.name:$siteName "/[path='/'].applicationPool:$poolName" *> $null
 
 # ---------------------------------------------------------------------------
 # 5. Firewall — PUBLIC mode only
@@ -166,8 +166,11 @@ $g2 = "USE [$DbName]; IF NOT EXISTS (SELECT 1 FROM sys.database_principals WHERE
 & sqlcmd -E -S $DbServer -d $DbName -b -Q $g2 *> $null
 Log "login + db_owner granted"
 
-& iisreset /restart *> $null
+# Targeted restart instead of a global `iisreset /restart`: this box also hosts
+# other production sites (Toledo), and iisreset bounces every one of them.
+# http.sys picks up new sites/bindings immediately, so only this pool recycles.
 & $appcmd start site /site.name:$siteName *> $null
+& $appcmd recycle apppool /apppool.name:$poolName *> $null
 
 Write-Host ""
 Write-Host "IIS deploy done." -ForegroundColor Green
