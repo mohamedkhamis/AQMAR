@@ -1858,19 +1858,25 @@
           x-text="lang === 'ar' ? 'دخول المحرّر' : 'Editor login'"></h3>
       <p class="text-center text-muted text-[13px] mt-0 mb-6"
          x-text="lang === 'ar' ? 'استخدم رمز الإدارة من ملف .env' : 'Use the ADMIN_TOKEN from your .env file'"></p>
-      <label class="block mb-4">
-        <div class="field-label" x-text="lang === 'ar' ? 'رمز الإدارة' : 'Admin token'"></div>
-        <input type="password" class="input" x-model="loginPass" @keyup.enter="doLogin()"
-               autocomplete="current-password"
-               :placeholder="lang === 'ar' ? 'الصق الرمز هنا…' : 'Paste token here…'">
-      </label>
-      <div x-show="loginError" class="text-[13px] mt-[-8px] mb-3" style="color: var(--crimson);" x-text="loginError"></div>
-      <div class="flex gap-2.5 mt-3.5">
-        <button @click="doLogin()" class="btn btn-primary flex-1 justify-center"
-                x-text="lang === 'ar' ? 'دخول' : 'Sign in'"></button>
-        <button @click="showLogin = false; loginError = ''" class="btn btn-ghost"
-                x-text="lang === 'ar' ? 'إلغاء' : 'Cancel'"></button>
-      </div>
+      <!-- A password input outside a <form> makes browsers warn and stops
+           password managers offering to fill/save it. The form also gives
+           Enter-to-submit for free, which is why @keyup.enter is gone. -->
+      <form id="login-form" @submit.prevent="doLogin()">
+        <label class="block mb-4">
+          <div class="field-label" x-text="lang === 'ar' ? 'رمز الإدارة' : 'Admin token'"></div>
+          <input type="password" class="input" x-model="loginPass"
+                 autocomplete="current-password" name="admin-token"
+                 :placeholder="lang === 'ar' ? 'الصق الرمز هنا…' : 'Paste token here…'">
+        </label>
+        <div x-show="loginError" class="text-[13px] mt-[-8px] mb-3" style="color: var(--crimson);" x-text="loginError"></div>
+        <div class="flex gap-2.5 mt-3.5">
+          <button type="submit" class="btn btn-primary flex-1 justify-center"
+                  x-text="lang === 'ar' ? 'دخول' : 'Sign in'"></button>
+          <!-- type=button: inside a form an unqualified button submits it. -->
+          <button type="button" @click="showLogin = false; loginError = ''" class="btn btn-ghost"
+                  x-text="lang === 'ar' ? 'إلغاء' : 'Cancel'"></button>
+        </div>
+      </form>
     </div>
   </div>
 
@@ -1965,6 +1971,6 @@
 </div>
 
 <style>[x-cloak]{display:none!important}</style>
-<script src="app.js?v=20260831b"></script>
+<script src="app.js?v=20260831c"></script>
 </body>
 </html>

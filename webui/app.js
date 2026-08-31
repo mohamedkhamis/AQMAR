@@ -199,6 +199,7 @@ function aqmar() {
       // Keep document.title in sync with the active view + language.
       this.$watch('view', (v) => {
         if (window.__updateTitle) window.__updateTitle(v, this.lang);
+        this.focusView(v);
       });
       if (window.__updateTitle) window.__updateTitle(this.view, this.lang);
 
@@ -564,6 +565,27 @@ function aqmar() {
       this.martyrdomTo = '';
       this.ageMin = '';
       this.ageMax = '';
+    },
+
+    // Leaving a view flips aria-hidden on the section being left. If the
+    // control that triggered the change still holds focus inside it, the
+    // browser refuses the aria-hidden and warns - focus must never be hidden
+    // from assistive tech. Move focus to the view being entered, which also
+    // gives a screen reader the new heading to announce instead of stranding
+    // it on a button that no longer exists visually.
+    focusView(v) {
+      const active = document.activeElement;
+      if (active && active !== document.body && typeof active.blur === 'function') {
+        active.blur();
+      }
+      this.$nextTick(() => {
+        const id = 'main-content' + (v === 'home' ? '' : '-' + v);
+        const el = document.getElementById(id);
+        if (!el) return;
+        // -1 keeps it out of the tab order while still focusable in script.
+        if (!el.hasAttribute('tabindex')) el.setAttribute('tabindex', '-1');
+        try { el.focus({ preventScroll: true }); } catch (e) { el.focus(); }
+      });
     },
 
     // ---- Statistics designs ----
