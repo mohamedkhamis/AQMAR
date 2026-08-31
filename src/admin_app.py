@@ -51,6 +51,7 @@ from src.settings_store import (
     save_settings,
     validate_events,
     validate_lifeline,
+    validate_stats,
 )
 from src import notifier
 from src.notify_store import (
@@ -252,6 +253,8 @@ def put_settings(
     errors = validate_events(body.get("events", []))
     if "lifeline" in body:
         errors += validate_lifeline(body["lifeline"])
+    if "stats" in body:
+        errors += validate_stats(body["stats"])
     if errors:
         raise HTTPException(status_code=422, detail="; ".join(errors))
     try:

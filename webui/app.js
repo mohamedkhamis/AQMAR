@@ -67,6 +67,16 @@ function aqmar() {
     lifelineSaving: false,
     lifelineSaved: false,
     lifelineError: '',
+    // Statistics design config from settings.json: {default, enabled}.
+    // null until loaded (and when the file predates the feature), which
+    // AQMAR_STATS treats as "offer everything".
+    statsConfig: null,
+    statsChoice: readStoredStatsDesign(),
+    statsEnabledDraft: [],
+    statsDefaultDraft: null,
+    statsSaving: false,
+    statsSaved: false,
+    statsError: '',
     // Admin events editor. eventForm null = closed; otherwise a working copy
     // {id, name_ar, name_en, start_date} (empty strings for blank).
     eventForm: null,
@@ -92,6 +102,7 @@ function aqmar() {
     // ----- nav config -----
     nav: [
       { id: 'home',   ar: 'الرئيسية',  en: 'Home' },
+      { id: 'stats',  ar: 'إحصاءات',   en: 'Statistics' },
       { id: 'about',  ar: 'عن الموقع', en: 'About' },
     ],
 
@@ -265,6 +276,7 @@ function aqmar() {
       // Each lifespan-line design ships its own scoped stylesheet; inject them
       // once here, before the first detail view can render one.
       if (window.AQMAR_LIFELINE) window.AQMAR_LIFELINE.injectStyles();
+      if (window.AQMAR_STATS) window.AQMAR_STATS.injectStyles();
 
       // Lifespan line: designs measure pixels, so re-run the active design's
       // mount pass when the viewport resizes (no re-render needed). Every
@@ -343,6 +355,7 @@ function aqmar() {
       this.events = s.events;
       this.settingsVersion = s.version;
       this.lifelineConfig = s.lifeline;
+      this.statsConfig = s.stats;
     },
 
     // ---- Lifespan-line design switcher (desktop only) ----
@@ -443,6 +456,132 @@ function aqmar() {
       } catch (e) {
         console.warn('Could not remember the lifespan-line choice:', e.message);
       }
+    },
+
+    // ---- Statistics designs ----
+    // Same admin-config + visitor-choice contract as the lifespan line;
+    // AQMAR_STATS.resolve() reconciles the two.
+
+    get statsOptions() {
+      const S = window.AQMAR_STATS;
+      return S ? S.offered({ stats: this.statsConfig }) : [];
+    },
+
+    get statsActive() {
+      const S = window.AQMAR_STATS;
+      return S ? S.resolve(this.statsChoice, { stats: this.statsConfig }) : null;
+    },
+
+    // Not filtered by settings — the admin must be able to switch a
+    // disabled design back on.
+    get allStatsDesigns() {
+      const S = window.AQMAR_STATS;
+      return S ? S.all() : [];
+    },
+
+    resetStatsDraft() {
+      const S = window.AQMAR_STATS;
+      const cfg = this.statsConfig || {};
+      const known = S ? S.ORDER.filter((k) => S.has(k)) : [];
+      const enabled = (cfg.enabled || []).filter((k) => known.includes(k));
+      this.statsEnabledDraft = enabled.length ? enabled : known.slice();
+      this.statsDefaultDraft = this.statsEnabledDraft.includes(cfg.default)
+        ? cfg.default : (this.statsEnabledDraft[0] || null);
+      this.statsError = '';
+      this.statsSaved = false;
+    },
+
+    toggleStatsEnabled(key) {
+      const i = this.statsEnabledDraft.indexOf(key);
+      if (i === -1) this.statsEnabledDraft.push(key);
+      else this.statsEnabledDraft.splice(i, 1);
+      const S = window.AQMAR_STATS;
+      if (S) {
+        this.statsEnabledDraft = S.ORDER.filter(
+          (k) => this.statsEnabledDraft.includes(k));
+      }
+      if (!this.statsEnabledDraft.includes(this.statsDefaultDraft)) {
+        this.statsDefaultDraft = this.statsEnabledDraft[0] || null;
+      }
+      this.statsSaved = false;
+    },
+
+    async saveStatsSettings() {
+      this.statsError = '';
+      this.statsSaved = false;
+      if (!this.statsEnabledDraft.length) {
+        this.statsError = this.lang === 'ar'
+          ? 'اختر شكلاً واحداً على الأقل.' : 'Offer at least one design.';
+        return;
+      }
+      this.statsSaving = true;
+      try {
+        const saved = await saveSettingsViaApi({
+          version: this.settingsVersion,
+          events: this.events,
+          stats: {
+            default: this.statsDefaultDraft,
+            enabled: this.statsEnabledDraft,
+          },
+        });
+        this.statsConfig = saved.stats || null;
+        this.statsSaved = true;
+      } catch (e) {
+        this.statsError = e.message || String(e);
+      } finally {
+        this.statsSaving = false;
+      }
+    },
+
+    chooseStatsDesign(key) {
+      const S = window.AQMAR_STATS;
+      if (!S || !S.has(key)) return;
+      this.statsChoice = key;
+      try {
+        localStorage.setItem(STATS_STORAGE_KEY, key);
+      } catch (e) {
+        console.warn('Could not remember the statistics choice:', e.message);
+      }
+    },
+
+    // Aggregate + render the active design. Recomputing on every re-render
+    // is cheap next to the DOM write, and it keeps the page honest: the
+    // figures always describe the rows currently loaded.
+    renderStats() {
+      const S = window.AQMAR_STATS;
+      if (!S || !this.all.length) return '';
+      const design = S.get(this.statsActive);
+      if (!design) return '';
+      try {
+        return design.render(aggregateStats(this.all), this.lang);
+      } catch (e) {
+        console.warn('Statistics render failed:', e.message);
+        return '';
+      }
+    },
+
+    // Shared hover readout for every chart. The marks carry data-t/data-v,
+    // so one delegated listener covers all of them however they are drawn.
+    statsHover(e) {
+      const tip = document.getElementById('stats-tip');
+      const hit = e.target.closest ? e.target.closest('.st-hit') : null;
+      if (!tip) return;
+      if (!hit) { tip.style.opacity = 0; return; }
+      tip.innerHTML = '<div class="stt">' + esc(hit.dataset.t || '') +
+                      '</div><div class="stv">' + esc(hit.dataset.v || '') + '</div>';
+      tip.style.opacity = 1;
+      const r = tip.getBoundingClientRect();
+      let x = e.clientX - r.width / 2;
+      let y = e.clientY - r.height - 14;
+      x = Math.max(8, Math.min(x, window.innerWidth - r.width - 8));
+      if (y < 8) y = e.clientY + 18;
+      tip.style.left = x + 'px';
+      tip.style.top = y + 'px';
+    },
+
+    statsHideTip() {
+      const tip = document.getElementById('stats-tip');
+      if (tip) tip.style.opacity = 0;
     },
 
     // ---- Global events admin (settings.json) ----
@@ -629,7 +768,7 @@ function aqmar() {
       if (v === 'admin-settings' && !this.notifySettings) this.loadNotifySettings();
       // Re-seed the design working copy from the saved settings every time the
       // page opens, so an abandoned edit is never picked back up.
-      if (v === 'admin-settings') this.resetLifelineDraft();
+      if (v === 'admin-settings') { this.resetLifelineDraft(); this.resetStatsDraft(); }
       window.scrollTo({ top: 0, behavior: 'smooth' });
     },
     openMartyr(id) {
@@ -1736,6 +1875,18 @@ function toArDigits(n) {
 // outlives the session and applies to every martyr they open; it is only
 // honored while the admin still offers that design (AQMAR_LIFELINE.resolve).
 const LIFELINE_STORAGE_KEY = 'aqmar.lifelineDesign';
+
+// Same idea for the statistics page: the visitor's pick outlives the
+// session, and is honored only while the admin still offers it.
+const STATS_STORAGE_KEY = 'aqmar.statsDesign';
+
+function readStoredStatsDesign() {
+  try {
+    return localStorage.getItem(STATS_STORAGE_KEY) || null;
+  } catch (e) {
+    return null;
+  }
+}
 
 // Restore the stored choice. localStorage throws in some privacy modes, and a
 // design preference is never worth breaking boot over.

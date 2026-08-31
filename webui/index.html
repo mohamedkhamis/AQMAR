@@ -73,6 +73,15 @@
 <script src="lifeline/design-d.js?v=20260723"></script>
 <script src="lifeline/design-e.js?v=20260723"></script>
 <script src="lifeline-designs.js?v=20260723"></script>
+<!-- Statistics: aggregation + chart builders, then the selectable stats
+     designs. stats-designs.js MUST load last of this group, same contract
+     as lifeline-designs.js. Adding a design = one file + one script tag +
+     its key in STATS_DESIGNS (src/settings_store.py) and ORDER. -->
+<script src="stats-core.js?v=20260831"></script>
+<script src="stats/design-register.js?v=20260831"></script>
+<script src="stats/design-board.js?v=20260831"></script>
+<script src="stats/design-layers.js?v=20260831"></script>
+<script src="stats-designs.js?v=20260831"></script>
 
 <!-- Alpine + focus plugin (plugin must load BEFORE the core). -->
 <script defer src="https://unpkg.com/@alpinejs/focus@3.x.x/dist/cdn.min.js"></script>
@@ -925,6 +934,44 @@
     </div>
   </section>
 
+  <!-- ===================== STATISTICS ===================== -->
+  <!-- Everything here is computed client-side from `all`, so the page works
+       identically on the live admin API and on the published martyrs.json
+       snapshot. Which design renders is admin config + visitor choice,
+       reconciled by AQMAR_STATS.resolve - same contract as the lifespan line. -->
+  <section id="main-content-stats" x-show="view === 'stats'" :aria-hidden="view !== 'stats'"
+           class="max-w-[1100px] mx-auto px-8 py-14" x-cloak>
+    <div class="section-kicker" x-text="lang === 'ar' ? 'إحصاءات' : 'Statistics'"></div>
+    <h2 class="section-title" x-text="lang === 'ar' ? 'قراءةٌ في الأرقام' : 'Reading the numbers'"></h2>
+    <p class="section-sub" x-text="lang === 'ar'
+      ? 'كل رقمٍ هنا محسوبٌ من السجلّ نفسه لحظةَ فتح الصفحة، لا جداول محفوظة ولا تقديرات.'
+      : 'Every figure is computed from the register itself as the page opens - no stored tables, no estimates.'"></p>
+
+    <div class="stats-switch mt-7" x-show="statsOptions.length > 1" x-cloak>
+      <span class="stats-switch-lbl" x-text="lang === 'ar' ? 'شكل العرض' : 'View'"></span>
+      <div class="stats-switch-opts" role="group"
+           :aria-label="lang === 'ar' ? 'اختيار شكل الإحصاءات' : 'Statistics design'">
+        <template x-for="d in statsOptions" :key="d.key">
+          <button type="button" class="stats-switch-btn"
+                  :aria-pressed="d.key === statsActive"
+                  @click="chooseStatsDesign(d.key)"
+                  x-text="lang === 'ar' ? d.nameAr : d.nameEn"></button>
+        </template>
+      </div>
+    </div>
+
+    <div x-show="loading" class="text-muted text-[14px] mt-8">…</div>
+    <p x-show="!loading && !all.length" x-cloak class="text-muted text-[14px] mt-8"
+       x-text="lang === 'ar' ? 'لا توجد بيانات لعرضها بعد.' : 'No data to chart yet.'"></p>
+
+    <!-- Reading statsActive/all/lang here is what makes x-effect re-run. -->
+    <div id="stats-root" class="mt-6"
+         @mousemove="statsHover($event)" @mouseleave="statsHideTip()"
+         x-effect="statsActive; all.length; lang;
+                   $el.innerHTML = (view === 'stats' && all.length) ? renderStats() : ''"></div>
+    <div id="stats-tip" aria-hidden="true"></div>
+  </section>
+
   <!-- Shared admin banner + page tabs (People verify / Settings). Stays
        mounted across both admin views so the banner + tabs don't flicker
        when switching. Gated identically to the admin pages (loopback only). -->
@@ -1639,6 +1686,50 @@
               x-show="lifelineSaved" x-cloak
               x-text="lang === 'ar' ? 'تمّ الحفظ ✓' : 'Saved ✓'"></span>
         <span class="text-[13px]" style="color: var(--crimson);" x-text="lifelineError"></span>
+      </div>
+    </div>
+
+    <!-- Statistics designs (data/settings.json -> stats). Same contract as
+         the lifespan-line block above: which designs a visitor may switch
+         between, and which one they land on first. -->
+    <div class="bg-paper border border-divider rounded-lg mb-7" style="padding: 22px 26px;">
+      <div class="font-latin-sans text-[11px] tracking-[0.2em] text-olive uppercase"
+           x-text="lang === 'ar' ? 'شكل الإحصاءات' : 'Statistics design'"></div>
+      <div class="font-body text-[13px] text-muted mt-1"
+           x-text="lang === 'ar'
+             ? 'اختر الأشكال المتاحة للزائر في صفحة الإحصاءات، والشكل الافتراضي. يظهر المبدّل للزائر فقط إذا أتحتَ أكثر من شكل.'
+             : 'Choose which statistics designs visitors may switch between and which is the default. The switcher only appears when more than one is offered.'"></div>
+
+      <div class="stats-admin mt-4">
+        <div class="stats-admin-head">
+          <span x-text="lang === 'ar' ? 'مُتاح' : 'Offered'"></span>
+          <span x-text="lang === 'ar' ? 'الافتراضي' : 'Default'"></span>
+          <span x-text="lang === 'ar' ? 'الشكل' : 'Design'"></span>
+        </div>
+        <template x-for="d in allStatsDesigns" :key="d.key">
+          <label class="stats-admin-row">
+            <input type="checkbox" :value="d.key"
+                   :checked="statsEnabledDraft.includes(d.key)"
+                   @change="toggleStatsEnabled(d.key)">
+            <input type="radio" name="stats-default" :value="d.key"
+                   :checked="statsDefaultDraft === d.key"
+                   :disabled="!statsEnabledDraft.includes(d.key)"
+                   @change="statsDefaultDraft = d.key">
+            <span class="stats-admin-name">
+              <b x-text="lang === 'ar' ? d.nameAr : d.nameEn"></b>
+              <i x-text="lang === 'ar' ? d.nameEn : d.nameAr"></i>
+            </span>
+          </label>
+        </template>
+      </div>
+
+      <div class="flex items-center gap-3 mt-4 flex-wrap">
+        <button @click="saveStatsSettings()" class="btn btn-primary" :disabled="statsSaving"
+                x-text="statsSaving ? '…' : (lang === 'ar' ? 'حفظ شكل الإحصاءات' : 'Save statistics design')"></button>
+        <span class="text-[13px]" style="color: var(--forest);"
+              x-show="statsSaved" x-cloak
+              x-text="lang === 'ar' ? 'تمّ الحفظ ✓' : 'Saved ✓'"></span>
+        <span class="text-[13px]" style="color: var(--crimson);" x-text="statsError"></span>
       </div>
     </div>
 

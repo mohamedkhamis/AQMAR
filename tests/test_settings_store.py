@@ -10,12 +10,14 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from src.settings_store import (
     DEFAULT_SETTINGS,
     LIFELINE_DESIGNS,
+    STATS_DESIGNS,
     assign_ids,
     load_settings,
     merge_settings,
     save_settings,
     validate_events,
     validate_lifeline,
+    validate_stats,
 )
 
 
@@ -213,3 +215,62 @@ def test_merge_drops_unknown_keys_from_enabled():
     merged = merge_settings({}, {"events": [], "lifeline": {
         "default": "w", "enabled": ["w", "bogus"]}})
     assert merged["lifeline"]["enabled"] == ["w"]
+
+
+# ---- validate_stats (selectable statistics designs) ----
+
+def test_stats_valid_config_has_no_errors():
+    assert validate_stats({"default": "register",
+                           "enabled": ["register", "layers"]}) == []
+
+
+def test_stats_rejects_unknown_design_key():
+    errors = validate_stats({"default": "register", "enabled": ["register", "nope"]})
+    assert any("unknown design" in e for e in errors)
+
+
+def test_stats_rejects_default_outside_enabled():
+    errors = validate_stats({"default": "layers", "enabled": ["register"]})
+    assert any("must also be in stats.enabled" in e for e in errors)
+
+
+def test_stats_rejects_empty_or_missing_enabled():
+    assert validate_stats({"default": "register", "enabled": []})
+    assert validate_stats({"default": "register"})
+
+
+def test_stats_rejects_duplicate_design():
+    errors = validate_stats({"default": "register", "enabled": ["register", "register"]})
+    assert any("duplicate design" in e for e in errors)
+
+
+def test_stats_rejects_non_object():
+    assert validate_stats(["register"]) == ["'stats' must be an object"]
+
+
+def test_every_known_stats_design_is_accepted():
+    for key in STATS_DESIGNS:
+        assert validate_stats({"default": key, "enabled": [key]}) == []
+
+
+def test_stats_and_lifeline_blocks_are_independent():
+    """A stats-only save must not disturb the lifeline block, and vice versa."""
+    existing = {"version": 1, "events": [],
+                "lifeline": {"default": "c", "enabled": ["c"]}}
+    merged = merge_settings(existing, {"events": [], "stats": {
+        "default": "board", "enabled": ["board"]}})
+    assert merged["lifeline"] == {"default": "c", "enabled": ["c"]}
+    assert merged["stats"] == {"default": "board", "enabled": ["board"]}
+
+
+def test_merge_stores_stats_enabled_in_canonical_order():
+    merged = merge_settings({}, {"events": [], "stats": {
+        "default": "board", "enabled": ["layers", "board", "register"]}})
+    assert merged["stats"]["enabled"] == ["register", "board", "layers"]
+
+
+def test_merge_leaves_stats_untouched_when_not_sent():
+    existing = {"version": 1, "events": [],
+                "stats": {"default": "layers", "enabled": ["layers"]}}
+    merged = merge_settings(existing, {"events": []})
+    assert merged["stats"] == {"default": "layers", "enabled": ["layers"]}

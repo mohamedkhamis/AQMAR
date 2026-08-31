@@ -32,6 +32,11 @@ DEFAULT_SETTINGS = {"version": 1, "events": []}
 # silently-ignored value.
 LIFELINE_DESIGNS = ("w", "a", "b", "c", "d", "e")
 
+# Keys of the selectable statistics designs. MUST stay in sync with ORDER
+# in webui/stats-designs.js, for the same reason as LIFELINE_DESIGNS: the
+# admin may only offer a design the SPA can actually render.
+STATS_DESIGNS = ("register", "board", "layers")
+
 # PUT payloads above this are rejected so the settings file (git-tracked and
 # publicly served) can't be abused as a blob store.
 MAX_BODY_BYTES = 256 * 1024
@@ -96,40 +101,50 @@ def validate_events(events) -> list[str]:
     return errors
 
 
-def validate_lifeline(cfg) -> list[str]:
-    """Human-readable validation errors for the 'lifeline' block; [] means
-    valid. Shape: {"default": "w", "enabled": ["w", "a", ...]}.
-
-    'enabled' is the set of designs a visitor may switch between and
-    'default' is what a visitor sees before choosing — so default must
-    itself be enabled, otherwise the site would boot into a design nobody
-    is allowed to select.
+def _validate_design_block(cfg, block: str, known: tuple) -> list[str]:
+    """Shared validator for the selectable-design blocks. Both have the same
+    shape — {"default": key, "enabled": [key, ...]} — and the same rule:
+    "enabled" is the set a visitor may switch between and "default" is what
+    they see before choosing, so the default must itself be enabled or the
+    site would boot into a design nobody is allowed to select.
     """
     if not isinstance(cfg, dict):
-        return ["'lifeline' must be an object"]
+        return [f"{block!r} must be an object"]
     errors: list[str] = []
 
     enabled = cfg.get("enabled")
     if not isinstance(enabled, list) or not enabled:
-        errors.append("lifeline.enabled must be a non-empty list of design keys")
+        errors.append(f"{block}.enabled must be a non-empty list of design keys")
         enabled = []
     else:
         seen: set[str] = set()
         for k in enabled:
-            if not isinstance(k, str) or k not in LIFELINE_DESIGNS:
-                errors.append(f"lifeline.enabled: unknown design {k!r}; "
-                              f"known: {list(LIFELINE_DESIGNS)}")
+            if not isinstance(k, str) or k not in known:
+                errors.append(f"{block}.enabled: unknown design {k!r}; "
+                              f"known: {list(known)}")
             elif k in seen:
-                errors.append(f"lifeline.enabled: duplicate design {k!r}")
+                errors.append(f"{block}.enabled: duplicate design {k!r}")
             else:
                 seen.add(k)
 
     default = cfg.get("default")
-    if not isinstance(default, str) or default not in LIFELINE_DESIGNS:
-        errors.append(f"lifeline.default must be one of {list(LIFELINE_DESIGNS)}")
+    if not isinstance(default, str) or default not in known:
+        errors.append(f"{block}.default must be one of {list(known)}")
     elif enabled and default not in enabled:
-        errors.append(f"lifeline.default {default!r} must also be in lifeline.enabled")
+        errors.append(f"{block}.default {default!r} must also be in "
+                      f"{block}.enabled")
     return errors
+
+
+def validate_lifeline(cfg) -> list[str]:
+    """Errors for the 'lifeline' block; [] means valid."""
+    return _validate_design_block(cfg, "lifeline", LIFELINE_DESIGNS)
+
+
+def validate_stats(cfg) -> list[str]:
+    """Errors for the 'stats' block; [] means valid. Same shape and rules as
+    the lifeline block — see _validate_design_block."""
+    return _validate_design_block(cfg, "stats", STATS_DESIGNS)
 
 
 def assign_ids(events) -> list:
@@ -173,6 +188,13 @@ def merge_settings(existing: dict, incoming: dict) -> dict:
         merged["lifeline"] = {
             "default": cfg.get("default"),
             "enabled": [k for k in LIFELINE_DESIGNS if k in picked],
+        }
+    if "stats" in incoming:
+        cfg = incoming["stats"] or {}
+        picked = cfg.get("enabled") or []
+        merged["stats"] = {
+            "default": cfg.get("default"),
+            "enabled": [k for k in STATS_DESIGNS if k in picked],
         }
     return merged
 

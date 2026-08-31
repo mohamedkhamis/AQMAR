@@ -130,6 +130,43 @@ never block a row.
   and ran outside the card. Any new design must survive **15 events at 360 /
   768 / 1440px** with no overlap and no label displaced from its date.
 
+## Statistics page — selectable designs (2026-08-31)
+
+- **Three designs, one rendered at a time**, exactly the same contract as the
+  lifespan line. Each `webui/stats/design-<key>.js` registers itself on
+  `window.AQMAR_STATS_DESIGNS` with `{css, render(agg, lang)}`;
+  `stats-designs.js` adapts them into `window.AQMAR_STATS` and **must load
+  last** of that script group. Keys: `register` السجلّ (default) ·
+  `board` اللوحة · `layers` الطبقات.
+- **Adding a design** = new `design-<key>.js` + a `<script>` tag in
+  `index.html` + its key in `STATS_DESIGNS` (`src/settings_store.py`) and
+  `ORDER` (`stats-designs.js`). Miss the server-side key and the admin
+  can't offer it — `validate_stats` rejects it as an unknown design.
+- **Who picks what:** `data/settings.json` → `stats: {default, enabled}` is
+  the admin's choice (Settings page); the visitor's own pick lives in
+  `localStorage` (`aqmar.statsDesign`). `AQMAR_STATS.resolve(choice,
+  settings)` reconciles them — a pick the admin no longer offers degrades to
+  the default rather than blanking the page. `enabled: []` or a missing
+  `stats` key means **offer everything**.
+- `validate_lifeline` and `validate_stats` are both thin wrappers over
+  `_validate_design_block` — one shape, one rule (default must be inside
+  enabled). Add the next selectable-design block the same way.
+- **All figures are computed client-side** from the rows already loaded
+  (`aggregateStats(this.all)` in `stats-core.js`), so the page behaves
+  identically on the live admin API and on the published `martyrs.json`.
+  No new endpoint, and it works on GitHub/Cloudflare Pages.
+- **The five series colours are validated, not chosen by eye.**
+  `--stat-1..--stat-5` in `styles.css` clear the colour-blind separation
+  floor and 3:1 contrast against *this site's* dark-forest surfaces. Re-run
+  the data-viz palette validator before swapping a hue — the reference
+  palette is tuned for a neutral dark surface, not a green one.
+- `brigade` is folded for display only (`BRIGADE_FOLD` in `stats-core.js`):
+  OCR splits لواء خانيونس into a second spelling, and `brigade` is not in
+  `CANON_COLUMNS`, so the nightly canon pass never merges it.
+- Charts are hand-authored SVG on a fixed viewBox; every one ships a table
+  view (`statsTable`) so identity is never colour-alone, and a single
+  delegated `.st-hit` listener drives the shared hover readout.
+
 ## Global events (`data/settings.json`)
 
 - An event is a **single point in time**: `{id, name_ar, name_en, start_date}`.

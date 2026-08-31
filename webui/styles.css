@@ -24,6 +24,16 @@
   --crimson:   #ea4444;
   /* AI verification track (2026-06-10) — teal, distinct from the human
      gold/forest so the two verification dimensions never visually blur. */
+  /* Statistics series palette (2026-08-31). Five categorical hues used by
+     the stats designs for brigades. Validated with the data-viz colour
+     checks against this site's dark surfaces (#142914 paper and #0c1f0c
+     ground): every adjacent pair clears the colour-blind separation floor
+     and all five clear 3:1 contrast. Re-validate before swapping a hue. */
+  --stat-1:    #3987e5;
+  --stat-2:    #d95926;
+  --stat-3:    #199e70;
+  --stat-4:    #c98500;
+  --stat-5:    #d55181;
   --ai:        #4cc3b0;
   --ai-dim:    rgba(76, 195, 176, 0.12);
 
@@ -1044,25 +1054,106 @@ html[dir="rtl"] .lifeline-life { background: linear-gradient(to left, var(--oliv
 
 /* Admin Settings → lifespan-line designs: offered (checkbox) + default
    (radio) per design. Grid keeps the two controls in aligned columns. */
-.lifeline-admin { border: 1px solid var(--divider); border-radius: 8px; overflow: hidden; }
+.lifeline-admin,
+.stats-admin { border: 1px solid var(--divider); border-radius: 8px; overflow: hidden; }
 .lifeline-admin-head,
-.lifeline-admin-row {
+.lifeline-admin-row,
+.stats-admin-head,
+.stats-admin-row {
   display: grid; grid-template-columns: 64px 74px 1fr; align-items: center;
   gap: 8px; padding: 9px 14px;
 }
-.lifeline-admin-head {
+.lifeline-admin-head,
+.stats-admin-head {
   background: var(--bg-2); border-bottom: 1px solid var(--divider);
   font-family: var(--font-latin-sans); font-size: 10.5px; letter-spacing: 0.12em;
   text-transform: uppercase; color: var(--faint);
 }
-.lifeline-admin-row { border-bottom: 1px dashed var(--divider); cursor: pointer; }
-.lifeline-admin-row:last-child { border-bottom: 0; }
-.lifeline-admin-row:hover { background: var(--bg-2); }
-.lifeline-admin-row input { accent-color: var(--forest); width: 16px; height: 16px; cursor: pointer; }
-.lifeline-admin-row input:disabled { cursor: not-allowed; opacity: 0.4; }
-.lifeline-admin-name { display: flex; flex-direction: column; gap: 1px; }
-.lifeline-admin-name b { font-size: 14px; font-weight: 600; color: var(--ink); }
-.lifeline-admin-name i {
+.lifeline-admin-row,
+.stats-admin-row { border-bottom: 1px dashed var(--divider); cursor: pointer; }
+.lifeline-admin-row:last-child,
+.stats-admin-row:last-child { border-bottom: 0; }
+.lifeline-admin-row:hover,
+.stats-admin-row:hover { background: var(--bg-2); }
+.lifeline-admin-row input,
+.stats-admin-row input { accent-color: var(--forest); width: 16px; height: 16px; cursor: pointer; }
+.lifeline-admin-row input:disabled,
+.stats-admin-row input:disabled { cursor: not-allowed; opacity: 0.4; }
+.lifeline-admin-name,
+.stats-admin-name { display: flex; flex-direction: column; gap: 1px; }
+.lifeline-admin-name b,
+.stats-admin-name b { font-size: 14px; font-weight: 600; color: var(--ink); }
+.lifeline-admin-name i,
+.stats-admin-name i {
   font-style: normal; font-size: 11.5px; color: var(--muted);
   font-family: var(--font-latin-sans);
+}
+
+
+/* ============================================================
+   STATISTICS  (webui/stats-core.js + webui/stats/design-*.js)
+   Shared chrome only. Each design's own layout CSS travels with
+   its module and is injected at runtime by stats-designs.js.
+   ============================================================ */
+.st-title{font-family:var(--font-display);font-weight:600;
+  font-size:var(--text-lg);margin:0 0 4px}
+.st-sub{color:var(--faint);font-size:var(--text-sm);margin:0 0 16px}
+.st-card{background:var(--paper);border:1px solid var(--divider);
+  border-radius:12px;padding:20px}
+
+.st-card svg{display:block;width:100%;height:auto;overflow:visible}
+.st-grid line{stroke:var(--divider);stroke-width:1}
+.st-axis text{fill:var(--faint);font-size:11px;font-family:var(--font-body);
+  font-variant-numeric:tabular-nums}
+.st-spark{height:42px;width:100%}
+
+/* ranked bars */
+.st-rank{display:flex;flex-direction:column;gap:9px}
+.st-row{display:grid;grid-template-columns:1fr 62px;gap:12px;align-items:center}
+.st-lbl{font-size:var(--text-sm);color:var(--ink-2);white-space:nowrap;
+  overflow:hidden;text-overflow:ellipsis}
+.st-val{text-align:left;color:var(--muted);font-size:var(--text-sm)}
+.st-track{position:relative;height:26px;background:var(--bg-2);
+  border-radius:6px;overflow:hidden;margin-top:4px}
+.st-bar{position:absolute;inset-block:0;right:0;border-radius:0 6px 6px 0}
+
+/* legend — identity is never colour-alone, so the name sits beside the swatch */
+.st-legend{display:flex;gap:16px;flex-wrap:wrap;margin-top:16px}
+.st-lg{display:flex;align-items:center;gap:7px;font-size:var(--text-sm);color:var(--ink-2)}
+.st-lg b{color:var(--faint);font-weight:400}
+.st-sw{width:11px;height:11px;border-radius:3px;flex:0 0 auto;display:inline-block}
+
+/* table view — every chart ships one */
+.st-table{margin-top:16px;border-top:1px solid var(--divider);padding-top:12px}
+.st-table summary{cursor:pointer;color:var(--muted);font-size:var(--text-sm)}
+.st-tw{overflow-x:auto;max-height:320px;margin-top:12px}
+.st-tw table{border-collapse:collapse;width:100%;font-size:var(--text-sm)}
+.st-tw th,.st-tw td{text-align:right;padding:7px 12px;
+  border-bottom:1px solid var(--divider);white-space:nowrap}
+.st-tw th{color:var(--muted);font-weight:500;position:sticky;top:0;background:var(--paper)}
+.st-tw td.num{color:var(--ink-2)}
+
+/* hover readout */
+#stats-tip{position:fixed;pointer-events:none;opacity:0;transition:opacity .12s;
+  z-index:80;background:var(--bg);border:1px solid var(--divider);border-radius:9px;
+  padding:9px 13px;font-size:var(--text-sm);color:var(--ink);max-width:280px;
+  box-shadow:0 10px 28px rgba(0,0,0,.55)}
+#stats-tip .stt{color:var(--forest);font-family:var(--font-display);
+  font-weight:600;margin-bottom:3px}
+#stats-tip .stv{color:var(--muted);font-variant-numeric:tabular-nums;line-height:1.5}
+
+/* visitor design switcher — mirrors .lifeline-switch */
+.stats-switch{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:22px}
+.stats-switch-lbl{color:var(--faint);font-size:var(--text-xs)}
+.stats-switch-opts{display:flex;gap:6px;flex-wrap:wrap}
+.stats-switch-btn{font-family:var(--font-display);font-size:var(--text-sm);
+  color:var(--muted);background:transparent;border:1px solid var(--divider);
+  border-radius:999px;padding:5px 15px;cursor:pointer;transition:all .18s}
+.stats-switch-btn:hover{color:var(--ink);border-color:var(--faint)}
+.stats-switch-btn[aria-pressed="true"]{background:var(--forest);color:var(--bg);
+  border-color:var(--forest)}
+
+@media (max-width:480px){
+  .st-row{grid-template-columns:1fr 52px}
+  .st-card{padding:14px}
 }
