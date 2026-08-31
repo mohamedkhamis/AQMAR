@@ -1157,3 +1157,37 @@ html[dir="rtl"] .lifeline-life { background: linear-gradient(to left, var(--oliv
   .st-row{grid-template-columns:1fr 52px}
   .st-card{padding:14px}
 }
+
+
+/* ---- chart drill-down ---- */
+/* Anything carrying data-drill-dim is clickable; make that legible rather
+   than leaving the visitor to discover it by accident. */
+.st-drill { cursor: pointer; }
+rect.st-drill:hover { fill: rgba(251, 191, 36, 0.10); }
+.st-bar.st-drill:hover { filter: brightness(1.18); }
+.st-lg.st-drill:hover, .std-smc.st-drill:hover { color: var(--ink); }
+.std-smc.st-drill { cursor: pointer; transition: background .15s; }
+.std-smc.st-drill:hover { background: var(--bg-2); }
+tr.st-drill:hover td { background: var(--bg-2); }
+.st-drill:focus-visible,
+rect.st-drill:focus-visible { outline: 2px solid var(--forest); outline-offset: 2px; }
+
+/* the chip above the results that explains a narrowed grid */
+.drill-chip {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  padding: 12px 18px; border-radius: 8px; background: var(--bg-2);
+  border: 1px solid var(--divider); border-inline-start: 3px solid var(--forest);
+}
+.drill-chip-lbl {
+  font-family: var(--font-latin-sans); font-size: 10.5px; letter-spacing: 0.14em;
+  text-transform: uppercase; color: var(--faint);
+}
+.drill-chip b { font-family: var(--font-display); font-size: var(--text-base); color: var(--ink); }
+.drill-chip-n { color: var(--muted); font-size: var(--text-sm); }
+.drill-chip-x, .drill-chip-back {
+  background: transparent; border: 1px solid var(--divider); border-radius: 999px;
+  color: var(--muted); cursor: pointer; padding: 4px 12px; font-size: var(--text-sm);
+}
+.drill-chip-x { margin-inline-start: auto; padding: 4px 10px; }
+.drill-chip-x:hover { color: var(--crimson); border-color: var(--crimson); }
+.drill-chip-back:hover { color: var(--ink); border-color: var(--faint); }

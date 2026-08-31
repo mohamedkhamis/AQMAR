@@ -77,6 +77,9 @@ function aqmar() {
     statsSaving: false,
     statsSaved: false,
     statsError: '',
+    // Set when the visitor arrived at the grid by clicking a chart; drives
+    // the chip above the results. Cleared by clearDrill().
+    drillLabel: '',
     // Admin events editor. eventForm null = closed; otherwise a working copy
     // {id, name_ar, name_en, start_date} (empty strings for blank).
     eventForm: null,
@@ -158,7 +161,7 @@ function aqmar() {
     filtersExpanded: false,
 
     // ----- browse filters -----
-    filters: { q: '', city: '', rank: '', batt: '', age: '' },
+    filters: { q: '', city: '', rank: '', batt: '', brig: '', age: '' },
     // Default registry sort puts the most recently added rows on top — matches
     // the admin grid default so what the admin just verified shows up first
     // for visitors too.
@@ -456,6 +459,111 @@ function aqmar() {
       } catch (e) {
         console.warn('Could not remember the lifespan-line choice:', e.message);
       }
+    },
+
+    // Folded, de-duplicated brigade names for the registry filter. Kept
+    // separate from `brigades` (raw values) because that one feeds the admin
+    // edit form, which must still show exactly what is in the database.
+    get brigadeOptions() {
+      const foldB = window.foldBrigadeName || ((x) => (x || '').trim());
+      return [...new Set(this.all.map(m => foldB(m.brigade)).filter(Boolean))].sort();
+    },
+
+    // ---- Chart drill-down ----
+    // One delegated handler for every chart: marks carry data-drill-dim and
+    // data-drill-val, and each dimension maps onto filters the registry
+    // already has, so a click lands the visitor in the ordinary grid rather
+    // than a parallel result list they cannot refine further.
+    drillFromStats(e) {
+      const el = e.target.closest ? e.target.closest('[data-drill-dim]') : null;
+      if (!el) return;
+      if (e.type === 'keydown') {
+        if (e.key !== 'Enter' && e.key !== ' ') return;
+        e.preventDefault();
+      }
+      this.applyDrill(el.dataset.drillDim, el.dataset.drillVal);
+    },
+
+    applyDrill(dim, val) {
+      if (!dim || val == null || val === '') return;
+      // Start from a clean slate: drills replace each other rather than
+      // silently intersecting, which would show an empty grid for no
+      // visible reason.
+      this.clearFilters();
+      this.matchFilter = null;
+      this.martyrdomFrom = '';
+      this.martyrdomTo = '';
+      this.ageMin = '';
+      this.ageMax = '';
+
+      const monthRange = (ym) => {
+        const y = +ym.slice(0, 4), m = +ym.slice(5, 7);
+        if (!y || !m) return;
+        this.martyrdomFrom = ym + '-01';
+        // Day 0 of the next month is the last day of this one, leap years
+        // included - never hardcode 28/30/31 here.
+        this.martyrdomTo = ym + '-' + pad(new Date(y, m, 0).getDate());
+      };
+
+      switch (dim) {
+        case 'month':     monthRange(val); break;
+        case 'year':      this.martyrdomFrom = val + '-01-01';
+                          this.martyrdomTo = val + '-12-31'; break;
+        case 'brigade':   this.filters.brig = val; break;
+        case 'battalion': this.filters.batt = val; break;
+        case 'rank':      this.filters.rank = val; break;
+        case 'age':       this.ageMin = Number(val); this.ageMax = Number(val); break;
+        case 'brigade-month': {
+          const parts = String(val).split('|');
+          this.filters.brig = parts[0];
+          if (parts[1]) monthRange(parts[1]);
+          break;
+        }
+        default: return;
+      }
+
+      this.drillLabel = this.describeDrill(dim, val);
+      this.filtersUnlocked = true;
+      this.sort = 'martyrdom_desc';
+      this.view = 'home';
+      // Wait for the home view to actually be in the DOM before scrolling.
+      this.$nextTick(() => {
+        const r = document.getElementById('results');
+        if (r) r.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+    },
+
+    // Human-readable description of the active drill, shown as a chip above
+    // the results so the visitor knows why the grid is narrowed.
+    describeDrill(dim, val) {
+      const ar = this.lang === 'ar';
+      switch (dim) {
+        case 'month': return (ar ? 'شهر ' : 'Month: ') + statsMonthLabel(val, this.lang);
+        case 'year':  return (ar ? 'سنة ' : 'Year: ') + toArDigits(val);
+        // Brigade and battalion names already begin with لواء / كتيبة,
+        // so prefixing the type again reads as a stutter.
+        case 'brigade':
+          return val.startsWith('لواء') ? val : (ar ? 'لواء: ' : 'Brigade: ') + val;
+        case 'battalion':
+          return val.startsWith('كتيبة') ? val : (ar ? 'كتيبة: ' : 'Battalion: ') + val;
+        case 'rank':      return (ar ? 'رتبة: ' : 'Rank: ') + val;
+        case 'age':       return (ar ? 'العمر ' : 'Age ') + toArDigits(val) +
+                                 (ar ? ' عامًا' : ' years');
+        case 'brigade-month': {
+          const p = String(val).split('|');
+          return p[0] + ' — ' + statsMonthLabel(p[1], this.lang);
+        }
+        default: return '';
+      }
+    },
+
+    clearDrill() {
+      this.drillLabel = '';
+      this.clearFilters();
+      this.martyrdomFrom = '';
+      this.martyrdomTo = '';
+      this.ageMin = '';
+      this.ageMax = '';
     },
 
     // ---- Statistics designs ----
@@ -941,7 +1049,7 @@ function aqmar() {
       }, 60);
     },
     clearFilters() {
-      this.filters = { q: '', city: '', rank: '', batt: '', age: '' };
+      this.filters = { q: '', city: '', rank: '', batt: '', brig: '', age: '' };
     },
     get filtered() {
       let list = this.all.map(m => ({ ...m }));
@@ -968,6 +1076,12 @@ function aqmar() {
       if (f.city) list = list.filter(m => m.city === f.city);
       if (f.rank) list = list.filter(m => m.rank === f.rank);
       if (f.batt) list = list.filter(m => m.battalion === f.batt);
+      // Brigade is compared through the same OCR fold the statistics use, so
+      // a chart bar and the grid it drills into always agree on the count.
+      if (f.brig) {
+        const foldB = window.foldBrigadeName || ((x) => (x || '').trim());
+        list = list.filter(m => foldB(m.brigade) === f.brig);
+      }
       // Age filters require a finite age — rows with missing/malformed birth or
       // martyrdom dates (35% of the dataset) have m.age=null and must NOT pass
       // any age bucket (null < 20 is true in JS — old bug surfaced them as "Under 20").

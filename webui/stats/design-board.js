@@ -60,13 +60,17 @@
             : 'Every sparkline spans the same months, so the cards compare directly.') +
         '</p><div class="std-sm">' + agg.brigadeSeries.map(function (d, i) {
           var c = STATS_SERIES[i % STATS_SERIES.length];
-          return '<div class="std-smc"><div class="std-smh"><span>' + esc(d.name) +
+          return '<div class="std-smc st-hit st-drill" role="button" tabindex="0"' +
+            ' data-t="' + esc(d.name) + '" data-v="' + statsNum(d.total, lang) + '"' +
+            ' data-drill-dim="brigade" data-drill-val="' + esc(d.name) + '">' +
+            '<div class="std-smh"><span>' + esc(d.name) +
             '</span><span class="std-smt num" style="color:' + c + '">' +
             statsNum(d.total, lang) + '</span></div>' + statsSpark(d.values, c) + '</div>';
         }).join('') + '</div>' +
         statsTable(ar ? 'عرض الأرقام كجدول' : 'Show the numbers as a table',
                    [ar ? 'اللواء' : 'Brigade', ar ? 'العدد' : 'Count'],
-                   agg.brigades.map(function (b) { return [b[0], statsNum(b[1], lang)]; })) +
+                   agg.brigades.map(function (b) { return [b[0], statsNum(b[1], lang)]; }),
+                   'brigade', agg.brigades.map(function (b) { return b[0]; })) +
         '</section>';
     }
 
@@ -83,7 +87,7 @@
       h += '<section class="std-sec"><h3 class="st-title">' +
         (ar ? 'الرتب' : 'Ranks') + '</h3>' +
         '<div class="st-card">' +
-        statsBars(agg.ranks.slice(0, 8), function () { return 'var(--stat-3)'; }, lang) +
+        statsBars(agg.ranks.slice(0, 8), function () { return 'var(--stat-3)'; }, lang, 'rank') +
         '</div></section>';
     }
 

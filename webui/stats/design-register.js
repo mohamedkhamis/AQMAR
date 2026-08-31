@@ -48,7 +48,7 @@
                     [ar ? 'الشهر' : 'Month', ar ? 'العدد' : 'Count'],
                     agg.months.map(function (m, i) {
                       return [statsMonthLabel(m, lang), statsNum(agg.monthly[i], lang)];
-                    })) +
+                    }), 'month', agg.months) +
          '</section>';
 
     if (agg.brigades.length) {
@@ -57,7 +57,8 @@
            '<p class="st-sub">' + statsNum(agg.brigades.length, lang) + ' ' +
            (ar ? 'ألوية' : 'brigades') + '</p>' +
            '<div class="st-card">' +
-           statsBars(agg.brigades, function (i) { return STATS_SERIES[i % STATS_SERIES.length]; }, lang) +
+           statsBars(agg.brigades, function (i) { return STATS_SERIES[i % STATS_SERIES.length]; },
+                     lang, 'brigade') +
            '</div></section>';
     }
 
@@ -69,7 +70,7 @@
                  statsNum(agg.battalions.length, lang) + ' كتيبة'
                : 'Top ' + agg.battalionsTop.length + ' of ' + agg.battalions.length) +
            '</p><div class="st-card">' +
-           statsBars(agg.battalionsTop, function () { return 'var(--olive)'; }, lang) +
+           statsBars(agg.battalionsTop, function () { return 'var(--olive)'; }, lang, 'battalion') +
            '</div></section>';
     }
 

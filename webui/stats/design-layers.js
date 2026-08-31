@@ -34,14 +34,15 @@
             return [statsMonthLabel(m, lang)].concat(agg.brigadeSeries.map(function (d) {
               return statsNum(d.values[i], lang);
             }));
-          })) +
+          }), 'month', agg.months) +
         '</section>';
 
       h += '<section class="std-sec"><h3 class="st-title">' +
         (ar ? 'المجموع لكل لواء' : 'Total per brigade') + '</h3>' +
         '<p class="st-sub">' + (ar ? 'بنفس ألوان الطبقات أعلاه.' : 'Same colours as the layers above.') + '</p>' +
         '<div class="st-card">' +
-        statsBars(agg.brigades, function (i) { return STATS_SERIES[i % STATS_SERIES.length]; }, lang) +
+        statsBars(agg.brigades, function (i) { return STATS_SERIES[i % STATS_SERIES.length]; },
+                  lang, 'brigade') +
         '</div></section>';
     }
 
@@ -49,8 +50,8 @@
       h += '<section class="std-sec"><h3 class="st-title">' +
         (ar ? 'المجموع لكل سنة' : 'Total per year') + '</h3>' +
         '<div class="st-card">' +
-        statsBars(agg.years.map(function (y) { return [statsNum(y[0], lang), y[1]]; }),
-                  function () { return 'var(--olive)'; }, lang) +
+        statsBars(agg.years.map(function (y) { return [statsNum(y[0], lang), y[1], y[0]]; }),
+                  function () { return 'var(--olive)'; }, lang, 'year') +
         '</div><p class="std-note">' +
         (ar ? 'السنة الأولى ناقصة: السجل يبدأ من أول منشور في القناة، لا من أول يناير.'
             : 'The first year is partial — the record starts at the channel’s first post.') +

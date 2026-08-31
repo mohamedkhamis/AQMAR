@@ -9,6 +9,11 @@
 // loaded, so the statistics work identically on the live admin API and on the
 // published data/martyrs.json snapshot (GitHub Pages / Cloudflare Pages).
 //
+// Every clickable mark carries data-drill-dim + data-drill-val. app.js has a
+// single delegated click handler that turns those into the ordinary registry
+// filters, so a chart click lands the visitor in the same grid they would
+// have reached by setting the filters by hand - no parallel result list.
+//
 // The five series colours are design tokens (--stat-1..--stat-5 in
 // styles.css). That palette was validated with the data-viz colour checks
 // against this site's dark-forest surface: every pair clears the
@@ -179,10 +184,12 @@
                ' L' + x(0).toFixed(1) + ' ' + (P.t + ih) + ' Z';
     var hot = '';
     vals.forEach(function (v, i) {
-      hot += '<rect class="st-hit" x="' + (x(i) - iw / n / 2).toFixed(1) + '" y="' + P.t +
+      if (!v) return;   // an empty month has nothing to drill into
+      hot += '<rect class="st-hit st-drill" x="' + (x(i) - iw / n / 2).toFixed(1) + '" y="' + P.t +
              '" width="' + (iw / n).toFixed(1) + '" height="' + ih + '" fill="transparent"' +
              ' data-t="' + esc(statsMonthLabel(months[i], lang)) + '"' +
-             ' data-v="' + esc(nfmt(v, lang)) + '"></rect>';
+             ' data-v="' + esc(nfmt(v, lang)) + '"' +
+             ' data-drill-dim="month" data-drill-val="' + months[i] + '"></rect>';
     });
     gid = gid || 'stg';
     return '<svg viewBox="0 0 ' + W + ' ' + h + '" role="img" aria-label="' +
@@ -220,13 +227,26 @@
                '" fill-opacity=".82" stroke="var(--paper)" stroke-width="2"/>';
       acc = top;
     });
-    var hot = '';
-    months.forEach(function (m, i) {
-      var parts = series.map(function (d) { return d.name + ' ' + nfmt(d.values[i], lang); }).join(' · ');
-      hot += '<rect class="st-hit" x="' + (x(i) - iw / n / 2).toFixed(1) + '" y="' + P.t +
-             '" width="' + (iw / n).toFixed(1) + '" height="' + ih + '" fill="transparent"' +
-             ' data-t="' + esc(statsMonthLabel(m, lang)) + '"' +
-             ' data-v="' + esc(nfmt(totals[i], lang) + ' — ' + parts) + '"></rect>';
+    // One hit area per (brigade, month) segment rather than one per month, so
+    // clicking a layer drills into that brigade in that month. Segments below
+    // ~6px get a 6px tall target centred on the band - otherwise the thin
+    // layers in quiet months are unclickable.
+    var hot = '', base = months.map(function () { return 0; });
+    series.forEach(function (d, si) {
+      d.values.forEach(function (v, i) {
+        var lo = base[i], hi = base[i] + v;
+        base[i] = hi;
+        if (!v) return;
+        var yTop = y(hi), yBot = y(lo), hgt = Math.max(6, yBot - yTop);
+        var yy = (yBot - yTop) >= 6 ? yTop : (yTop + yBot) / 2 - 3;
+        hot += '<rect class="st-hit st-drill" x="' + (x(i) - iw / n / 2).toFixed(1) +
+               '" y="' + yy.toFixed(1) + '" width="' + (iw / n).toFixed(1) +
+               '" height="' + hgt.toFixed(1) + '" fill="transparent"' +
+               ' data-t="' + esc(d.name + ' — ' + statsMonthLabel(months[i], lang)) + '"' +
+               ' data-v="' + esc(nfmt(v, lang) + ' / ' + nfmt(totals[i], lang)) + '"' +
+               ' data-drill-dim="brigade-month" data-drill-val="' +
+               esc(d.name + '|' + months[i]) + '"></rect>';
+      });
     });
     return '<svg viewBox="0 0 ' + W + ' ' + h + '" role="img" aria-label="' +
       (lang === 'en' ? 'By brigade over time' : 'التوزيع حسب اللواء عبر الزمن') + '">' +
@@ -235,15 +255,24 @@
       paths + '<g>' + hot + '</g></svg>';
   }
 
-  function statsBars(items, colorFn, lang) {
+  // `dim` is the drill dimension these bars represent ('brigade', 'battalion',
+  // 'rank', 'year'); pass null for a non-drillable list. Each bar is a real
+  // button so the keyboard reaches it - there are few enough of them for that
+  // to be reasonable, unlike the dense month marks.
+  function statsBars(items, colorFn, lang, dim) {
     if (!items.length) return '';
     var max = Math.max.apply(null, items.map(function (i) { return i[1]; })) || 1;
     return '<div class="st-rank">' + items.map(function (it, i) {
+      var drill = dim
+        ? ' data-drill-dim="' + dim + '" data-drill-val="' + esc(it[2] != null ? it[2] : it[0]) + '"' +
+          ' role="button" tabindex="0"'
+        : '';
       return '<div><div class="st-row"><div class="st-lbl">' + esc(it[0]) + '</div>' +
         '<div class="st-val num">' + nfmt(it[1], lang) + '</div></div>' +
-        '<div class="st-track"><div class="st-bar st-hit" style="width:' +
-        (it[1] / max * 100).toFixed(1) + '%;background:' + colorFn(i) + '"' +
-        ' data-t="' + esc(it[0]) + '" data-v="' + esc(nfmt(it[1], lang)) + '"></div></div></div>';
+        '<div class="st-track"><div class="st-bar st-hit' + (dim ? ' st-drill' : '') +
+        '" style="width:' + (it[1] / max * 100).toFixed(1) + '%;background:' + colorFn(i) + '"' +
+        ' data-t="' + esc(it[0]) + '" data-v="' + esc(nfmt(it[1], lang)) + '"' +
+        drill + '></div></div></div>';
     }).join('') + '</div>';
   }
 
@@ -268,11 +297,12 @@
     var bw = iw / ages.length, bars = '', xl = '';
     ages.forEach(function (a, i) {
       var bh = (a[1] / max) * ih, bx = P.l + i * bw, by = P.t + ih - bh;
-      bars += '<rect class="st-hit" x="' + (bx + 1).toFixed(1) + '" y="' + by.toFixed(1) +
+      bars += '<rect class="st-hit st-drill" x="' + (bx + 1).toFixed(1) + '" y="' + by.toFixed(1) +
               '" width="' + Math.max(1, bw - 2).toFixed(1) + '" height="' + bh.toFixed(1) +
               '" rx="3" fill="' + color + '" fill-opacity=".8"' +
               ' data-t="' + esc(nfmt(a[0], lang) + (lang === 'en' ? ' yrs' : ' عامًا')) + '"' +
-              ' data-v="' + esc(nfmt(a[1], lang)) + '"></rect>';
+              ' data-v="' + esc(nfmt(a[1], lang)) + '"' +
+              ' data-drill-dim="age" data-drill-val="' + a[0] + '"></rect>';
       if (a[0] % 10 === 0) {
         xl += '<text x="' + (bx + bw / 2).toFixed(1) + '" y="' + (H - 8) +
               '" text-anchor="middle">' + nfmt(a[0], lang) + '</text>';
@@ -286,12 +316,20 @@
 
   // Every chart ships a table view: identity must never be colour-alone, and
   // a screen-reader user needs the numbers.
-  function statsTable(caption, head, rows) {
+  // `dim` + a per-row raw value make the table the accessible equivalent of a
+  // dense chart: the month marks are mouse-only, but every month is a
+  // focusable row here. Pass rows as [label, ...cells] and vals aligned to them.
+  function statsTable(caption, head, rows, dim, vals) {
     return '<details class="st-table"><summary>' + esc(caption) + '</summary>' +
       '<div class="st-tw"><table><thead><tr>' +
       head.map(function (h) { return '<th>' + esc(h) + '</th>'; }).join('') +
-      '</tr></thead><tbody>' + rows.map(function (r) {
-        return '<tr>' + r.map(function (c, i) {
+      '</tr></thead><tbody>' + rows.map(function (r, ri) {
+        var v = (dim && vals && vals[ri] != null) ? vals[ri] : null;
+        var attrs = v != null
+          ? ' class="st-drill st-hit" role="button" tabindex="0"' +
+            ' data-drill-dim="' + dim + '" data-drill-val="' + esc(v) + '"'
+          : '';
+        return '<tr' + attrs + '>' + r.map(function (c, i) {
           return '<td' + (i ? ' class="num"' : '') + '>' + esc(c) + '</td>';
         }).join('') + '</tr>';
       }).join('') + '</tbody></table></div></details>';
@@ -299,12 +337,17 @@
 
   function statsLegend(series, lang) {
     return '<div class="st-legend">' + series.map(function (d, i) {
-      return '<span class="st-lg"><i class="st-sw" style="background:' +
-        SERIES[i % SERIES.length] + '"></i>' + esc(d.name) +
-        ' <b class="num">' + nfmt(d.total, lang) + '</b></span>';
+      return '<span class="st-lg st-hit st-drill" role="button" tabindex="0"' +
+        ' data-t="' + esc(d.name) + '" data-v="' + esc(nfmt(d.total, lang)) + '"' +
+        ' data-drill-dim="brigade" data-drill-val="' + esc(d.name) + '">' +
+        '<i class="st-sw" style="background:' + SERIES[i % SERIES.length] + '"></i>' +
+        esc(d.name) + ' <b class="num">' + nfmt(d.total, lang) + '</b></span>';
     }).join('') + '</div>';
   }
 
+  // Exported so the registry filter can fold the same way the charts do -
+  // otherwise clicking a brigade bar showing 369 would list only 365 rows.
+  global.foldBrigadeName  = function (n) { return fold(clean(n)); };
   global.STATS_SERIES     = SERIES;
   global.aggregateStats   = aggregateStats;
   global.statsMonthLabel  = statsMonthLabel;

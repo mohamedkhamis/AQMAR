@@ -77,11 +77,11 @@
      designs. stats-designs.js MUST load last of this group, same contract
      as lifeline-designs.js. Adding a design = one file + one script tag +
      its key in STATS_DESIGNS (src/settings_store.py) and ORDER. -->
-<script src="stats-core.js?v=20260831"></script>
-<script src="stats/design-register.js?v=20260831"></script>
-<script src="stats/design-board.js?v=20260831"></script>
-<script src="stats/design-layers.js?v=20260831"></script>
-<script src="stats-designs.js?v=20260831"></script>
+<script src="stats-core.js?v=20260831b"></script>
+<script src="stats/design-register.js?v=20260831b"></script>
+<script src="stats/design-board.js?v=20260831b"></script>
+<script src="stats/design-layers.js?v=20260831b"></script>
+<script src="stats-designs.js?v=20260831b"></script>
 
 <!-- Alpine + focus plugin (plugin must load BEFORE the core). -->
 <script defer src="https://unpkg.com/@alpinejs/focus@3.x.x/dist/cdn.min.js"></script>
@@ -410,6 +410,15 @@
                 <option value="o40" x-text="lang === 'ar' ? 'أكثر من ٤٠' : 'Over 40'"></option>
               </select>
             </label>
+            <label class="block">
+              <div class="field-label" x-text="lang === 'ar' ? 'اللواء' : 'Brigade'"></div>
+              <select x-model="filters.brig" class="input">
+                <option value="" x-text="lang === 'ar' ? 'كل الألوية' : 'All brigades'"></option>
+                <template x-for="b in brigadeOptions" :key="b">
+                  <option :value="b" x-text="b"></option>
+                </template>
+              </select>
+            </label>
             <div class="pb-1 flex items-end">
               <button @click="clearFilters()" class="btn btn-ghost"
                       x-text="lang === 'ar' ? 'مسح' : 'Clear'"></button>
@@ -481,6 +490,20 @@
       <!-- ===== Results — shown once filters are unlocked ===== -->
       <section id="results" class="mt-12" x-show="filtersUnlocked" x-cloak aria-labelledby="results-heading">
         <h3 id="results-heading" class="sr-only" x-text="lang === 'ar' ? 'النتائج' : 'Results'"></h3>
+
+        <!-- Drill chip: set when the visitor arrived here by clicking a chart,
+             so the narrowed grid always explains itself and can be undone. -->
+        <div x-show="drillLabel" x-cloak class="drill-chip mb-6">
+          <span class="drill-chip-lbl"
+                x-text="lang === 'ar' ? 'من الإحصاءات' : 'From statistics'"></span>
+          <b x-text="drillLabel"></b>
+          <span class="drill-chip-n num"
+                x-text="toArDigits(filtered.length) + (lang === 'ar' ? ' نتيجة' : ' results')"></span>
+          <button type="button" @click="clearDrill()" class="drill-chip-x"
+                  :aria-label="lang === 'ar' ? 'إلغاء التصفية' : 'Clear this filter'">✕</button>
+          <button type="button" @click="view = 'stats'" class="drill-chip-back"
+                  x-text="lang === 'ar' ? 'عودة للإحصاءات' : 'Back to statistics'"></button>
+        </div>
 
         <!-- Birthday match banner -->
         <div x-show="matchFilter"
@@ -960,6 +983,11 @@
       </div>
     </div>
 
+    <p class="text-faint text-[13px] mt-2" x-show="all.length" x-cloak
+       x-text="lang === 'ar'
+         ? 'انقر على أي عمود أو شريط أو صفّ جدول لعرض الأسماء التي يمثّلها.'
+         : 'Click any bar, point or table row to see the names behind it.'"></p>
+
     <div x-show="loading" class="text-muted text-[14px] mt-8">…</div>
     <p x-show="!loading && !all.length" x-cloak class="text-muted text-[14px] mt-8"
        x-text="lang === 'ar' ? 'لا توجد بيانات لعرضها بعد.' : 'No data to chart yet.'"></p>
@@ -967,6 +995,7 @@
     <!-- Reading statsActive/all/lang here is what makes x-effect re-run. -->
     <div id="stats-root" class="mt-6"
          @mousemove="statsHover($event)" @mouseleave="statsHideTip()"
+         @click="drillFromStats($event)" @keydown="drillFromStats($event)"
          x-effect="statsActive; all.length; lang;
                    $el.innerHTML = (view === 'stats' && all.length) ? renderStats() : ''"></div>
     <div id="stats-tip" aria-hidden="true"></div>
@@ -1936,6 +1965,6 @@
 </div>
 
 <style>[x-cloak]{display:none!important}</style>
-<script src="app.js?v=20260731"></script>
+<script src="app.js?v=20260831b"></script>
 </body>
 </html>

@@ -163,6 +163,21 @@ never block a row.
 - `brigade` is folded for display only (`BRIGADE_FOLD` in `stats-core.js`):
   OCR splits لواء خانيونس into a second spelling, and `brigade` is not in
   `CANON_COLUMNS`, so the nightly canon pass never merges it.
+- **Drill-down:** every clickable mark carries `data-drill-dim` +
+  `data-drill-val`, and one delegated handler (`drillFromStats` in `app.js`)
+  maps the dimension onto filters the registry **already has** —
+  `month`/`year` → `martyrdomFrom`/`To`, `age` → `ageMin`/`Max`,
+  `brigade`/`battalion`/`rank` → `filters.*`. A click lands the visitor in the
+  ordinary grid, not a parallel result list, so they can keep refining.
+  Drills replace each other rather than intersecting, and `drillLabel` drives
+  the chip that explains the narrowed grid.
+- **`filters.brig` folds through `foldBrigadeName`** — the charts merge the
+  OCR brigade variant, so the filter must too, or a bar reading ٣٦٩ would drill
+  into 365 rows. Any new chart dimension must match its filter the same way.
+- The dense month marks are mouse-only by design (63 tab stops is not an
+  accessibility win); the **table view rows carry the same drill attributes**
+  and are focusable, so they are the keyboard path. Bars and legend entries
+  are `role="button" tabindex="0"` because there are few enough of them.
 - Charts are hand-authored SVG on a fixed viewBox; every one ships a table
   view (`statsTable`) so identity is never colour-alone, and a single
   delegated `.st-hit` listener drives the shared hover readout.
