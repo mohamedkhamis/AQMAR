@@ -1024,8 +1024,13 @@ html[dir="rtl"] .lifeline-life { background: linear-gradient(to left, var(--oliv
   border-bottom: 1px dashed var(--divider);
 }
 .lifeline-switch-lbl {
-  font-family: var(--font-latin-sans); font-size: 11px; letter-spacing: 0.16em;
-  text-transform: uppercase; color: var(--olive);
+  /* This label is Arabic (شكل خطّ الحياة) in the default language, and
+     --font-latin-sans (IBM Plex Sans) carries no Arabic glyphs - it fell back
+     to a system face and read as a different typeface from everything around
+     it. --font-body covers both scripts, which is why .section-kicker uses it.
+     2026-08-31. */
+  font-family: var(--font-body); font-size: 11px; font-weight: 500;
+  letter-spacing: 0.16em; text-transform: uppercase; color: var(--olive);
 }
 .lifeline-switch-opts { display: flex; gap: 6px; flex-wrap: wrap; }
 .lifeline-switch-btn {
@@ -1179,8 +1184,9 @@ rect.st-drill:focus-visible { outline: 2px solid var(--forest); outline-offset: 
   border: 1px solid var(--divider); border-inline-start: 3px solid var(--forest);
 }
 .drill-chip-lbl {
-  font-family: var(--font-latin-sans); font-size: 10.5px; letter-spacing: 0.14em;
-  text-transform: uppercase; color: var(--faint);
+  /* Arabic label - see the note on .lifeline-switch-lbl. */
+  font-family: var(--font-body); font-size: 10.5px; font-weight: 500;
+  letter-spacing: 0.14em; text-transform: uppercase; color: var(--faint);
 }
 .drill-chip b { font-family: var(--font-display); font-size: var(--text-base); color: var(--ink); }
 .drill-chip-n { color: var(--muted); font-size: var(--text-sm); }
