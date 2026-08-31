@@ -160,9 +160,16 @@ never block a row.
   floor and 3:1 contrast against *this site's* dark-forest surfaces. Re-run
   the data-viz palette validator before swapping a hue — the reference
   palette is tuned for a neutral dark surface, not a green one.
-- `brigade` is folded for display only (`BRIGADE_FOLD` in `stats-core.js`):
-  OCR splits لواء خانيونس into a second spelling, and `brigade` is not in
-  `CANON_COLUMNS`, so the nightly canon pass never merges it.
+- `brigade` **is** in `CANON_COLUMNS` (added 2026-08-31), so the nightly canon
+  pass merges its OCR variants at the source like rank and battalion.
+  `BRIGADE_FOLD` in `stats-core.js` stays as a display-time safety net: a fresh
+  scrape can introduce a new variant hours before the nightly canonicalizes it,
+  and a chart that disagrees with its own drill-down would read as a bug.
+  ⚠️ The canon agent **reads this file** and treats it as authoritative — on
+  2026-08-31 it saw the previous wording here, decided brigade was "out of
+  scope for canon", and skipped the column even though the code already listed
+  it. Change `CANON_COLUMNS` and this line together, or the docs will silently
+  veto the code.
 - **Drill-down:** every clickable mark carries `data-drill-dim` +
   `data-drill-val`, and one delegated handler (`drillFromStats` in `app.js`)
   maps the dimension onto filters the registry **already has** —

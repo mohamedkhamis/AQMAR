@@ -220,7 +220,8 @@ NEVER run git add/commit/push or any git state-changing command.
                 $cprompt = @"
 You are running the AQMAR NIGHTLY FIELD-CANON cycle (repo: $repo).
 
-INPUT: $canonDump - {"military_rank":[{"value","count"},...],"battalion":[...]}.
+INPUT: $canonDump - {"military_rank":[{"value","count"},...],"battalion":[...],
+"brigade":[...]}.
 Those are the DISTINCT values currently in the database, with row counts. They
 come from OCR of memorial cards, so one real value often appears several times
 with letter damage, a missing space, or an inserted letter.
@@ -233,7 +234,11 @@ RULES - read carefully, this rewrites a memorial database:
    it is almost always the correct one.
 2. Merge ONLY when two strings are the SAME real value damaged by OCR - an
    inserted or dropped letter, a split or missing space, a look-alike letter.
-3. NEVER merge values naming DIFFERENT things. For battalions this is critical:
+3. NEVER merge values naming DIFFERENT things. Brigades are the strictest
+   case: each names a different AREA, and there are only a handful of them,
+   so the only legitimate brigade merge is one spelling of the SAME area
+   (a split or missing space, a damaged letter). Never fold one area into
+   another however close the names look. For battalions this is critical too:
    two battalions honouring different people are different battalions, however
    similar the names look - never fold one into the other. For ranks, platoon /
    company / battalion / group commanders are FOUR distinct ranks, and a deputy
@@ -245,7 +250,8 @@ RULES - read carefully, this rewrites a memorial database:
 OUTPUT: write $canonMap as
   {"military_rank":[{"from":"...","to":"...","confidence":"high|medium",
                      "note":"why, <=120 chars"}],
-   "battalion":[ ...same shape... ]}
+   "battalion":[ ...same shape... ],
+   "brigade":[ ...same shape... ]}
 Include a column key only when it has at least one merge, and write the file
 even when there is nothing to merge (an empty object) so the caller knows you
 finished.

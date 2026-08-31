@@ -87,7 +87,7 @@ from src.field_normalizer import build_merge_plan
 from src.field_canon import build_dump, plan_canon_updates
 
 # Closed-ish metadata sets we canonicalize with the AI-proposed canon loop.
-CANON_COLUMNS = ("military_rank", "battalion")
+CANON_COLUMNS = ("military_rank", "battalion", "brigade")
 
 
 def _reject_bad_columns(columns) -> bool:
