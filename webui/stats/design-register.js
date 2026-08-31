@@ -25,7 +25,6 @@
     if (!agg.months.length) return '';
     var first = statsMonthLabel(agg.months[0], lang);
     var last  = statsMonthLabel(agg.months[agg.months.length - 1], lang);
-    var pk = agg.peakIndex;
 
     var h = '<div class="std-register">';
 
@@ -37,11 +36,8 @@
 
     h += '<section class="std-sec"><h3 class="st-title">' +
          (ar ? 'الشهداء شهريًّا' : 'Martyrs per month') + '</h3>' +
-         '<p class="st-sub">' + (pk >= 0
-            ? (ar ? 'الذروة في ' + statsMonthLabel(agg.months[pk], lang) + ' بـ' +
-                    statsNum(agg.monthly[pk], lang) + ' شهيدًا.'
-                  : 'Peak in ' + statsMonthLabel(agg.months[pk], lang) + ' with ' +
-                    agg.monthly[pk] + '.') : '') + '</p>' +
+         '<p class="st-sub">' +
+         (ar ? 'من ' + first + ' إلى ' + last + '.' : first + ' – ' + last + '.') + '</p>' +
          '<div class="st-card">' +
          statsArea(agg.months, agg.monthly, 'var(--forest)', 230, lang, 'stg-reg') + '</div>' +
          statsTable(ar ? 'عرض الأرقام كجدول' : 'Show the numbers as a table',
@@ -59,6 +55,35 @@
            '<div class="st-card">' +
            statsBars(agg.brigades, function (i) { return STATS_SERIES[i % STATS_SERIES.length]; },
                      lang, 'brigade') +
+           '</div></section>';
+    }
+
+    if (agg.birthYears.length) {
+      h += '<section class="std-sec"><h3 class="st-title">' +
+           (ar ? 'سنة الميلاد' : 'Year of birth') + '</h3>' +
+           '<p class="st-sub">' +
+           (ar ? 'من ' + statsNum(agg.birthYears[0][0], lang) + ' إلى ' +
+                 statsNum(agg.birthYears[agg.birthYears.length - 1][0], lang) +
+                 (agg.topBirthYear ? '، وأكثرها ' + statsNum(agg.topBirthYear[0], lang) : '') + '.'
+               : agg.birthYears[0][0] + '–' + agg.birthYears[agg.birthYears.length - 1][0] +
+                 (agg.topBirthYear ? ', commonest ' + agg.topBirthYear[0] : '') + '.') +
+           '</p><div class="st-card">' +
+           statsHist(agg.birthYears, 'var(--stat-1)', lang,
+                     { dim: 'birth-year',
+                       label: ar ? 'توزيع سنوات الميلاد' : 'Birth year distribution' }) +
+           '</div>' +
+           statsTable(ar ? 'عرض الأرقام كجدول' : 'Show the numbers as a table',
+                      [ar ? 'السنة' : 'Year', ar ? 'العدد' : 'Count'],
+                      agg.birthYears.map(function (e) {
+                        return [statsNum(e[0], lang), statsNum(e[1], lang)];
+                      }), 'birth-year', agg.birthYears.map(function (e) { return e[0]; })) +
+           '</section>';
+
+      h += '<section class="std-sec"><h3 class="st-title">' +
+           (ar ? 'حسب العقد' : 'By decade') + '</h3>' +
+           '<div class="st-card">' +
+           statsBars(agg.birthDecades, function () { return 'var(--stat-1)'; },
+                     lang, 'birth-decade') +
            '</div></section>';
     }
 

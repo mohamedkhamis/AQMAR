@@ -77,11 +77,11 @@
      designs. stats-designs.js MUST load last of this group, same contract
      as lifeline-designs.js. Adding a design = one file + one script tag +
      its key in STATS_DESIGNS (src/settings_store.py) and ORDER. -->
-<script src="stats-core.js?v=20260831b"></script>
-<script src="stats/design-register.js?v=20260831b"></script>
-<script src="stats/design-board.js?v=20260831b"></script>
-<script src="stats/design-layers.js?v=20260831b"></script>
-<script src="stats-designs.js?v=20260831b"></script>
+<script src="stats-core.js?v=20260831e"></script>
+<script src="stats/design-register.js?v=20260831e"></script>
+<script src="stats/design-board.js?v=20260831e"></script>
+<script src="stats/design-layers.js?v=20260831e"></script>
+<script src="stats-designs.js?v=20260831e"></script>
 
 <!-- Alpine + focus plugin (plugin must load BEFORE the core). -->
 <script defer src="https://unpkg.com/@alpinejs/focus@3.x.x/dist/cdn.min.js"></script>
@@ -621,7 +621,7 @@
              :style="viewMode === 'list'
                ? 'grid-template-columns: 1fr;'
                : 'grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));'">
-          <template x-for="m in filtered" :key="m.id">
+          <template x-for="m in visibleRows" :key="m.id">
             <button @click="openMartyr(m.id)" class="card card-hover text-right cursor-pointer relative overflow-hidden flex"
                     :class="viewMode === 'grid' ? 'flex-col' : 'flex-row gap-3.5 items-stretch'"
                     :style="viewMode === 'grid' ? '' : 'padding: 14px;'">
@@ -695,6 +695,21 @@
 
             </button>
           </template>
+        </div>
+
+        <!-- Pagination — mirrors the admin table's. Only appears when the match
+             set is larger than what is on screen. -->
+        <div x-show="filtered.length > publicLimit" x-cloak
+             class="flex flex-wrap items-center justify-center gap-3 mt-8 pt-5"
+             style="border-top: 1px dashed var(--divider);">
+          <button @click="publicLimit += 60" class="btn btn-ghost"
+                  x-text="lang === 'ar'
+                    ? `عرض ٦٠ اسماً إضافياً (${toArDigits(filtered.length - publicLimit)} متبقٍّ)`
+                    : `Show 60 more (${filtered.length - publicLimit} left)`"></button>
+          <button @click="publicLimit = filtered.length" class="btn btn-text"
+                  x-text="lang === 'ar'
+                    ? `عرض الكلّ (${toArDigits(filtered.length)})`
+                    : `Show all (${filtered.length})`"></button>
         </div>
       </section>
 
@@ -1971,6 +1986,6 @@
 </div>
 
 <style>[x-cloak]{display:none!important}</style>
-<script src="app.js?v=20260831c"></script>
+<script src="app.js?v=20260831e"></script>
 </body>
 </html>

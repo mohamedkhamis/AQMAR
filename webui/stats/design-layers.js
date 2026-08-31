@@ -46,6 +46,18 @@
         '</div></section>';
     }
 
+    if (agg.birthDecades.length) {
+      h += '<section class="std-sec"><h3 class="st-title">' +
+        (ar ? 'أجيال الشهداء' : 'Generations') + '</h3>' +
+        '<p class="st-sub">' +
+        (ar ? 'عدد الشهداء المولودين في كل عقد.'
+            : 'How many were born in each decade.') + '</p>' +
+        '<div class="st-card">' +
+        statsBars(agg.birthDecades, function () { return 'var(--stat-1)'; },
+                  lang, 'birth-decade') +
+        '</div></section>';
+    }
+
     if (agg.years.length) {
       h += '<section class="std-sec"><h3 class="st-title">' +
         (ar ? 'المجموع لكل سنة' : 'Total per year') + '</h3>' +

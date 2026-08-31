@@ -107,8 +107,38 @@
     var peak = 0;
     monthly.forEach(function (v, i) { if (v > monthly[peak]) peak = i; });
 
+    // Birth year: a plain year histogram, plus the decade rollup. Rows with no
+    // birth date are simply absent - they are not a zero year.
+    var byYear = new Map();
+    rows.forEach(function (r) {
+      var y = parseInt(String(r.birth || '').slice(0, 4), 10);
+      if (!y || y < 1900 || y > 2100) return;
+      byYear.set(y, (byYear.get(y) || 0) + 1);
+    });
+    var birthYears = Array.from(byYear.entries()).sort(function (a, b) { return a[0] - b[0]; });
+
+    var byDecade = new Map();
+    birthYears.forEach(function (e) {
+      var d = Math.floor(e[0] / 10) * 10;
+      byDecade.set(d, (byDecade.get(d) || 0) + e[1]);
+    });
+    // [label, count, rawDecade] - statsBars drills on the third element, so the
+    // label can carry Arabic-Indic digits while the drill value stays numeric.
+    var birthDecades = Array.from(byDecade.entries())
+      .sort(function (a, b) { return a[0] - b[0]; })
+      .map(function (e) { return [String(e[0]) + 's', e[1], e[0]]; });
+
+    var topBirthYear = null;
+    birthYears.forEach(function (e) {
+      if (!topBirthYear || e[1] > topBirthYear[1]) topBirthYear = e;
+    });
+
     var battalions = countBy(rows, function (r) { return r.battalion; });
     return {
+      birthYears: birthYears,
+      birthDecades: birthDecades,
+      topBirthYear: topBirthYear,
+      withBirth: birthYears.reduce(function (n, e) { return n + e[1]; }, 0),
       total: rows.length,
       months: months, monthly: monthly,
       brigades: brigades, brigadeSeries: brigadeSeries,
@@ -289,7 +319,13 @@
       '<path d="' + line + '" fill="none" stroke="' + color + '" stroke-width="2"/></svg>';
   }
 
-  function statsHist(ages, color, lang) {
+  // A simple count-per-bucket column chart. `opts.dim` is the drill dimension
+  // and `opts.suffix` the unit shown in the tooltip, so the same builder serves
+  // both the age histogram and the birth-year distribution.
+  function statsHist(ages, color, lang, opts) {
+    opts = opts || {};
+    var dim = opts.dim || 'age';
+    var suffix = opts.suffix || '';
     if (!ages.length) return '';
     var W = 900, H = 200, P = { t: 12, r: 8, b: 28, l: 42 };
     var iw = W - P.l - P.r, ih = H - P.t - P.b;
@@ -300,16 +336,16 @@
       bars += '<rect class="st-hit st-drill" x="' + (bx + 1).toFixed(1) + '" y="' + by.toFixed(1) +
               '" width="' + Math.max(1, bw - 2).toFixed(1) + '" height="' + bh.toFixed(1) +
               '" rx="3" fill="' + color + '" fill-opacity=".8"' +
-              ' data-t="' + esc(nfmt(a[0], lang) + (lang === 'en' ? ' yrs' : ' عامًا')) + '"' +
+              ' data-t="' + esc(nfmt(a[0], lang) + suffix) + '"' +
               ' data-v="' + esc(nfmt(a[1], lang)) + '"' +
-              ' data-drill-dim="age" data-drill-val="' + a[0] + '"></rect>';
+              ' data-drill-dim="' + dim + '" data-drill-val="' + a[0] + '"></rect>';
       if (a[0] % 10 === 0) {
         xl += '<text x="' + (bx + bw / 2).toFixed(1) + '" y="' + (H - 8) +
               '" text-anchor="middle">' + nfmt(a[0], lang) + '</text>';
       }
     });
     return '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' +
-      (lang === 'en' ? 'Age distribution' : 'توزيع الأعمار') + '">' +
+      (opts.label || (lang === 'en' ? 'Age distribution' : 'توزيع الأعمار')) + '">' +
       '<g class="st-grid st-axis">' + yAxis(P, W, ih, max, 3, lang) + '</g>' +
       '<g class="st-axis">' + xl + '</g>' + bars + '</svg>';
   }

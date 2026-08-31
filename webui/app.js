@@ -38,6 +38,11 @@ function aqmar() {
     adminSortBy: 'addedAt', // any of adminCols[].id
     adminSortDir: 'desc',   // 'asc' | 'desc' — DESC = newest first for addedAt
     adminLimit: 30,           // pagination cap for the admin table — bumped by "Show more"
+    // Same idea for the public grid. Without a cap the registry renders every
+    // match at once: ~950ms for 369 cards, and browsing all names builds 1200+
+    // in one synchronous pass, which the browser reports as a long-running
+    // click handler. Cards are visual, so the page is larger than the admin's.
+    publicLimit: PUBLIC_PAGE,
     mobileNavOpen: false,
     _initialized: false,      // guards init() against Alpine's double-invoke (auto init() + x-init)
     loading: true,            // true until the initial loadData() resolves (or errors out)
@@ -169,6 +174,11 @@ function aqmar() {
     viewMode: 'grid',   // 'grid' (default, multi-column) or 'list' (single-column)
     // Advanced filters — collapsible panel below the primary filter row
     showAdvancedFilters: false,
+    // Birth-date range. Set by the birth-year / decade drill-downs; there is no
+    // picker for it in the filter panel, so the drill chip is what names and
+    // clears it. Same ISO shape as the martyrdom range.
+    birthFrom: '',
+    birthTo: '',
     martyrdomFrom: '',   // ISO date "YYYY-MM-DD" — filter rows with martyrdom >= this
     martyrdomTo:   '',   // ISO date "YYYY-MM-DD" — filter rows with martyrdom <= this
     ageMin: '',          // number or '' — filter rows with age >= this
@@ -197,6 +207,15 @@ function aqmar() {
         if (window.__updateTitle) window.__updateTitle(this.view, l);
       });
       // Keep document.title in sync with the active view + language.
+      // A new search must not inherit an expanded limit - otherwise picking a
+      // filter after "show all" would immediately render thousands of cards for
+      // a result set the visitor has not even seen yet.
+      ['filters.q', 'filters.city', 'filters.rank', 'filters.batt', 'filters.brig',
+       'filters.age', 'martyrdomFrom', 'martyrdomTo', 'birthFrom', 'birthTo',
+       'ageMin', 'ageMax',
+       'matchFilter'].forEach((k) => {
+        this.$watch(k, () => { this.publicLimit = PUBLIC_PAGE; });
+      });
       this.$watch('view', (v) => {
         if (window.__updateTitle) window.__updateTitle(v, this.lang);
         this.focusView(v);
@@ -494,6 +513,8 @@ function aqmar() {
       this.matchFilter = null;
       this.martyrdomFrom = '';
       this.martyrdomTo = '';
+      this.birthFrom = '';
+      this.birthTo = '';
       this.ageMin = '';
       this.ageMax = '';
 
@@ -508,6 +529,17 @@ function aqmar() {
 
       switch (dim) {
         case 'month':     monthRange(val); break;
+        case 'birth-year':
+          this.birthFrom = val + '-01-01';
+          this.birthTo = val + '-12-31';
+          break;
+        case 'birth-decade': {
+          const d0 = parseInt(val, 10);
+          if (!Number.isFinite(d0)) return;
+          this.birthFrom = d0 + '-01-01';
+          this.birthTo = (d0 + 9) + '-12-31';
+          break;
+        }
         case 'year':      this.martyrdomFrom = val + '-01-01';
                           this.martyrdomTo = val + '-12-31'; break;
         case 'brigade':   this.filters.brig = val; break;
@@ -540,7 +572,12 @@ function aqmar() {
       const ar = this.lang === 'ar';
       switch (dim) {
         case 'month': return (ar ? 'شهر ' : 'Month: ') + statsMonthLabel(val, this.lang);
-        case 'year':  return (ar ? 'سنة ' : 'Year: ') + toArDigits(val);
+        case 'year':  return (ar ? 'سنة الاستشهاد ' : 'Died: ') + toArDigits(val);
+        case 'birth-year':
+          return (ar ? 'مواليد ' : 'Born ') + toArDigits(val);
+        case 'birth-decade':
+          return (ar ? 'مواليد عقد ' : 'Born in the ') + toArDigits(val) +
+                 (ar ? '' : 's');
         // Brigade and battalion names already begin with لواء / كتيبة,
         // so prefixing the type again reads as a stutter.
         case 'brigade':
@@ -563,6 +600,8 @@ function aqmar() {
       this.clearFilters();
       this.martyrdomFrom = '';
       this.martyrdomTo = '';
+      this.birthFrom = '';
+      this.birthTo = '';
       this.ageMin = '';
       this.ageMax = '';
     },
@@ -1070,6 +1109,12 @@ function aqmar() {
         if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }, 60);
     },
+    // What the grid actually renders. `filtered` stays the full match set so
+    // the result count and the "N of M" line keep telling the truth.
+    get visibleRows() {
+      return this.filtered.slice(0, this.publicLimit);
+    },
+
     clearFilters() {
       this.filters = { q: '', city: '', rank: '', batt: '', brig: '', age: '' };
     },
@@ -1113,6 +1158,8 @@ function aqmar() {
       if (f.age === 'o40')   list = list.filter(m => Number.isFinite(m.age) && m.age >= 40);
 
       // Advanced filters (panel below primary filters) — martyrdom date range + age range
+      if (this.birthFrom) list = list.filter(m => m.birth && m.birth >= this.birthFrom);
+      if (this.birthTo)   list = list.filter(m => m.birth && m.birth <= this.birthTo);
       if (this.martyrdomFrom) list = list.filter(m => m.martyrdom && m.martyrdom >= this.martyrdomFrom);
       if (this.martyrdomTo)   list = list.filter(m => m.martyrdom && m.martyrdom <= this.martyrdomTo);
       if (this.ageMin !== '' && this.ageMin != null) {
@@ -2010,6 +2057,11 @@ function toArDigits(n) {
 // Where the visitor's lifespan-line design choice is remembered. Their pick
 // outlives the session and applies to every martyr they open; it is only
 // honored while the admin still offers that design (AQMAR_LIFELINE.resolve).
+// How many cards the public grid renders before "show more". 60 fills roughly
+// five rows of the widest grid without the long synchronous render that an
+// uncapped list produces.
+const PUBLIC_PAGE = 60;
+
 const LIFELINE_STORAGE_KEY = 'aqmar.lifelineDesign';
 
 // Same idea for the statistics page: the visitor's pick outlives the
