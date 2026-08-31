@@ -1062,3 +1062,213 @@ Sanity: ages at martyrdom span 20 (2583, 2003-02-09 → 2023-12-23) and
 2597 (1999-12-12 → 2023-10-07, age 23) to 36 (2575, 1989-05-03 →
 2025-05-25); all martyrdom dates fall inside 2023-10 … today
 (2026-08-30)+1month.
+
+## 2026-08-30_0613 nightly p1 - 45 processed
+
+**43 exact matches · 1 correction · 0 NULL fills · 1 needs-human**
+Full re-sweep of msg 2504–2597. Only the `_28` video frame exists per row
+this batch (no `_30`/`_32`), so each card was read once from `_28` and
+cross-checked against the poster (poster prints DD-MM-YYYY, card prints
+YYYY-MM-DD). msg 2587 is poster-only (no video frames). One correction: a
+day/month swap on msg 2522 birth. One needs-human: msg 2556 card vs poster
+disagree on the martyrdom day. No cover frames changed — every verified-true
+row already had its `_28` cover.
+
+| msg | field | was | now | card shows |
+|---|---|---|---|---|
+| 2522 | birth | 1993-01-08 | **1993-08-01** | 1993 - 08 - 01 (day/month swap; month is the middle group); martyrdom 2024-10-14 matches, poster 14-10-2024 |
+
+**Needs human:**
+
+| msg | reason |
+|---|---|
+| 2556 (أحمد ياسين إياد أبو زبيدة) | card martyrdom تاريخ الشهادة 2023 - 11 - 12 vs poster تاريخ الاستشهاد 2023/11/10 — day 12 vs 10 conflict, never guess. birth card 2004-10-11 matches DB |
+
+**Exact matches (43):** 2504, 2506, 2508, 2510, 2512, 2514, 2516, 2518,
+2520, 2524, 2526, 2528, 2530, 2532, 2534, 2536, 2538, 2540, 2542, 2544,
+2546, 2548, 2550, 2552, 2554, 2558, 2560, 2564, 2569, 2571, 2573, 2575,
+2577, 2579, 2581, 2583, 2585, 2587, 2589, 2591, 2593, 2595, 2597.
+
+Note on 2587 (ياسر محمد موسى أبوسعود): poster-only post, no memorial-card
+frames. Poster prints only تاريخ الاستشهاد / 16-12-2023, which matches the
+DB; no birth date printed and the DB birth is NULL, so the row is verified
+with birth still unset.
+
+Sanity: among verified-true rows, ages at martyrdom span 20 (2583,
+2003-02-09 → 2023-12-23) to 66 (2552, 1957-07-04 → 2023-11-23); all
+martyrdom dates fall inside 2023-10 … today (2026-08-30)+1month —
+including the two recent ones, 2504 (2026-08-02) and 2526 (2026-06-25).
+
+## 2026-08-30_1254 nightly p1 - 2 processed
+
+**0 exact matches · 2 corrections · 0 NULL fills · 0 needs-human**
+Two rows (msg 2601, 2604). Each card read from `_28` and `_30` (digits
+agreed) and cross-checked against the poster (poster prints DD-MM-YYYY,
+card prints YYYY-MM-DD). Both verified true; both keep their `_28` cover
+frame. Two name repairs off the cards (the DB rows each carried a
+shortened name), plus one martyrdom day/month swap.
+
+| msg | field | was | now | card shows |
+|---|---|---|---|---|
+| 2601 | name | أحمد علي غراب | **أحمد علي عبدالله غراب** | card + poster both print أحمد علي عبدالله غراب; dates unchanged — birth 2001-01-28, mart 2025-10-02 both match |
+| 2604 | martyrdom | 2023-04-11 | **2023-11-04** | 2023 - 11 - 04 (day/month swap; month is the middle group); poster 04/11/2023; old value was pre-war |
+| 2604 | name | محمد جمال راضي | **محمد جمال عبد القادر راضي** | card + poster both print محمد جمال عبد القادر راضي; birth 1994-04-29 matches |
+
+**Needs human:** none.
+
+**Exact matches:** none.
+
+Sanity: verified-true ages at martyrdom — 2601 (2001-01-28 → 2025-10-02,
+age 24) and 2604 (1994-04-29 → 2023-11-04, age 29); both martyrdom dates
+fall inside 2023-10 … today (2026-08-30)+1month.
+
+## 2026-08-30_2215 nightly p1 - 6 processed
+
+**1 exact match · 1 correction · 2 NULL fills · 2 needs-human**
+Six rows (msg 2607, 2610, 2612, 2616, 2619, 2621). Each card read from
+`_28` and `_30` (digits agreed) and cross-checked against the poster
+(poster prints DD-MM-YYYY, card prints YYYY-MM-DD). Four verified-true rows
+keep their `_28` cover frame. One birth month/day swap fixed, two martyrdom
+dates filled from the card.
+
+| msg | field | was | now | card shows |
+|---|---|---|---|---|
+| 2612 (خضر محمد ناصر أبو جراد) | martyrdom_date | _(NULL)_ | **2024-08-31** | تاريخ الشهادة 2024 - 08 - 31; poster تاريخ الاستشهاد 31-08-2024; birth 1991-08-14 matches DB |
+| 2619 (عبد الرحمن حمدي شرير) | birth_date | 2000-04-07 | **2000-07-04** | تاريخ الميلاد 2000 - 07 - 04 (all 3 frames; month is the middle group); poster prints martyrdom only; martyrdom 2025-06-30 matches DB (poster 30-06-2025) |
+| 2621 (نادر جهاد مدوخ) | martyrdom_date | _(NULL)_ | **2025-05-26** | تاريخ الشهادة 2025 - 05 - 26; poster تاريخ الاستشهاد 26-05-2025; birth 1986-09-26 matches DB |
+
+Note on 2621: card + poster both print the fuller name نادر جهاد حسن مدوخ
+(DB row is نادر جهاد مدوخ) — same person, extra middle name left for the
+admin, not an OCR repair.
+
+**Needs human (2):**
+
+| msg | reason |
+|---|---|
+| 2610 | Not a martyr post — military spokesman (الناطق العسكري) speech video, no memorial card in any frame; DB birth/martyrdom both NULL. |
+| 2616 (فادي فرج صبري جندية) | Birth-date conflict — video card تاريخ الميلاد 1983-05-02 (matches DB) vs poster 1985-05-02. Martyrdom 2023-12-04 agrees on both card and poster; left unfilled pending the birth decision. |
+
+**Exact matches (1):** 2607.
+
+Sanity: verified-true ages at martyrdom — 2607 (1991-08-20 → 2023-11-18,
+age 32), 2612 (1991-08-14 → 2024-08-31, age 33), 2619 (2000-07-04 →
+2025-06-30, age 24), 2621 (1986-09-26 → 2025-05-26, age 38); all martyrdom
+dates fall inside 2023-10 … today (2026-08-30)+1month.
+
+## 2026-08-31_0225 nightly p1 — 1 processed
+
+**1 exact match · 0 corrections · 0 NULL fills · 0 needs-human**
+One row (msg 2623). Card read from `_28` and `_30` (digits agreed) and
+cross-checked against the poster (poster prints DD-MM-YYYY, card prints
+YYYY-MM-DD). Both dates and the name match DB; `_28` set as cover frame.
+
+| msg | field | was | now | card shows |
+|---|---|---|---|---|
+| 2623 (يوسف نمر زغرة) | _(none)_ | 1979-12-08 / 2024-08-03 | 1979-12-08 / 2024-08-03 | تاريخ الميلاد 1979 - 12-08; تاريخ الشهادة 2024 - 08-03; poster تاريخ الاستشهاد 03-08-2024; name يوسف نمر زغرة identical |
+
+**Exact matches (1):** 2623.
+
+Sanity: verified-true age at martyrdom — 2623 (1979-12-08 → 2024-08-03,
+age 44); martyrdom falls inside 2023-10 … today (2026-08-31)+1month.
+
+## 2026-08-31_1202 nightly p1 — 1 processed
+
+**1 exact match · 0 corrections · 0 NULL fills · 0 needs-human**
+One row (msg 2625). Card read from `_30` (middle) and `_28`; digits agreed.
+Cross-checked against the poster (poster prints DD-MM-YYYY, card prints
+YYYY-MM-DD). Both dates and the name match DB; `_28` set as cover frame.
+
+| msg | field | was | now | card shows |
+|---|---|---|---|---|
+| 2625 (محمود محمد الشريف) | _(none)_ | 1991-08-28 / 2024-06-19 | 1991-08-28 / 2024-06-19 | تاريخ الميلاد 1991 - 08 - 28; تاريخ الشهادة 2024 - 06 - 19; poster تاريخ الاستشهاد 19 يونيو - 2024; name محمود محمد الشريف identical |
+
+**Exact matches (1):** 2625.
+
+Sanity: verified-true age at martyrdom — 2625 (1991-08-28 → 2024-06-19,
+age 32); martyrdom falls inside 2023-10 … today (2026-08-31)+1month.
+
+## 2026-08-31_1934 nightly p1 — 4 processed
+
+**2 exact matches · 1 correction (msg 2633) · 0 NULL fills · 1 needs-human**
+Each row: middle frame (`_30`) plus `_28` read, digits agreed; frame rows
+with a poster cross-checked against it (poster DD-MM-YYYY, card YYYY-MM-DD).
+`_28` set as cover frame on the three verified-true rows.
+
+| msg | field | was | now | card shows |
+|---|---|---|---|---|
+| 2633 (مؤمن جمال الزاملي) | birth | 1993-10-04 | **1993-04-10** | تاريخ الميلاد 1993 - 04 - 10 (day/month swap) |
+| 2633 (مؤمن جمال الزاملي) | martyrdom | 2023-03-10 | **2023-10-08** | تاريخ الشهادة 2023 - 10 - 08; poster تاريخ الاستشهاد 08 أكتوبر - 2023 (old value was pre-war) |
+
+**Needs human (1):**
+
+| msg | reason |
+|---|---|
+| 2629 (عيسى هشام أحمد النحال) | card/poster conflict on martyrdom day — card تاريخ الشهادة 2024 - 06 - 01 vs poster تاريخ الاستشهاد 07 يونيو 2024; both agree the month is June 2024, but DB value 2024-01-06 matches neither. Birth 1995-04-27 matches card. Card name "عيسى هشام أحمد النحال" vs DB "عيسى هشان النحال" (DB drops أحمد, "هشان" garbled) — left for human, not rewritten. |
+
+**Exact matches (2):** 2627, 2631.
+
+Sanity: verified-true age at martyrdom — 2627 (1994-02-20 → 2024-07-13,
+age 30); 2631 (1997-11-07 → 2023-10-17, age 25); 2633 (1993-04-10 →
+2023-10-08, age 30). All martyrdom dates fall inside 2023-10 … today
+(2026-08-31)+1month.
+
+## 2026-08-31_2215 nightly p1 — 1 processed
+
+**0 exact matches · 1 correction (msg 2635, name) · 0 NULL fills · 0 needs-human**
+One row (msg 2635). Card read from `_30` (middle) and `_28`; digits agreed.
+Cross-checked against the poster (poster prints DD-MM-YYYY, card prints
+YYYY-MM-DD). Both dates match DB exactly; `_28` set as cover frame.
+Name: DB carried the short form `علي أنور كلاب`; the card (both frames) and
+the poster both print the middle name `أحمد`, so it was fixed to the card
+spelling `علي أنور أحمد كلاب` — same person, both dates and the battalion
+identical; logged here, not a silent rewrite.
+
+| msg | field | was | now | card shows |
+|---|---|---|---|---|
+| 2635 (علي أنور أحمد كلاب) | name | علي أنور كلاب | **علي أنور أحمد كلاب** | name printed `علي أنور أحمد كلاب` on card (`_28`/`_30`) and on the poster — middle name `أحمد` restored |
+| 2635 (علي أنور أحمد كلاب) | birth | 1989-07-14 | 1989-07-14 | تاريخ الميلاد 1989 - 07 - 14 |
+| 2635 (علي أنور أحمد كلاب) | martyrdom | 2024-06-07 | 2024-06-07 | تاريخ الشهادة 2024 - 06 - 07; poster تاريخ الاستشهاد 07 يونيو - 2024 |
+
+**Needs human (0):** none.
+
+**Exact matches (0):** _(none — the single row carried a name correction)_.
+
+Sanity: verified-true age at martyrdom — 2635 (1989-07-14 → 2024-06-07,
+age 34); martyrdom falls inside 2023-10 … today (2026-08-31)+1month.
+
+## 2026-08-31_2257 nightly p1 — 2 processed
+
+**0 exact matches · 2 verified-true (1 pure name fix, 1 date swap + name) ·
+0 NULL fills · 0 needs-human**
+Two rows (msg 2637, 2639). Each card read from `_30` (middle) and `_28`;
+digits agreed across both frames. Cross-checked against the poster (poster
+prints DD-MM-YYYY and a written month; card prints YYYY-MM-DD). `_28` set as
+cover frame for both.
+
+- **2637** — both dates match DB exactly. DB carried the short name
+  `محمد تيسير الجمل`; card (`_28`/`_30`) and poster both print
+  `محمد تيسير طاهر الجمل`, so the middle name `طاهر` was restored to the card
+  spelling — same person, both dates identical. Logged, not a silent rewrite.
+- **2639** — both dates were day/month swaps in the DB (OCR read the card's
+  `YYYY-MM-DD` as `YYYY-DD-MM`). Card middle group is the month in each:
+  birth `1995 - 08 - 03` → 1995-08-03; martyrdom `2024 - 06 - 07` → 2024-06-07,
+  and the poster confirms `تاريخ الاستشهاد 07 يونيو 2024`. DB name
+  `أحمد عبد ربه القاضي` → card+poster `أحمد عبد ربه محمد القاضي`; middle name
+  `محمد` restored — same person.
+
+| msg | field | was | now | card shows |
+|---|---|---|---|---|
+| 2637 (محمد تيسير طاهر الجمل) | name | محمد تيسير الجمل | **محمد تيسير طاهر الجمل** | name printed `محمد تيسير طاهر الجمل` on card (`_28`/`_30`) and poster — middle name `طاهر` restored |
+| 2637 (محمد تيسير طاهر الجمل) | birth | 1998-02-24 | 1998-02-24 | تاريخ الميلاد 1998 - 02 - 24 |
+| 2637 (محمد تيسير طاهر الجمل) | martyrdom | 2024-09-18 | 2024-09-18 | تاريخ الشهادة 2024 - 09 - 18; poster تاريخ الاستشهاد 18 سبتمبر 2024 |
+| 2639 (أحمد عبد ربه محمد القاضي) | name | أحمد عبد ربه القاضي | **أحمد عبد ربه محمد القاضي** | name printed `أحمد عبد ربه محمد القاضي` on card (`_28`/`_30`) and poster — middle name `محمد` restored |
+| 2639 (أحمد عبد ربه محمد القاضي) | birth | 1995-03-08 | **1995-08-03** | تاريخ الميلاد 1995 - 08 - 03 (day/month swap) |
+| 2639 (أحمد عبد ربه محمد القاضي) | martyrdom | 2024-07-06 | **2024-06-07** | تاريخ الشهادة 2024 - 06 - 07; poster تاريخ الاستشهاد 07 يونيو 2024 (day/month swap) |
+
+**Needs human (0):** none.
+
+**Exact matches (0):** _(none — both rows carried name corrections)_.
+
+Sanity: verified-true age at martyrdom — 2637 (1998-02-24 → 2024-09-18,
+age 26); 2639 (1995-08-03 → 2024-06-07, age 28). Both martyrdom dates fall
+inside 2023-10 … today (2026-08-31)+1month.
