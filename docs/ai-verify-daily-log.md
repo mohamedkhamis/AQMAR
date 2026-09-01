@@ -1272,3 +1272,39 @@ cover frame for both.
 Sanity: verified-true age at martyrdom — 2637 (1998-02-24 → 2024-09-18,
 age 26); 2639 (1995-08-03 → 2024-06-07, age 28). Both martyrdom dates fall
 inside 2023-10 … today (2026-08-31)+1month.
+
+## 2026-09-01_1116 nightly p1 — 2 processed
+
+**0 exact matches · 2 verified-true (1 NULL fill, 1 name fix) · 1 NULL fill ·
+0 needs-human**
+Two rows (msg 2641, 2643). Each card read from `_30` (middle) and `_28`;
+digits agreed across both frames. Cross-checked against the poster (poster
+prints `تاريخ الاستشهاد DD-MM-YYYY`; card prints `YYYY-MM-DD`). `_28` set as
+cover frame for both.
+
+- **2641** — `عماد عبد المنعم وادي "أبو معاذ"`. Birth `1998 - 02 - 02` →
+  1998-02-02, matches DB. Martyrdom was NULL in DB; card prints
+  `تاريخ الشهادة 2023 - 10 - 09` → 2023-10-09, and poster confirms
+  `تاريخ الاستشهاد 09-10-2023`. Filled martyrdom_date. Name matches DB.
+- **2643** — birth `1988 - 12 - 18` → 1988-12-18 and martyrdom
+  `2023 - 10 - 29` → 2023-10-29 both match DB exactly. DB carried the short
+  name `أحمد عبد الحي أبو مهادي`; card (`_28`/`_30`) and poster both print
+  `أحمد عبد الحي عبدالله أبو مهادي`, so the dropped token `عبدالله` was
+  restored to the card spelling — same person (same kunya `أبو مهادي`, both
+  dates identical). Logged, not a silent rewrite.
+
+| msg | field | was | now | card shows |
+|---|---|---|---|---|
+| 2641 (عماد عبد المنعم وادي) | martyrdom | _(NULL)_ | **2023-10-09** | تاريخ الشهادة 2023 - 10 - 09; poster تاريخ الاستشهاد 09-10-2023 |
+| 2641 (عماد عبد المنعم وادي) | birth | 1998-02-02 | 1998-02-02 | تاريخ الميلاد 1998 - 02 - 02 |
+| 2643 (أحمد عبد الحي عبدالله أبو مهادي) | name | أحمد عبد الحي أبو مهادي | **أحمد عبد الحي عبدالله أبو مهادي** | name printed `أحمد عبد الحي عبدالله أبو مهادي` on card (`_28`/`_30`) and poster — token `عبدالله` restored |
+| 2643 (أحمد عبد الحي عبدالله أبو مهادي) | birth | 1988-12-18 | 1988-12-18 | تاريخ الميلاد 1988 - 12 - 18 |
+| 2643 (أحمد عبد الحي عبدالله أبو مهادي) | martyrdom | 2023-10-29 | 2023-10-29 | تاريخ الشهادة 2023 - 10 - 29; poster تاريخ الاستشهاد 29-10-2023 |
+
+**Needs human (0):** none.
+
+**Exact matches (0):** _(none — 2641 took a NULL fill, 2643 a name correction)_.
+
+Sanity: verified-true age at martyrdom — 2641 (1998-02-02 → 2023-10-09,
+age 25); 2643 (1988-12-18 → 2023-10-29, age 34). Both martyrdom dates fall
+inside 2023-10 … today (2026-09-01)+1month.

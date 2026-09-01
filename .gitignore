@@ -43,3 +43,4 @@ src/sqlserver_client.py
 tests/test_field_normalizer.py
 scripts/ai_verify.py
 src/sqlserver_client.py
+docs/ai-verify-daily-log.md
