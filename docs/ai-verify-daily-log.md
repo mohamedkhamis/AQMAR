@@ -1308,3 +1308,105 @@ cover frame for both.
 Sanity: verified-true age at martyrdom — 2641 (1998-02-02 → 2023-10-09,
 age 25); 2643 (1988-12-18 → 2023-10-29, age 34). Both martyrdom dates fall
 inside 2023-10 … today (2026-09-01)+1month.
+
+## 2026-09-01_2215 nightly p1 — 11 processed
+
+**6 exact matches · 5 fixed (3 birth day/month swaps, 3 NULL martyrdom fills,
+1 name fix) · 0 needs-human**
+Eleven rows (msg 2645–2665). Each card read from `_30` (middle) plus `_28`;
+the three swap/fill rows (2653, 2659, 2665) were re-read against `_32` and
+all three frames agreed. Card prints `YYYY-MM-DD`; poster prints
+`تاريخ الاستشهاد DD-MM-YYYY` — used to corroborate every fill. `_28` set as
+cover frame for all 11 (`_32` carries the animated title overlay).
+
+- **2653** — `مصطفى محمد شريم`. Birth printed `1991 - 10 - 01` → 1991-10-01;
+  DB held `1991-01-10` (day/month swapped) — fixed. Martyrdom `2023 - 11 - 22`
+  matches DB (poster `22-11-2023`). Card prints the name as
+  `مصطفى محمد محمد شريم` (extra `محمد`); DB and poster both read
+  `مصطفى محمد شريم`, so the name was left unchanged.
+- **2659** — `نهاد خليل عبد النبي`. Birth printed `1993 - 11 - 07` →
+  1993-11-07; DB held `1993-07-11` (swapped) — fixed. Martyrdom was NULL;
+  card `2024 - 05 - 29` → 2024-05-29, poster `29-05-2024` — filled.
+- **2665** — Birth printed `1993 - 02 - 07` → 1993-02-07; DB held
+  `1993-07-02` (swapped) — fixed. Martyrdom was NULL; card `2025 - 09 - 20`
+  → 2025-09-20, poster `20-09-2025` — filled. DB carried the short name
+  `لواء وائل أبو عمشة`; card (`_28`/`_30`/`_32`) and poster both print
+  `لواء وائل عبداللطيف أبو عمشة`, so the dropped token `عبداللطيف` was
+  restored — same person, both dates from the same card. Logged, not a
+  silent rewrite.
+- **2647** — Martyrdom was NULL; card `2024 - 01 - 09` → 2024-01-09, poster
+  `09-01-2024` — filled. Birth `1985-06-28` matches DB.
+- **2663** — Martyrdom was NULL; card `2024 - 03 - 24` → 2024-03-24, poster
+  `24-03-2024` — filled. Birth `1995-01-18` matches DB.
+
+| msg | field | was | now | card shows |
+|---|---|---|---|---|
+| 2647 (يوسف محمود لبد) | martyrdom | _(NULL)_ | **2024-01-09** | تاريخ الشهادة 2024 - 01 - 09; poster تاريخ الاستشهاد 09-01-2024 |
+| 2653 (مصطفى محمد شريم) | birth | 1991-01-10 | **1991-10-01** | تاريخ الميلاد 1991 - 10 - 01 (day/month swap) |
+| 2659 (نهاد خليل عبد النبي) | birth | 1993-07-11 | **1993-11-07** | تاريخ الميلاد 1993 - 11 - 07 (day/month swap) |
+| 2659 (نهاد خليل عبد النبي) | martyrdom | _(NULL)_ | **2024-05-29** | تاريخ الشهادة 2024 - 05 - 29; poster تاريخ الاستشهاد 29-05-2024 |
+| 2663 (عماد أمين خضر) | martyrdom | _(NULL)_ | **2024-03-24** | تاريخ الشهادة 2024 - 03 - 24; poster تاريخ الاستشهاد 24-03-2024 |
+| 2665 (لواء وائل عبداللطيف أبو عمشة) | birth | 1993-07-02 | **1993-02-07** | تاريخ الميلاد 1993 - 02 - 07 (day/month swap) |
+| 2665 (لواء وائل عبداللطيف أبو عمشة) | martyrdom | _(NULL)_ | **2025-09-20** | تاريخ الشهادة 2025 - 09 - 20; poster تاريخ الإستشهاد 20-09-2025 |
+| 2665 (لواء وائل عبداللطيف أبو عمشة) | name | لواء وائل أبو عمشة | **لواء وائل عبداللطيف أبو عمشة** | card (`_28`/`_30`/`_32`) and poster both print `لواء وائل عبداللطيف أبو عمشة` — token `عبداللطيف` restored |
+
+**Needs human (0):** none.
+
+**Exact matches (6):** 2645, 2649, 2651, 2655, 2657, 2661.
+
+Sanity: verified-true age at martyrdom — 2645 (1990-02-27 → 2025-04-17, 35);
+2647 (1985-06-28 → 2024-01-09, 38); 2649 (1979-12-20 → 2024-12-30, 45);
+2651 (1995-12-28 → 2025-05-18, 29); 2653 (1991-10-01 → 2023-11-22, 32);
+2655 (1992-06-18 → 2024-12-29, 32); 2657 (1990-05-05 → 2024-11-17, 34);
+2659 (1993-11-07 → 2024-05-29, 30); 2661 (1996-02-21 → 2024-09-01, 28);
+2663 (1995-01-18 → 2024-03-24, 29); 2665 (1993-02-07 → 2025-09-20, 32). All
+martyrdom dates fall inside 2023-10 … today (2026-09-01)+1month.
+
+## 2026-09-01_2227 nightly p1 — 1 processed
+
+- **2667** — `عبد الرحيم محمد عبد الرحمن (أبو عامر)`. Birth `2001 - 08 - 26`
+  → 2001-08-26 and martyrdom `2024 - 05 - 16` → 2024-05-16 (card format
+  YYYY-MM-DD); both match DB. Frames `_28`/`_30` agree; poster confirms the
+  name and `تاريخ الاستشهاد 16-05-2024`. Cover frame `_28`.
+
+| msg | field | was | now | card shows |
+|---|---|---|---|---|
+| _(none — exact match)_ | | | | |
+
+**Needs human (0):** none.
+
+**Exact matches (1):** 2667.
+
+Sanity: verified-true age at martyrdom — 2667 (2001-08-26 → 2024-05-16, 22).
+Martyrdom date falls inside 2023-10 … today (2026-09-01)+1month.
+
+## 2026-09-02_1347 nightly p1 — 3 processed
+
+- **2669** — `حازم شادي أحمد العريني`. Card `تاريخ الميلاد 2007 - 08 - 23`
+  → 2007-08-23 and `تاريخ الشهادة 2023 - 11 - 19` → 2023-11-19 (card format
+  YYYY-MM-DD); both match DB. Frames `_28`/`_30` agree; poster confirms the
+  name and `تاريخ الاستشهاد 19-11-2023`. Name repaired: DB was missing the
+  token `أحمد` that both card and poster print. Cover frame `_28`.
+- **2671** — `محمد أحمد الباز`. Card `تاريخ الميلاد 1994 - 11 - 26`
+  → 1994-11-26 and `تاريخ الشهادة 2024 - 07 - 27` → 2024-07-27; both match
+  DB. Frames `_28`/`_30` agree. Card text renders the name as
+  `محمد أحمد أحمد الباز` (doubled `أحمد`), but the poster and DB agree on
+  `محمد أحمد الباز`; name left as-is. Cover frame `_28`.
+- **2673** — `أحمد حسن أحمد زهد`. Card `تاريخ الميلاد 1995 - 09 - 21`
+  → 1995-09-21 and `تاريخ الشهادة 2025 - 04 - 22` → 2025-04-22; both match
+  DB. Frames `_28`/`_30` agree; poster confirms the name and
+  `تاريخ الإستشهاد 22-04-2025`. Name repaired: DB was missing the token
+  `أحمد` that both card and poster print. Cover frame `_28`.
+
+| msg | field | was | now | card shows |
+|---|---|---|---|---|
+| 2669 (حازم شادي أحمد العريني) | name | حازم شادي العريني | **حازم شادي أحمد العريني** | card (`_28`/`_30`) and poster both print `حازم شادي أحمد العريني` — token `أحمد` restored |
+| 2673 (أحمد حسن أحمد زهد) | name | أحمد حسن زهد | **أحمد حسن أحمد زهد** | card (`_28`/`_30`) and poster both print `أحمد حسن أحمد زهد` — token `أحمد` restored |
+
+**Needs human (0):** none.
+
+**Exact matches (3):** 2669, 2671, 2673 (dates on all three match DB).
+
+Sanity: verified-true age at martyrdom — 2669 (2007-08-23 → 2023-11-19, 16);
+2671 (1994-11-26 → 2024-07-27, 29); 2673 (1995-09-21 → 2025-04-22, 29). All
+martyrdom dates fall inside 2023-10 … today (2026-09-02)+1month.
