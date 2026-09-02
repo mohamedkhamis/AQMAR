@@ -196,11 +196,22 @@ NEVER run git add/commit/push or any git state-changing command.
         }
     }
 
+    # ---------- Phase 1a: deterministic field normalize ----------
+    # Free and offline: merges values differing only by punctuation, tashkeel
+    # or word boundaries. Runs BEFORE canon so the AI never spends a decision
+    # on an artifact a regex can settle - the split-word case ("مجاهد قسا مي")
+    # recurred in three consecutive batches before this was wired in.
+    if (-not $SkipCanon) {
+        & $py scriptsi_verify.py normalize-fields --apply
+        if ($LASTEXITCODE -ne 0) { $errors += "normalize:deterministic pass failed" }
+    }
+
     # ---------- Phase 1b: canon (rank / battalion spelling consolidation) ----------
-    # OCR leaves letter-level variants - an inserted letter, a split or missing
-    # space - that the deterministic normalize-fields pass can never merge: its
-    # grouping key is defined to leave letters alone. Only a reader of the value
-    # list can propose those merges, so this is its own Claude pass.
+    # OCR leaves LETTER-level variants - an inserted or dropped letter, a
+    # look-alike swap - that no regex can settle, because the grouping key is
+    # defined to leave letters alone. Only a reader of the value list can
+    # propose those merges, so this is its own Claude pass. Spacing and
+    # punctuation artifacts are handled deterministically in Phase 1a above.
     # Blast radius is bounded by canon-apply itself: every `to` must already exist
     # in that column, and a chained mapping is a hard error that empties the plan.
     if (-not $SkipCanon) {
