@@ -1410,3 +1410,54 @@ Martyrdom date falls inside 2023-10 … today (2026-09-01)+1month.
 Sanity: verified-true age at martyrdom — 2669 (2007-08-23 → 2023-11-19, 16);
 2671 (1994-11-26 → 2024-07-27, 29); 2673 (1995-09-21 → 2025-04-22, 29). All
 martyrdom dates fall inside 2023-10 … today (2026-09-02)+1month.
+
+## 2026-09-02_2225 nightly p1 — 6 processed
+
+- **2675** — `حسام محمد صبحي صايمة`. Card `تاريخ الميلاد 1988 - 05 - 31`
+  → 1988-05-31 and `تاريخ الشهادة 2024 - 06 - 15` → 2024-06-15 (card format
+  YYYY-MM-DD); both match DB. Frames `_28`/`_30` agree; poster confirms the
+  name and `تاريخ الاستشهاد 2024/06/15`. Name repaired: DB was missing the
+  token `صبحي` that both card and poster print. Cover frame `_28`.
+- **2677** — `مؤمن إبراهيم فوزي ثابت`. Card `تاريخ الميلاد 2001 - 06 - 18`
+  → 2001-06-18 and `تاريخ الشهادة 2024 - 07 - 20` → 2024-07-20; both match
+  DB. Frames `_28`/`_30` agree; poster confirms the name and
+  `تاريخ الاستشهاد 2024/07/20`. Name repaired: DB was missing the token
+  `فوزي` that both card and poster print. Cover frame `_28`.
+- **2679** — `عبد المجيد خالد أبو مخدة`. Card `تاريخ الميلاد 1993 - 05 - 17`
+  → 1993-05-17 and `تاريخ الشهادة 2024 - 11 - 12` → 2024-11-12; both match
+  DB. Frames `_28`/`_30` agree. Name identical to DB. Cover frame `_28`.
+- **2681** — `محمد عدنان سليمان أبو العوف`. Card `تاريخ الميلاد 1990 - 03 - 03`
+  → 1990-03-03 and `تاريخ الشهادة 2024 - 12 - 04` → 2024-12-04; both match
+  DB. Frames `_28`/`_30` agree; poster confirms the name and
+  `تاريخ الاستشهاد 2024/12/04`. Name repaired: DB was missing the token
+  `سليمان` that both card and poster print. Cover frame `_28`.
+- **2683** — `موسى عبدالله خليل الخواص`. Card `تاريخ الميلاد 1990 - 08 - 26`
+  → 1990-08-26 (DB birth_date was NULL — filled) and
+  `تاريخ الشهادة 2026 - 05 - 10` → 2026-05-10, matches DB. Frames `_28`/`_30`
+  agree; poster confirms the name (poster prints no date). Name repaired: DB
+  was missing the token `خليل` that both card and poster print. Cover frame
+  `_28`.
+- **2685** — `محمد زهير عبد القادر الكرد`. Card `تاريخ الميلاد 2003 - 03 - 13`
+  → 2003-03-13 and `تاريخ الشهادة 2023 - 10 - 20` → 2023-10-20; both match
+  DB. Frames `_28`/`_30` agree; poster confirms the name and
+  `تاريخ الاستشهاد 2023-10-20`. Name repaired: DB was missing the tokens
+  `عبد القادر` that both card and poster print. Cover frame `_28`.
+
+| msg | field | was | now | card shows |
+|---|---|---|---|---|
+| 2675 (حسام محمد صبحي صايمة) | name | حسام محمد صايمة | **حسام محمد صبحي صايمة** | card (`_28`/`_30`) and poster both print `حسام محمد صبحي صايمة` — token `صبحي` restored |
+| 2677 (مؤمن إبراهيم فوزي ثابت) | name | مؤمن إبراهيم ثابت | **مؤمن إبراهيم فوزي ثابت** | card (`_28`/`_30`) and poster both print `مؤمن إبراهيم فوزي ثابت` — token `فوزي` restored |
+| 2681 (محمد عدنان سليمان أبو العوف) | name | محمد عدنان أبو العوف | **محمد عدنان سليمان أبو العوف** | card (`_28`/`_30`) and poster both print `محمد عدنان سليمان أبو العوف` — token `سليمان` restored |
+| 2683 (موسى عبدالله خليل الخواص) | birth_date | _(NULL)_ | **1990-08-26** | card `تاريخ الميلاد 1990 - 08 - 26` → 1990-08-26 |
+| 2683 (موسى عبدالله خليل الخواص) | name | موسى عبدالله الخواص | **موسى عبدالله خليل الخواص** | card (`_28`/`_30`) and poster both print `موسى عبدالله خليل الخواص` — token `خليل` restored |
+| 2685 (محمد زهير عبد القادر الكرد) | name | محمد زهير الكرد | **محمد زهير عبد القادر الكرد** | card (`_28`/`_30`) and poster both print `محمد زهير عبد القادر الكرد` — tokens `عبد القادر` restored |
+
+**Needs human (0):** none.
+
+**Exact matches (1):** 2679 (dates and name match DB).
+
+Sanity: verified-true age at martyrdom — 2675 (1988-05-31 → 2024-06-15, 36);
+2677 (2001-06-18 → 2024-07-20, 23); 2679 (1993-05-17 → 2024-11-12, 31);
+2681 (1990-03-03 → 2024-12-04, 34); 2683 (1990-08-26 → 2026-05-10, 35);
+2685 (2003-03-13 → 2023-10-20, 20). All martyrdom dates fall inside
+2023-10 … today (2026-09-02)+1month.

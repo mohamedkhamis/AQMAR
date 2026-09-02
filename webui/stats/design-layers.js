@@ -53,7 +53,7 @@
         (ar ? 'عدد الشهداء المولودين في كل عقد.'
             : 'How many were born in each decade.') + '</p>' +
         '<div class="st-card">' +
-        statsBars(agg.birthDecades, function () { return 'var(--stat-1)'; },
+        statsBars(statsDecades(agg, lang), function () { return 'var(--stat-1)'; },
                   lang, 'birth-decade') +
         '</div></section>';
     }

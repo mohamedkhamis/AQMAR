@@ -1793,9 +1793,11 @@ function aqmar() {
       // emitted <a> tags with no href — looked clickable but did nothing.
       const ar = this.lang === 'ar';
       return [
+        // The test-results page (tests.html) is deliberately NOT linked here.
+        // It is developer output, not part of the memorial; the link lives in
+        // the admin tab strip instead (2026-09-03).
         { title: ar ? 'المشروع' : 'Project', links: [
           { text: ar ? 'عن المشروع' : 'About',     go: 'about' },
-          { text: ar ? 'الاختبارات' : 'Tests',     href: 'tests.html' },
           { text: ar ? 'الكود المصدري' : 'Source', href: 'https://github.com/mohamedkhamis/AQMAR', external: true },
         ]},
         { title: ar ? 'السجلّ' : 'Registry', links: [

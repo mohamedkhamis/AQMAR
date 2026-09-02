@@ -105,7 +105,7 @@
       h += '<section class="std-sec"><h3 class="st-title">' +
         (ar ? 'حسب العقد' : 'By decade') + '</h3>' +
         '<div class="st-card">' +
-        statsBars(agg.birthDecades, function () { return 'var(--stat-1)'; },
+        statsBars(statsDecades(agg, lang), function () { return 'var(--stat-1)'; },
                   lang, 'birth-decade') +
         '</div></section>';
     }

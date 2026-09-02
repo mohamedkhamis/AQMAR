@@ -383,6 +383,15 @@
 
   // Exported so the registry filter can fold the same way the charts do -
   // otherwise clicking a brigade bar showing 369 would list only 365 rows.
+  // Decade labels are built at render time, not in the aggregate: the aggregate
+  // has no language, and "1990s" in Latin digits beside an Arabic-Indic count
+  // (٦٠٨) reads as a different interface. Arabic gets ١٩٩٠; English keeps the
+  // plural 's', which means nothing in Arabic.
+  global.statsDecades     = function (agg, lang) {
+    return (agg.birthDecades || []).map(function (d) {
+      return [lang === 'en' ? d[0] : nfmt(d[2], lang), d[1], d[2]];
+    });
+  };
   global.foldBrigadeName  = function (n) { return fold(clean(n)); };
   global.STATS_SERIES     = SERIES;
   global.aggregateStats   = aggregateStats;

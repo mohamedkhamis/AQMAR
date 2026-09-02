@@ -77,11 +77,11 @@
      designs. stats-designs.js MUST load last of this group, same contract
      as lifeline-designs.js. Adding a design = one file + one script tag +
      its key in STATS_DESIGNS (src/settings_store.py) and ORDER. -->
-<script src="stats-core.js?v=20260831e"></script>
-<script src="stats/design-register.js?v=20260831e"></script>
-<script src="stats/design-board.js?v=20260831e"></script>
-<script src="stats/design-layers.js?v=20260831e"></script>
-<script src="stats-designs.js?v=20260831e"></script>
+<script src="stats-core.js?v=20260902b"></script>
+<script src="stats/design-register.js?v=20260902b"></script>
+<script src="stats/design-board.js?v=20260902b"></script>
+<script src="stats/design-layers.js?v=20260902b"></script>
+<script src="stats-designs.js?v=20260902b"></script>
 
 <!-- Alpine + focus plugin (plugin must load BEFORE the core). -->
 <script defer src="https://unpkg.com/@alpinejs/focus@3.x.x/dist/cdn.min.js"></script>
@@ -1063,6 +1063,11 @@
       <button @click="goto('admin-settings')" class="btn admin-tab"
               :class="view === 'admin-settings' ? 'is-active' : ''"
               x-text="lang === 'ar' ? 'الإعدادات' : 'Settings'"></button>
+      <!-- Test results: developer output, kept out of the public footer.
+           A real page rather than an SPA view, so it is an <a>, and it opens
+           in a new tab so the admin does not lose their place. -->
+      <a href="tests.html" target="_blank" rel="noopener" class="btn admin-tab"
+         x-text="lang === 'ar' ? 'نتائج الاختبارات ↗' : 'Test results ↗'"></a>
     </div>
   </section>
 
@@ -1986,6 +1991,6 @@
 </div>
 
 <style>[x-cloak]{display:none!important}</style>
-<script src="app.js?v=20260902a"></script>
+<script src="app.js?v=20260903a"></script>
 </body>
 </html>
