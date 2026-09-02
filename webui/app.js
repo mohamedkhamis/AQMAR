@@ -14,6 +14,9 @@ function aqmar() {
     loginPass: '',
     loginError: '',
     selectedId: null,
+    // True while applyRouteFromUrl is assigning view/selectedId, so the
+    // watchers it trips do not push a duplicate history entry.
+    _applyingRoute: false,
     editingId: null,
     photoZoomed: false,       // admin edit: big-image click opens fullscreen lightbox of carouselCurrent()
     carouselIdx: 0,           // admin edit: index into carouselImages() (portrait + frames combined). Reset to 0 on every editMartyr / cancel / save / reject / logout.
@@ -219,7 +222,14 @@ function aqmar() {
       this.$watch('view', (v) => {
         if (window.__updateTitle) window.__updateTitle(v, this.lang);
         this.focusView(v);
+        this.syncRouteUrl();
       });
+      // Opening a different person is a navigation too, even though `view`
+      // does not change when moving from one profile straight to another.
+      this.$watch('selectedId', () => this.syncRouteUrl());
+      // Back / forward: re-read the URL without writing it again.
+      window.addEventListener('popstate', () => this.applyRouteFromUrl());
+      this.applyRouteFromUrl();
       if (window.__updateTitle) window.__updateTitle(this.view, this.lang);
 
       // Restore admin edits from localStorage
@@ -365,6 +375,7 @@ function aqmar() {
       this.weapons     = [...new Set(this.all.map(m => m.weapon).filter(Boolean))].sort();
       this.battalions  = [...new Set(this.all.map(m => m.battalion).filter(Boolean))].sort();
       this.brigades    = [...new Set(this.all.map(m => m.brigade).filter(Boolean))].sort();
+      this.validateRoutedPerson();
     },
 
     async retryLoad() {
@@ -1065,6 +1076,71 @@ function aqmar() {
       this.syncBirthdayUrl();   // clears any ?b/?w/?d from the address bar
       this.scrollToResults();
     },
+    // ---- URL routing ----
+    // Every view is addressable, so a link can be copied, bookmarked, shared
+    // and reopened, and the browser's Back button works:
+    //     (no params)        home
+    //     ?view=stats        statistics
+    //     ?view=about        about
+    //     ?person=2635       one martyr, by msg_id
+    // A person implies the detail view, so `view` is not repeated for it.
+    // Only these keys are touched - the birthday search's b/w/d survive, and
+    // syncBirthdayUrl leaves these alone in turn.
+    syncRouteUrl() {
+      if (this._applyingRoute) return;   // popstate is replaying, not navigating
+      try {
+        const params = new URLSearchParams(window.location.search);
+        ['view', 'person'].forEach((k) => params.delete(k));
+        if (this.view === 'detail') {
+          if (this.selectedId != null) params.set('person', String(this.selectedId));
+        } else if (this.view && this.view !== 'home') {
+          params.set('view', this.view);
+        }
+        const qs = params.toString();
+        const url = window.location.pathname + (qs ? '?' + qs : '') + window.location.hash;
+        // Same URL (a re-render, or the initial apply) must not stack history.
+        if (url === window.location.pathname + window.location.search + window.location.hash) return;
+        history.pushState(null, '', url);
+      } catch (e) {}
+    },
+
+    // Read the address bar and move to whatever it names. Used on boot and on
+    // every popstate. Guarded so the watchers it trips do not push a new entry.
+    applyRouteFromUrl() {
+      this._applyingRoute = true;
+      try {
+        const params = new URLSearchParams(window.location.search);
+        const person = params.get('person');
+        const view = params.get('view');
+        if (person != null && person !== '') {
+          const id = Number(person);
+          this.selectedId = Number.isFinite(id) ? id : person;
+          this.view = 'detail';
+        } else {
+          this.selectedId = null;
+          const known = ['home', 'stats', 'about', 'admin', 'admin-settings'];
+          this.view = known.includes(view) ? view : 'home';
+        }
+      } catch (e) {
+        this.view = 'home';
+      } finally {
+        // Release on the next tick so the watchers fired by the assignments
+        // above see the guard still set and stay quiet.
+        this.$nextTick(() => { this._applyingRoute = false; });
+      }
+    },
+
+    // A ?person= id that is not in the registry would otherwise leave the
+    // detail view mounted with nothing in it. Called once the rows land.
+    validateRoutedPerson() {
+      if (this.view !== 'detail' || this.selectedId == null) return;
+      if (!this.all.length) return;   // not loaded yet; checked again after
+      if (this.current) return;
+      console.warn('No martyr with msg_id', this.selectedId, '- returning home.');
+      this.selectedId = null;
+      this.view = 'home';
+    },
+
     // Mirror the active birthday search into the URL query string so the link
     // can be copied and reopened (applyBirthdayFromUrl reads it on load). Uses
     // replaceState so it doesn't pile up history entries; preserves any other

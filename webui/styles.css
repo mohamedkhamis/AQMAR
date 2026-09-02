@@ -1158,9 +1158,26 @@ html[dir="rtl"] .lifeline-life { background: linear-gradient(to left, var(--oliv
 .stats-switch-btn[aria-pressed="true"]{background:var(--forest);color:var(--bg);
   border-color:var(--forest)}
 
+/* ---- statistics on a phone ----
+   A 900-unit viewBox squeezed into a 375px screen renders at scale 0.31, so
+   an 11-unit axis label comes out at 3.4px - present, but unreadable. Give the
+   dense charts a comfortable min-width and let them scroll inside their own
+   card, which is the same treatment tables get here; the page body still never
+   scrolls sideways. Axis text is enlarged in viewBox units so it survives the
+   remaining downscale. Sparklines are untouched - they live in .std-smc, carry
+   no axis, and are meant to read as a shape rather than a chart. */
+@media (max-width:640px){
+  .st-card{padding:14px 12px;overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .st-card > svg{min-width:560px}
+  .st-axis text{font-size:17px}
+  .st-title{font-size:var(--text-base)}
+  .st-sub{margin-bottom:12px}
+  .st-legend{gap:10px}
+  .st-tw{max-height:260px}
+}
 @media (max-width:480px){
   .st-row{grid-template-columns:1fr 52px}
-  .st-card{padding:14px}
+  .st-lbl{font-size:var(--text-xs)}
 }
 
 
