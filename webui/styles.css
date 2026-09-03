@@ -764,8 +764,8 @@ html[dir="rtl"] .lifeline-life { background: linear-gradient(to left, var(--oliv
    Tailwind utility classes (.flex / .items-center / .px-9 .py-8). */
 @media (max-width: 1024px) {
   .nav-links { display: none !important; }
-  .nav-hamburger { display: inline-flex; }
-  .mobile-nav { display: block; }
+  /* .nav-hamburger / .mobile-nav are switched on AFTER their base rules
+     further down this file - see the note there. */
   .grid-filters { grid-template-columns: 1fr 1fr 1fr; }
   .grid-detail, .grid-detail.is-admin { grid-template-columns: 1fr; }
   .grid-detail-portrait { justify-self: center; }
@@ -863,6 +863,17 @@ html[dir="rtl"] .lifeline-life { background: linear-gradient(to left, var(--oliv
 }
 .nav-hamburger:hover { background: var(--bg-2); border-color: var(--olive); }
 .mobile-nav { display: none; }
+
+/* These two must come AFTER the defaults directly above: the selectors have
+   the same specificity, so source order decides. Declared up in the 1024
+   block (line ~765) they lost to the `display:none` defaults below them, so
+   the hamburger never appeared and a phone had NO navigation at all - the
+   drawer was built and populated, but nothing could open it. Fixed
+   2026-09-03; keep them here rather than adding !important. */
+@media (max-width: 1024px) {
+  .nav-hamburger { display: inline-flex; }
+  .mobile-nav { display: block; }
+}
 
 /* ── Date picker — Litepicker restyled to the AQMAR dark theme ───────────
    Litepicker themes through its own --litepicker-* custom properties; setting
