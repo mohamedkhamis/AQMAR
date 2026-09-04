@@ -1,8 +1,8 @@
 {
-  "version": 58,
-  "generated_at": "2026-09-03T19:32:45Z",
+  "version": 59,
+  "generated_at": "2026-09-04T19:28:40Z",
   "channel": "AqmarTofan",
-  "note": "nightly auto (14 new, 1 fixed)",
+  "note": "nightly auto (0 new, 0 fixed)",
   "martyrs": [
     {
       "msg_id": 2713,
@@ -14073,7 +14073,7 @@
       "name": "أحمد عزمي القطراوي",
       "name_normalized": "احمد عزمي القطراوي",
       "birth_date": "2002-07-22",
-      "martyrdom_date": "2023-01-07",
+      "martyrdom_date": "2023-10-07",
       "city": null,
       "military_rank": "مجاهد قسامي",
       "weapon": null,
@@ -14089,7 +14089,7 @@
       "ocr_birth_date": "2002-07-22",
       "ocr_martyrdom_date": null,
       "created_at": "2026-06-24T09:21:32",
-      "updated_at": "2026-07-15T02:36:03",
+      "updated_at": "2026-09-04T13:05:42",
       "archive_org_id": null
     },
     {
