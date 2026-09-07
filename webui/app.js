@@ -1069,6 +1069,24 @@ function aqmar() {
       this.syncBirthdayUrl();
       this.scrollToResults();
     },
+    // One click from the landing page to the whole registry, newest first.
+    // Reaching the list used to mean expanding "More filters", finding the
+    // browse button inside the lock hint, and clicking it - three actions,
+    // the last one invisible until the panel was open. The only one-click
+    // path was the footer link at the very bottom of the page.
+    //
+    // Deliberately resets the sort rather than inheriting whatever the
+    // visitor last chose: the button promises newest-added, so it has to
+    // deliver that every time, not just the first.
+    showLatest() {
+      this.clearDrill();            // filters, date + age ranges, and the chip
+      this.matchFilter = null;      // drop any birthday match
+      this.sort = 'created_desc';   // 'الإضافة ↓ (الأحدث)'
+      this.filtersUnlocked = true;
+      this.syncBirthdayUrl();       // clears ?b/?w/?d from the address bar
+      this.scrollToResults();
+    },
+
     // "Browse the full registry" — unlock the filters without a birthday match.
     browseAll() {
       this.filtersUnlocked = true;

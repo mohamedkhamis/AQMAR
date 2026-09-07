@@ -50,7 +50,7 @@
 <!-- Design tokens + components. ?v bumped 2026-06-15 (combined filters,
      offline cache, admin flag) so returning visitors don't run a stale
      app.js against the new markup. -->
-<link rel="stylesheet" href="styles.css?v=20260903a">
+<link rel="stylesheet" href="styles.css?v=20260907a">
 
 <!-- Site config -->
 <script src="config.js?v=20260722"></script>
@@ -320,6 +320,12 @@
             <button @click="runBirthdaySearch()" class="btn btn-primary">
               <span x-text="lang === 'ar' ? 'اعرض الأسماء' : 'Show names'"></span>
               <span class="text-xs opacity-70">←</span>
+            </button>
+            <!-- The registry without picking anything: one click, newest added
+                 first. The birthday search is the page's main purpose, so this stays
+                 a ghost button beside it rather than competing with it. -->
+            <button @click="showLatest()" class="btn btn-ghost">
+              <span x-text="lang === 'ar' ? 'أحدث الأسماء' : 'Latest names'"></span>
             </button>
           </div>
         </div>
@@ -1991,6 +1997,6 @@
 </div>
 
 <style>[x-cloak]{display:none!important}</style>
-<script src="app.js?v=20260903a"></script>
+<script src="app.js?v=20260907a"></script>
 </body>
 </html>
