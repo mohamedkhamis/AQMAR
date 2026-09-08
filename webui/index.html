@@ -50,7 +50,7 @@
 <!-- Design tokens + components. ?v bumped 2026-06-15 (combined filters,
      offline cache, admin flag) so returning visitors don't run a stale
      app.js against the new markup. -->
-<link rel="stylesheet" href="styles.css?v=20260907a">
+<link rel="stylesheet" href="styles.css?v=20260908b">
 
 <!-- Site config -->
 <script src="config.js?v=20260722"></script>
@@ -853,9 +853,25 @@
                    nothing — no chip, no label. Replaces the old badges (which
                    carried no label) AND the separate facts list (which
                    repeated the same three values). -->
+              <!-- A chip carrying a drill dimension (rank / battalion / brigade)
+                   filters the registry by that value and drops the visitor into
+                   the ordinary grid, narrowed, with the drill chip explaining
+                   why - the same applyDrill() contract the charts use, so there
+                   is one filtering path rather than two. City and weapon have no
+                   drill dimension and render as plain, static chips.
+                   role/tabindex rather than a <button>: x-for allows a single
+                   root element per iteration, and this matches the pattern the
+                   stats bars and legend entries already use. -->
               <div class="detail-chips mt-4" x-show="detailFacts(current).length">
                 <template x-for="(f, i) in detailFacts(current)" :key="f.k">
-                  <span class="detail-chip" :class="i === 0 ? 'is-lead' : ''">
+                  <span class="detail-chip"
+                        :class="{ 'is-lead': i === 0, 'is-drill': f.dim }"
+                        :role="f.dim ? 'button' : null"
+                        :tabindex="f.dim ? 0 : null"
+                        :aria-label="f.dim ? factDrillLabel(f) : null"
+                        @click="applyDrill(f.dim, f.v)"
+                        @keydown.enter="applyDrill(f.dim, f.v)"
+                        @keydown.space.prevent="applyDrill(f.dim, f.v)">
                     <span class="ck" x-text="f.k"></span>
                     <span class="cv" x-text="f.v"></span>
                   </span>
@@ -1997,6 +2013,6 @@
 </div>
 
 <style>[x-cloak]{display:none!important}</style>
-<script src="app.js?v=20260908a"></script>
+<script src="app.js?v=20260908b"></script>
 </body>
 </html>

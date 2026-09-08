@@ -517,6 +517,18 @@ function aqmar() {
 
     applyDrill(dim, val) {
       if (!dim || val == null || val === '') return;
+      // A brigade drill can arrive already folded (the charts merge the OCR
+      // variants before drawing) or raw, straight off one person's record
+      // when a detail chip is clicked. The registry compares folded names -
+      // foldBrigadeName(m.brigade) === filters.brig - so a raw variant would
+      // narrow the grid to nothing. Fold here, once, on behalf of every
+      // caller: fold() is idempotent, so the chart path is unchanged.
+      // Reassigning val also keeps the chip naming the group actually shown,
+      // rather than the spelling that happened to be on that one record.
+      if (dim === 'brigade') {
+        const foldB = window.foldBrigadeName || ((x) => (x || '').trim());
+        val = foldB(val);
+      }
       // Start from a clean slate: drills replace each other rather than
       // silently intersecting, which would show an empty grid for no
       // visible reason.
@@ -1317,16 +1329,32 @@ function aqmar() {
     // rest of that grid (name, birth, age, rank, battalion, brigade) merely
     // repeated the hero heading, the dates strip and the badges beside it.
     // Blank-but-present values are trimmed, so "   " counts as empty.
+    // `dim` is the drill dimension the chip filters by when clicked, or null
+    // for a fact the registry cannot narrow on. Weapon has no filter at all;
+    // city has one (filters.city) but no drill dimension in applyDrill, so
+    // both stay static. Only the drillable chips get the affordance - a chip
+    // that looks clickable and does nothing is worse than a plain one.
     detailFacts(m) {
       if (!m) return [];
       const ar = this.lang === 'ar';
       return [
-        { k: ar ? 'المدينة' : 'City', v: m.city },
-        { k: ar ? 'الرتبة' : 'Rank', v: m.rank },
-        { k: ar ? 'السلاح' : 'Weapon', v: m.weapon },
-        { k: ar ? 'الكتيبة' : 'Battalion', v: m.battalion },
-        { k: ar ? 'اللواء' : 'Brigade', v: m.brigade },
+        { k: ar ? 'المدينة' : 'City', v: m.city, dim: null },
+        { k: ar ? 'الرتبة' : 'Rank', v: m.rank, dim: 'rank' },
+        { k: ar ? 'السلاح' : 'Weapon', v: m.weapon, dim: null },
+        { k: ar ? 'الكتيبة' : 'Battalion', v: m.battalion, dim: 'battalion' },
+        { k: ar ? 'اللواء' : 'Brigade', v: m.brigade, dim: 'brigade' },
       ].filter(f => typeof f.v === 'string' && f.v.trim());
+    },
+
+    // What a screen reader announces for a clickable chip. The visible text is
+    // just the label and the value, which says what the fact IS but not what
+    // clicking it does, so the accessible name has to carry the action.
+    factDrillLabel(f) {
+      const ar = this.lang === 'ar';
+      if (f.dim === 'rank') {
+        return ar ? 'عرض كل الشهداء برتبة ' + f.v : 'Show all martyrs with the rank ' + f.v;
+      }
+      return ar ? 'عرض كل الشهداء في ' + f.v : 'Show all martyrs in ' + f.v;
     },
 
     // ============================================================
