@@ -1,18 +1,28 @@
 # scripts/setup_2hourly_trigger.ps1
 #
-# Registers a Windows Scheduled Task that runs phase3_daily.py every 2 hours.
+# Registers a Windows Scheduled Task that runs phase3_daily.py every hour.
 # Replaces the once-a-day "AqmarTofan Daily Scrape" cadence for users who
 # want near-realtime mirroring of the Telegram channel.
 #
 # Idempotent — re-running re-registers the task. To remove:
 #   Unregister-ScheduledTask -TaskName "AqmarTofan 2-Hourly Scrape" -Confirm:$false
 #
+# The task NAME still says "2-Hourly" on purpose. Renaming it would make this
+# script register a second task alongside the one already on the box instead
+# of replacing it, and the name is referenced from deploy/vps/README.md,
+# BUNDLE-INSTALL.md and 05_setup_tasks_vps.ps1. The cadence below is the
+# source of truth; the name is just an identifier.
+#
 # Trigger model:
-#   Daily at 00:00 + RepetitionInterval=2h + RepetitionDuration=1d
-#   → fires at 00, 02, 04, 06, 08, 10, 12, 14, 16, 18, 20, 22 every day (12 runs/day)
+#   Daily at 00:00 + RepetitionInterval=1h + RepetitionDuration=1d
+#   → fires on every hour, 00 through 23, every day (24 runs/day)
+#
+# Went from 2-hourly to hourly on 2026-09-08: the live task had been
+# hand-edited in the Task Scheduler GUI to a 12-hour duration, so scraping
+# stopped overnight entirely. Hourly with a full-day duration closes that gap.
 #
 # The phase3_daily.py script is itself idempotent — it only fetches messages
-# newer than the last cursor in dbo.state, so running it 12 times/day is safe
+# newer than the last cursor in dbo.state, so running it 24 times/day is safe
 # (most runs will be no-ops with "No new messages.")
 
 $ErrorActionPreference = "Stop"
@@ -68,13 +78,13 @@ Set-Content -Path $wrapperBat -Value $batContent -Encoding ASCII
 # and halts the script.
 & cmd /c "schtasks /delete /tn ""$taskName"" /f >nul 2>nul"
 
-# /sc HOURLY /mo 2 = fire every 2 hours, indefinitely
-# /st 00:00          = first fire of the day is at 00:00 (slots: 00,02,04,...,22)
+# /sc HOURLY /mo 1 = fire every hour, indefinitely
+# /st 00:00          = first fire of the day is at 00:00 (slots: 00,01,02,...,23)
 # /it                = "interactive only" — runs only while user is logged in
 #                       (avoids the stored-credential prompt that needs admin)
 # /rl LIMITED        = limited (non-elevated) run level
 # /tr "<path>"       = path to the wrapper .bat
-& cmd /c "schtasks /create /tn ""$taskName"" /sc HOURLY /mo 2 /st 00:00 /it /rl LIMITED /tr ""$wrapperBat"" /f"
+& cmd /c "schtasks /create /tn ""$taskName"" /sc HOURLY /mo 1 /st 00:00 /it /rl LIMITED /tr ""$wrapperBat"" /f"
 
 if ($LASTEXITCODE -ne 0) {
     Write-Error "schtasks failed with exit code $LASTEXITCODE"
@@ -82,8 +92,8 @@ if ($LASTEXITCODE -ne 0) {
 
 Write-Host ""
 Write-Host "Scheduled task '$taskName' created."
-Write-Host "  Cadence:    every 2 hours, 24/7 (12 runs per day)"
-Write-Host "  Slots:      00, 02, 04, 06, 08, 10, 12, 14, 16, 18, 20, 22"
+Write-Host "  Cadence:    every hour, 24/7 (24 runs per day)"
+Write-Host "  Slots:      on the hour, 00 through 23"
 Write-Host "  Script:     $script"
 Write-Host "  Log file:   $logFile"
 Write-Host ""

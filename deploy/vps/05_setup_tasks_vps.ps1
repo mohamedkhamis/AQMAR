@@ -15,8 +15,8 @@
 # override. S4U ("/np", no stored password) is NOT used on purpose: S4U tasks
 # get no network access, and both tasks need the network (Telegram, git, SMTP).
 #
-# Cadence: 2-hourly scrape at 00,02,...,22 ; nightly verify+publish at 22:15
-# (deliberately clear of the 22:00 scrape slot).
+# Cadence: hourly scrape on the hour, 00..23 ; nightly verify+publish at 22:15
+# (deliberately offset from the scrape slots).
 #
 # Run ELEVATED. Idempotent - deletes + recreates both tasks and regenerates the
 # wrapper scripts (don't hand-edit those).
@@ -50,7 +50,7 @@ if (-not $Password) {
 }
 
 # ---------------------------------------------------------------------------
-# Wrapper for the 2-hourly scrape (same shape as the local .bat wrapper).
+# Wrapper for the hourly scrape (same shape as the local .bat wrapper).
 # ---------------------------------------------------------------------------
 $scrapeBat = Join-Path $repo "scripts\_run_phase3_silent.bat"
 $scrapeLog = Join-Path $logDir "scrape_2hourly.log"
@@ -100,11 +100,19 @@ function Register-AqmarTask($name, $sc, $extra, $tr) {
 
 Write-Host "Registering scheduled tasks as $RunAsUser (headless)..." -ForegroundColor Cyan
 
-# 2-hourly scrape: HOURLY /mo 2, first fire 00:00 -> 00,02,...,22
-Register-AqmarTask "AqmarTofan 2-Hourly Scrape" "HOURLY" @('/mo','2','/st','00:00') `
+# Hourly scrape: HOURLY /mo 1, first fire 00:00 -> on the hour, 00..23.
+# Was /mo 2 until 2026-09-08. The task name keeps "2-Hourly" deliberately —
+# it is the identifier the README, BUNDLE-INSTALL.md and the recovery commands
+# all use, and renaming it here would register a second task next to the one
+# already running rather than replacing it.
+Register-AqmarTask "AqmarTofan 2-Hourly Scrape" "HOURLY" @('/mo','1','/st','00:00') `
     ("`"$scrapeBat`"")
 
-# Nightly verify+publish: daily 22:15 (clear of the 22:00 scrape slot), hidden via wscript
+# Nightly verify+publish: daily 22:15, hidden via wscript. It starts 15 min
+# after a scrape slot and now has ~45 min before the next one (23:00) instead
+# of the ~1h45 it had at the 2-hourly cadence. The two are independent — the
+# scrape only appends new rows and the nightly reads a snapshot — but if the
+# nightly ever grows past ~45 min, move it to :30 rather than shortening it.
 Register-AqmarTask "AqmarTofan Nightly Verify+Publish" "DAILY" @('/st','22:15') `
     ("wscript.exe `"$nightlyVbs`"")
 

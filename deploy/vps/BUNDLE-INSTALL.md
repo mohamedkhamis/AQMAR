@@ -28,7 +28,7 @@ this-folder\
 |---|---|
 | Admin site (FastAPI) | IIS → `https://<your-domain>` |
 | Database | SQL Server on the VPS (restored from the `.bak`) |
-| 2-hourly Telegram scrape | Scheduled task (headless) |
+| Hourly Telegram scrape | Scheduled task (headless) |
 | Nightly verify → publish → email | Scheduled task (headless) |
 
 The public site (`aqmar.pages.dev` / GitHub Pages) is unaffected.

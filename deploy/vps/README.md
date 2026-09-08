@@ -5,7 +5,7 @@ Move the whole AQMAR back end onto your Windows Server 2022 VPS:
 - **SQL Server** database (`aqmar`) — restored from a backup
 - **OCR pipeline** — ffmpeg + EasyOCR, run by the scheduled tasks
 - **IIS admin portal** — `http://localhost:8082`, reached by RDP (not public)
-- **2 scheduled tasks** — 2-hourly Telegram scrape · nightly verify → publish
+- **2 scheduled tasks** — hourly Telegram scrape · nightly verify → publish
 - **Publish** — `git push origin master` from the VPS updates both public sites
 
 The public sites (`https://aqmar.pages.dev`, `https://mohamedkhamis.github.io/AQMAR/`)
@@ -23,7 +23,7 @@ are untouched and keep working on your dev machine.
 |---|---|
 | IIS exposure | **Local only** — `http://localhost:8082`, reached via RDP. No domain, no TLS, no inbound ports. |
 | Database | **On the VPS**, restored from a `.bak` taken on the dev box |
-| Tasks | **Both** — 2-hourly scrape (00,02,…,22) + nightly verify→publish→email at **22:15** |
+| Tasks | **Both** — hourly scrape (on the hour, 00..23) + nightly verify→publish→email at **22:15** |
 | Task logon | **Headless** — runs as your existing VPS admin account, whether logged in or not (password stored by Task Scheduler), survives reboot |
 | AI date-verify | **Kept** — the nightly runs headless `claude` to fix/fill card dates before publishing |
 | Publish | `git push origin master` **is** the publish; the old redundant "second push" is skipped automatically |
