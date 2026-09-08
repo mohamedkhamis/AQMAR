@@ -1135,7 +1135,15 @@ function aqmar() {
           this.selectedId = Number.isFinite(id) ? id : person;
           this.view = 'detail';
         } else {
-          this.selectedId = null;
+          // selectedId is left deliberately untouched. Nulling it here made
+          // `current` transiently null while the detail subtree was still
+          // mounted, and on the popstate path Alpine ran a child binding
+          // (current.name, mediaPair(current).main.src, …) before the
+          // x-if="current" that owns them tore down - five expression
+          // errors on every Back out of a profile. Nothing reads a stale id:
+          // the section is x-show="view === 'detail' && current", and
+          // syncRouteUrl only writes ?person= while the view IS detail, so
+          // it never leaks back into the address bar.
           const known = ['home', 'stats', 'about', 'admin', 'admin-settings'];
           this.view = known.includes(view) ? view : 'home';
         }
