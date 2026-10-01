@@ -1177,6 +1177,24 @@ html[dir="rtl"] .lifeline-life { background: linear-gradient(to left, var(--oliv
 .st-rk-bar{display:block;height:100%;border-radius:6px}
 .st-rk-v{color:var(--muted);font-size:var(--text-sm);white-space:nowrap}
 
+/* brigade × year grid (layers design) - a row per brigade, a cell per year,
+   every bar on one scale shared by the whole grid. Under 480px the header
+   row hides and each cell shows its own year (.st-bg-cy) instead. */
+.st-bg{display:flex;flex-direction:column;gap:12px}
+.st-bg-head,.st-bg-row{display:grid;grid-template-columns:minmax(8em,10em) 1fr;gap:12px;align-items:center}
+.st-bg-cells{display:grid;gap:6px}
+.st-bg-yh{color:var(--faint);font-size:var(--text-xs);padding:2px 7px;border-radius:6px;transition:background .15s}
+.st-bg-b{display:flex;align-items:center;gap:8px;font-size:var(--text-sm);color:var(--ink-2);
+  min-width:0;border-radius:6px;padding:4px 6px;margin:-4px -6px;transition:background .15s}
+.st-bg-b span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.st-bg-b b{color:var(--faint);font-weight:400;margin-inline-start:auto}
+.st-bg-cell{display:flex;flex-direction:column;background:var(--bg-2);border-radius:6px;
+  padding:5px 7px 6px;min-width:0;transition:background .15s}
+.st-bg-cy{display:none;color:var(--faint);font-size:var(--text-xs);line-height:1.2}
+.st-bg-n{font-family:var(--font-display);font-weight:600;font-size:var(--text-sm);color:var(--ink);line-height:1.1}
+.st-bg-track{display:block;height:6px;border-radius:3px;background:var(--paper);margin-top:5px;overflow:hidden}
+.st-bg-fill{display:block;height:100%;border-radius:3px}
+
 /* legend — identity is never colour-alone, so the name sits beside the swatch */
 .st-legend{display:flex;gap:16px;flex-wrap:wrap;margin-top:16px}
 .st-lg{display:flex;align-items:center;gap:7px;font-size:var(--text-sm);color:var(--ink-2)}
@@ -1223,7 +1241,6 @@ html[dir="rtl"] .lifeline-life { background: linear-gradient(to left, var(--oliv
 @media (max-width:640px){
   .st-card{padding:14px 12px}
   .st-card svg.st-area{height:150px}
-  .st-card svg.st-stack{height:190px}
   .st-title{font-size:var(--text-base)}
   .st-sub{margin-bottom:12px}
   .st-legend{gap:10px}
@@ -1234,6 +1251,10 @@ html[dir="rtl"] .lifeline-life { background: linear-gradient(to left, var(--oliv
   .st-lbl{font-size:var(--text-xs)}
   .st-rk{gap:8px;padding:5px 4px}
   .st-rk-v{font-size:var(--text-xs)}
+  .st-bg-head{display:none}
+  .st-bg-row{grid-template-columns:1fr;gap:6px}
+  .st-bg-b{margin:0;padding:2px 0}
+  .st-bg-cy{display:block}
 }
 
 
@@ -1244,7 +1265,9 @@ html[dir="rtl"] .lifeline-life { background: linear-gradient(to left, var(--oliv
 rect.st-drill:hover { fill: rgba(251, 191, 36, 0.10); }
 .st-bar.st-drill:hover { filter: brightness(1.18); }
 .st-lg.st-drill:hover, .std-smc.st-drill:hover { color: var(--ink); }
-.st-rk.st-drill:hover, .st-year.st-drill:hover { background: var(--bg-2); }
+.st-rk.st-drill:hover, .st-year.st-drill:hover, .st-bg-b.st-drill:hover,
+.st-bg-yh.st-drill:hover { background: var(--bg-2); }
+.st-bg-cell.st-drill:hover { background: var(--bg-3); }
 .std-smc.st-drill { cursor: pointer; transition: background .15s; }
 .std-smc.st-drill:hover { background: var(--bg-2); }
 tr.st-drill:hover td { background: var(--bg-2); }

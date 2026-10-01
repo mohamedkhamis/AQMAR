@@ -635,14 +635,42 @@
       const area = statsArea(agg.months, agg.monthly, "gold", 230, "ar", "g1");
       assertEq(/st-grid|st-axis|<text/.test(area), false);
       assertEq(/preserveAspectRatio="none"/.test(area), true);
-      const stack = statsStacked(agg.months, agg.brigadeSeries, 320, "ar");
-      assertEq(/st-grid|st-axis|<text/.test(stack), false);
       const el = document.createElement("div");
       el.innerHTML = area;
       const hits = [...el.querySelectorAll("rect.st-hit")];
       assertEq(hits.length, 3);   // one per non-empty month
       assertEq(hits.every(r => +r.getAttribute("x") >= 0 &&
                                +r.getAttribute("x") + +r.getAttribute("width") <= 900), true);
+    });
+
+    test("aggregateStats splits each year's total by brigade", () => {
+      const agg = aggregateStats(STAT_ROWS);
+      // brigadeSeries order: غزة, الشمال, خانيونس
+      assertEq(agg.brigadeYears, [
+        { year: "2023", total: 2, values: [2, 0, 0] },
+        { year: "2024", total: 6, values: [0, 1, 1] },
+      ]);
+    });
+
+    test("statsBrigadeGrid draws a row per brigade and a cell per year on one shared scale", () => {
+      const el = document.createElement("div");
+      el.innerHTML = statsBrigadeGrid(aggregateStats(STAT_ROWS), "ar");
+      assertEq([...el.querySelectorAll(".st-bg-yh")].map(y => y.dataset.drillVal), ["2023", "2024"]);
+      const rows = [...el.querySelectorAll(".st-bg-row")];
+      assertEq(rows.length, 3);
+      assertEq(rows.map(r => r.querySelector(".st-bg-b").dataset.drillVal),
+               ["لواء غزة", "لواء الشمال", "لواء خانيونس"]);
+      // غزة: 2 in 2023 (the grid max → full bar), nothing in 2024 (no drill target)
+      const cells = [...rows[0].querySelectorAll(".st-bg-cell")];
+      assertEq(cells.map(c => c.querySelector(".st-bg-n").textContent), ["٢", "٠"]);
+      assertEq(cells[0].dataset.drillDim, "brigade-year");
+      assertEq(cells[0].dataset.drillVal, "لواء غزة|2023");
+      assertEq(cells[0].querySelector(".st-bg-fill").style.width, "100%");
+      assertEq(cells[1].hasAttribute("data-drill-dim"), false);
+      // الشمال: 1 in 2024 → half the shared scale
+      const c2 = [...rows[1].querySelectorAll(".st-bg-cell")];
+      assertEq(c2[1].querySelector(".st-bg-fill").style.width, "50%");
+      assertEq(c2[1].dataset.drillVal, "لواء الشمال|2024");
     });
 
     test("statsYearStrip sizes each year by its months and drills by year", () => {

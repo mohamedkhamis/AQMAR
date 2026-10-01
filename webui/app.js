@@ -574,6 +574,16 @@ function aqmar() {
           if (parts[1]) monthRange(parts[1]);
           break;
         }
+        // "name|YYYY" from the stacked year bars: that brigade, that year.
+        case 'brigade-year': {
+          const parts = String(val).split('|');
+          this.filters.brig = parts[0];
+          if (parts[1]) {
+            this.martyrdomFrom = parts[1] + '-01-01';
+            this.martyrdomTo = parts[1] + '-12-31';
+          }
+          break;
+        }
         default: return;
       }
 
@@ -615,6 +625,10 @@ function aqmar() {
         case 'brigade-month': {
           const p = String(val).split('|');
           return p[0] + ' — ' + statsMonthLabel(p[1], this.lang);
+        }
+        case 'brigade-year': {
+          const p = String(val).split('|');
+          return p[0] + ' — ' + (ar ? toArDigits(p[1]) : p[1]);
         }
         default: return '';
       }

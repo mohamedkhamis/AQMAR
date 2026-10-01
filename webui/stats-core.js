@@ -121,6 +121,18 @@
     });
     var years = Array.from(yearMap.values());
 
+    // Brigade × year grid (layers design): the year's total and its
+    // count for every brigade, in brigadeSeries order. Total minus the sum of
+    // the values is the rows with no brigade recorded.
+    var brigadeYears = years.map(function (y) {
+      var idxs = [];
+      months.forEach(function (m, i) { if (m.slice(0, 4) === y[0]) idxs.push(i); });
+      return { year: y[0], total: y[1],
+               values: brigadeSeries.map(function (d) {
+                 return idxs.reduce(function (sum, i) { return sum + d.values[i]; }, 0);
+               }) };
+    });
+
     // Birth year: ascending for the span, and ranked - most common first,
     // older year first on a tie - for the "most common birth years" list.
     // Rows with no birth date are simply absent; they are not a zero year.
@@ -147,6 +159,7 @@
       ranks: countBy(rows, function (r) { return r.rank; }),
       ageBands: ageBands, medAge: medAge,
       years: years,
+      brigadeYears: brigadeYears,
     };
   }
 
@@ -228,56 +241,51 @@
       '<g>' + hot + '</g></svg>';
   }
 
-  function statsStacked(months, series, h, lang) {
-    if (!months.length) return '';
-    var W = 900, P = { t: 3, b: 3 };
-    var ih = h - P.t - P.b, n = months.length;
-    var totals = months.map(function (m, i) {
-      return series.reduce(function (s, d) { return s + d.values[i]; }, 0);
-    });
-    var max = Math.max.apply(null, totals) || 1;
-    var x = function (i) { return n === 1 ? W / 2 : (i / (n - 1)) * W; };
-    var y = function (v) { return P.t + ih - (v / max) * ih; };
-    var acc = months.map(function () { return 0; }), paths = '';
-    series.forEach(function (d, si) {
-      var top = d.values.map(function (v, i) { return acc[i] + v; });
-      var up = top.map(function (v, i) {
-        return (i ? 'L' : 'M') + x(i).toFixed(1) + ' ' + y(v).toFixed(1);
-      }).join(' ');
-      var dn = '';
-      for (var i = n - 1; i >= 0; i--) dn += 'L' + x(i).toFixed(1) + ' ' + y(acc[i]).toFixed(1) + ' ';
-      // A 2px surface-coloured stroke is the gap between stacked segments.
-      paths += '<path d="' + up + ' ' + dn + 'Z" fill="' + SERIES[si % SERIES.length] +
-               '" fill-opacity=".82" stroke="var(--paper)" stroke-width="2"' +
-               ' vector-effect="non-scaling-stroke"/>';
-      acc = top;
-    });
-    // One hit area per (brigade, month) segment rather than one per month, so
-    // clicking a layer drills into that brigade in that month. Segments below
-    // ~6px get a 6px tall target centred on the band - otherwise the thin
-    // layers in quiet months are unclickable.
-    var hw = W / Math.max(1, n - 1), hot = '', base = months.map(function () { return 0; });
-    series.forEach(function (d, si) {
-      d.values.forEach(function (v, i) {
-        var lo = base[i], hi = base[i] + v;
-        base[i] = hi;
-        if (!v) return;
-        var yTop = y(hi), yBot = y(lo), hgt = Math.max(6, yBot - yTop);
-        var yy = (yBot - yTop) >= 6 ? yTop : (yTop + yBot) / 2 - 3;
-        var x0 = Math.max(0, x(i) - hw / 2), x1 = Math.min(W, x(i) + hw / 2);
-        hot += '<rect class="st-hit st-drill" x="' + x0.toFixed(1) +
-               '" y="' + yy.toFixed(1) + '" width="' + (x1 - x0).toFixed(1) +
-               '" height="' + hgt.toFixed(1) + '" fill="transparent"' +
-               ' data-t="' + esc(d.name + ' — ' + statsMonthLabel(months[i], lang)) + '"' +
-               ' data-v="' + esc(nfmt(v, lang) + ' / ' + nfmt(totals[i], lang)) + '"' +
-               ' data-drill-dim="brigade-month" data-drill-val="' +
-               esc(d.name + '|' + months[i]) + '"></rect>';
-      });
-    });
-    return '<svg class="st-stack" viewBox="0 0 ' + W + ' ' + h + '" preserveAspectRatio="none"' +
-      ' role="img" aria-label="' +
-      (lang === 'en' ? 'By brigade over time' : 'التوزيع حسب اللواء عبر الزمن') + '">' +
-      paths + '<g>' + hot + '</g></svg>';
+  // Brigade × year grid: one row per brigade (swatch, name, total), one cell
+  // per year with the count and a bar on ONE scale shared by the whole grid,
+  // so cells compare across brigades as well as across years. The year
+  // header drills into the year, a name into the brigade, a cell into both;
+  // a zero cell has nothing behind it and is not a target. On a phone the
+  // header row hides and every cell carries its own year label instead.
+  // Chosen by the user on 2026-10-01 from a three-way preview, replacing the
+  // stacked area.
+  function statsBrigadeGrid(agg, lang) {
+    var ys = agg.brigadeYears || [];
+    if (!ys.length || !agg.brigadeSeries.length) return '';
+    var cellMax = 0;
+    ys.forEach(function (y) { y.values.forEach(function (v) { if (v > cellMax) cellMax = v; }); });
+    cellMax = cellMax || 1;
+    var cols = ' style="grid-template-columns:repeat(' + ys.length + ',1fr)"';
+    var head = '<div class="st-bg-head"><div></div><div class="st-bg-cells"' + cols + '>' +
+      ys.map(function (y) {
+        return '<div class="st-bg-yh num st-hit st-drill" role="button" tabindex="0"' +
+          ' data-t="' + esc(nfmt(y.year, lang)) + '" data-v="' + esc(nfmt(y.total, lang)) + '"' +
+          ' data-drill-dim="year" data-drill-val="' + esc(y.year) + '">' +
+          nfmt(y.year, lang) + '</div>';
+      }).join('') + '</div></div>';
+    return '<div class="st-bg">' + head + agg.brigadeSeries.map(function (d, bi) {
+      var c = SERIES[bi % SERIES.length];
+      return '<div class="st-bg-row">' +
+        '<div class="st-bg-b st-hit st-drill" role="button" tabindex="0"' +
+        ' data-t="' + esc(d.name) + '" data-v="' + esc(nfmt(d.total, lang)) + '"' +
+        ' data-drill-dim="brigade" data-drill-val="' + esc(d.name) + '">' +
+        '<i class="st-sw" style="background:' + c + '"></i><span>' + esc(d.name) + '</span>' +
+        '<b class="num">' + nfmt(d.total, lang) + '</b></div>' +
+        '<div class="st-bg-cells"' + cols + '>' + ys.map(function (y) {
+          var v = y.values[bi];
+          var drill = v
+            ? ' role="button" tabindex="0" data-drill-dim="brigade-year" data-drill-val="' +
+              esc(d.name + '|' + y.year) + '"'
+            : '';
+          return '<div class="st-bg-cell st-hit' + (v ? ' st-drill' : '') + '"' +
+            ' data-t="' + esc(d.name + ' — ' + nfmt(y.year, lang)) + '"' +
+            ' data-v="' + esc(nfmt(v, lang) + ' / ' + nfmt(y.total, lang)) + '"' + drill + '>' +
+            '<span class="st-bg-cy num">' + nfmt(y.year, lang) + '</span>' +
+            '<span class="st-bg-n num">' + nfmt(v, lang) + '</span>' +
+            '<span class="st-bg-track"><span class="st-bg-fill" style="width:' +
+            (v / cellMax * 100).toFixed(1) + '%;background:' + c + '"></span></span></div>';
+        }).join('') + '</div></div>';
+    }).join('') + '</div>';
   }
 
   // Row of year cells beneath a time chart. Each cell is as wide as that
@@ -420,7 +428,7 @@
   global.statsNum         = nfmt;
   global.statsCount       = statsCount;
   global.statsArea        = statsArea;
-  global.statsStacked     = statsStacked;
+  global.statsBrigadeGrid = statsBrigadeGrid;
   global.statsYearStrip   = statsYearStrip;
   global.statsBars        = statsBars;
   global.statsRanked      = statsRanked;

@@ -175,7 +175,8 @@ never block a row.
   maps the dimension onto filters the registry **already has** —
   `month`/`year` → `martyrdomFrom`/`To`, `birth-year` → `birthFrom`/`To`,
   `age` ("lo|hi" from the five-year bands, or one age) → `ageMin`/`Max`,
-  `brigade`/`battalion`/`rank` → `filters.*`. A click lands the visitor in the
+  `brigade`/`battalion`/`rank` → `filters.*`, `brigade-year` ("name|year") →
+  `filters.brig` plus that year's martyrdom range. A click lands the visitor in the
   ordinary grid, not a parallel result list, so they can keep refining.
   Drills replace each other rather than intersecting, and `drillLabel` drives
   the chip that explains the narrowed grid.
@@ -190,12 +191,18 @@ never block a row.
   view (`statsTable`) so identity is never colour-alone, and a single
   delegated `.st-hit` listener drives the shared hover readout.
 - **No grid, no axis (2026-10-01).** The user asked for the `st-grid`/`st-axis`
-  diagrams to go. `statsArea`/`statsStacked` now draw only the curve on a
-  900-unit viewBox with `preserveAspectRatio="none"` (`styles.css` fixes their
-  height under 640px, so nothing scrolls sideways on a phone), and
-  `statsYearStrip` beneath them is the time anchor: one clickable cell per
-  year, its width proportional to its months, so a partial first year is
-  visibly shorter. Both histograms are gone: birth years are `statsBirthYears`
+  diagrams to go. `statsArea` now draws only the curve on a 900-unit viewBox
+  with `preserveAspectRatio="none"` (`styles.css` fixes its height under
+  640px, so nothing scrolls sideways on a phone), and `statsYearStrip`
+  beneath it is the time anchor: one clickable cell per year, its width
+  proportional to its months, so a partial first year is visibly shorter.
+  The layers design's stacked area (`statsStacked`) is gone as well: the user
+  picked `statsBrigadeGrid` from a three-way preview — a row per brigade, a
+  cell per year holding the count and a bar on one scale shared by the whole
+  grid; the year header drills by `year`, a name by `brigade`, a cell by
+  `brigade-year` ("name|year"). Under 480px the header row hides and each
+  cell shows its own year. Its table view keeps the month-by-month
+  breakdown. Both histograms are gone: birth years are `statsBirthYears`
   (a numbered top-10 `<ol>` via `statsRanked`, then a table of every year in
   rank order) and ages are five-year bands through `statsBars`. The decade
   rollup, the "total per brigade" list under the stacked legend and the
