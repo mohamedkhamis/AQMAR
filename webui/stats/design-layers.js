@@ -5,13 +5,14 @@
 // rather than "how many?" alone.
 //
 // The stack is the one chart here with five series at once, so it ships a
-// legend AND a table view — identity is never carried by colour alone.
+// legend AND a table view — identity is never carried by colour alone. The
+// legend also carries each brigade's total, which is why there is no second
+// "total per brigade" list under it.
 (function (global) {
   "use strict";
 
   var CSS = [
-    '.std-layers .std-sec{margin-top:40px}',
-    '.std-layers .std-note{color:var(--faint);font-size:var(--text-xs);margin-top:10px}'
+    '.std-layers .std-sec{margin-top:40px}'
   ].join('\n');
 
   function render(agg, lang) {
@@ -23,11 +24,16 @@
       h += '<section><h3 class="st-title">' +
         (ar ? 'التوزيع حسب اللواء عبر الزمن' : 'By brigade over time') + '</h3>' +
         '<p class="st-sub">' +
-        (ar ? 'ارتفاع الشريط كاملًا هو مجموع الشهر، وكل طبقة نصيب لواء.'
-            : 'Full height is the month total; each layer is one brigade.') +
+        (ar ? 'ارتفاع الشريط كاملًا هو مجموع الشهر، وكل طبقة نصيب لواء؛ والصفّ أسفله مجموع كل سنة.'
+            : 'Full height is the month total; each layer is one brigade; the row beneath totals each year.') +
         '</p><div class="st-card">' +
         statsStacked(agg.months, agg.brigadeSeries, 320, lang) +
+        statsYearStrip(agg.years, lang) +
         statsLegend(agg.brigadeSeries, lang) + '</div>' +
+        '<p class="st-note">' +
+        (ar ? 'السنة الأولى ناقصة: السجل يبدأ من أول منشور في القناة، لا من أول يناير.'
+            : 'The first year is partial — the record starts at the channel’s first post.') +
+        '</p>' +
         statsTable(ar ? 'عرض الأرقام كجدول' : 'Show the numbers as a table',
           [ar ? 'الشهر' : 'Month'].concat(agg.brigadeSeries.map(function (d) { return d.name; })),
           agg.months.map(function (m, i) {
@@ -36,38 +42,13 @@
             }));
           }), 'month', agg.months) +
         '</section>';
-
-      h += '<section class="std-sec"><h3 class="st-title">' +
-        (ar ? 'المجموع لكل لواء' : 'Total per brigade') + '</h3>' +
-        '<p class="st-sub">' + (ar ? 'بنفس ألوان الطبقات أعلاه.' : 'Same colours as the layers above.') + '</p>' +
-        '<div class="st-card">' +
-        statsBars(agg.brigades, function (i) { return STATS_SERIES[i % STATS_SERIES.length]; },
-                  lang, 'brigade') +
-        '</div></section>';
     }
 
-    if (agg.birthDecades.length) {
+    if (agg.birthYearsRanked.length) {
       h += '<section class="std-sec"><h3 class="st-title">' +
-        (ar ? 'أجيال الشهداء' : 'Generations') + '</h3>' +
-        '<p class="st-sub">' +
-        (ar ? 'عدد الشهداء المولودين في كل عقد.'
-            : 'How many were born in each decade.') + '</p>' +
-        '<div class="st-card">' +
-        statsBars(statsDecades(agg, lang), function () { return 'var(--stat-1)'; },
-                  lang, 'birth-decade') +
-        '</div></section>';
-    }
-
-    if (agg.years.length) {
-      h += '<section class="std-sec"><h3 class="st-title">' +
-        (ar ? 'المجموع لكل سنة' : 'Total per year') + '</h3>' +
-        '<div class="st-card">' +
-        statsBars(agg.years.map(function (y) { return [statsNum(y[0], lang), y[1], y[0]]; }),
-                  function () { return 'var(--olive)'; }, lang, 'year') +
-        '</div><p class="std-note">' +
-        (ar ? 'السنة الأولى ناقصة: السجل يبدأ من أول منشور في القناة، لا من أول يناير.'
-            : 'The first year is partial — the record starts at the channel’s first post.') +
-        '</p></section>';
+        (ar ? 'أكثر سنوات الميلاد' : 'Most common birth years') + '</h3>' +
+        statsBirthYears(agg, lang, 10) +
+        '</section>';
     }
 
     return h + '</div>';

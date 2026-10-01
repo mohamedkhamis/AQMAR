@@ -1,9 +1,9 @@
 // webui/stats/design-register.js — «السجلّ» / "The Register"
 //
 // Editorial treatment, read top-to-bottom: one large figure opens the page,
-// then a wide monthly curve, then ranked lists. The quietest of the three and
-// the closest in tone to the rest of the memorial, which is why it is the
-// default in src/settings_store.py.
+// then a wide monthly curve anchored by its years, then ranked lists. The
+// quietest of the three and the closest in tone to the rest of the memorial,
+// which is why it is the default in src/settings_store.py.
 //
 // Registers on window.AQMAR_STATS_DESIGNS; stats-designs.js adapts it.
 // Scoped CSS (.std-register) travels with the design — the same deliberate
@@ -28,6 +28,8 @@
 
     var h = '<div class="std-register">';
 
+    // The hero states the span once; the monthly section does not repeat it —
+    // the year strip under the curve is the time reference there.
     h += '<div class="std-hero"><div class="std-big num">' + statsNum(agg.total, lang) + '</div>' +
          '<div class="std-cap">' +
          (ar ? 'شهيدًا موثّقًا في السجل، من ' + first + ' إلى ' + last + '.'
@@ -37,9 +39,15 @@
     h += '<section class="std-sec"><h3 class="st-title">' +
          (ar ? 'الشهداء شهريًّا' : 'Martyrs per month') + '</h3>' +
          '<p class="st-sub">' +
-         (ar ? 'من ' + first + ' إلى ' + last + '.' : first + ' – ' + last + '.') + '</p>' +
+         (ar ? 'كل نقطة شهر، والصفّ أسفل المنحنى مجموع كل سنة.'
+             : 'One point per month; the row beneath the curve totals each year.') + '</p>' +
          '<div class="st-card">' +
-         statsArea(agg.months, agg.monthly, 'var(--forest)', 230, lang, 'stg-reg') + '</div>' +
+         statsArea(agg.months, agg.monthly, 'var(--forest)', 230, lang, 'stg-reg') +
+         statsYearStrip(agg.years, lang) + '</div>' +
+         '<p class="st-note">' +
+         (ar ? 'السنة الأولى ناقصة: السجل يبدأ من أول منشور في القناة، لا من أول يناير.'
+             : 'The first year is partial — the record starts at the channel’s first post.') +
+         '</p>' +
          statsTable(ar ? 'عرض الأرقام كجدول' : 'Show the numbers as a table',
                     [ar ? 'الشهر' : 'Month', ar ? 'العدد' : 'Count'],
                     agg.months.map(function (m, i) {
@@ -58,33 +66,11 @@
            '</div></section>';
     }
 
-    if (agg.birthYears.length) {
+    if (agg.birthYearsRanked.length) {
       h += '<section class="std-sec"><h3 class="st-title">' +
-           (ar ? 'سنة الميلاد' : 'Year of birth') + '</h3>' +
-           '<p class="st-sub">' +
-           (ar ? 'من ' + statsNum(agg.birthYears[0][0], lang) + ' إلى ' +
-                 statsNum(agg.birthYears[agg.birthYears.length - 1][0], lang) +
-                 (agg.topBirthYear ? '، وأكثرها ' + statsNum(agg.topBirthYear[0], lang) : '') + '.'
-               : agg.birthYears[0][0] + '–' + agg.birthYears[agg.birthYears.length - 1][0] +
-                 (agg.topBirthYear ? ', commonest ' + agg.topBirthYear[0] : '') + '.') +
-           '</p><div class="st-card">' +
-           statsHist(agg.birthYears, 'var(--stat-1)', lang,
-                     { dim: 'birth-year',
-                       label: ar ? 'توزيع سنوات الميلاد' : 'Birth year distribution' }) +
-           '</div>' +
-           statsTable(ar ? 'عرض الأرقام كجدول' : 'Show the numbers as a table',
-                      [ar ? 'السنة' : 'Year', ar ? 'العدد' : 'Count'],
-                      agg.birthYears.map(function (e) {
-                        return [statsNum(e[0], lang), statsNum(e[1], lang)];
-                      }), 'birth-year', agg.birthYears.map(function (e) { return e[0]; })) +
+           (ar ? 'أكثر سنوات الميلاد' : 'Most common birth years') + '</h3>' +
+           statsBirthYears(agg, lang, 10) +
            '</section>';
-
-      h += '<section class="std-sec"><h3 class="st-title">' +
-           (ar ? 'حسب العقد' : 'By decade') + '</h3>' +
-           '<div class="st-card">' +
-           statsBars(statsDecades(agg, lang), function () { return 'var(--stat-1)'; },
-                     lang, 'birth-decade') +
-           '</div></section>';
     }
 
     if (agg.battalionsTop.length) {

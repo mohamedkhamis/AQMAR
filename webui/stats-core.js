@@ -19,6 +19,13 @@
 // against this site's dark-forest surface: every pair clears the
 // colour-blind separation floor and the 3:1 contrast floor. Do not swap a
 // hue for a prettier one without re-validating the set.
+//
+// The time charts carry NO grid and NO axis (removed 2026-10-01). The axis
+// labels were the one thing that forced a 560px minimum width on phones -
+// a 900-unit viewBox squeezed into 375px rendered them at 3px - and the
+// scrolling card that worked around it hid the start of every chart. The
+// curves now scale to their card; the hover readout and the table view carry
+// the exact figures, and statsYearStrip() beneath a chart is its time anchor.
 (function (global) {
   "use strict";
 
@@ -26,8 +33,8 @@
                 'var(--stat-4)', 'var(--stat-5)'];
 
   // Brigade spellings that OCR splits but which name the same brigade. The
-  // canon pass fixes military_rank/battalion in the DB; brigade is not in
-  // CANON_COLUMNS, so the fold happens here for display only.
+  // nightly canon pass merges them in the DB too; this is the display-time
+  // safety net for rows scraped since the last pass.
   var BRIGADE_FOLD = { 'لواء خان يونس': 'لواء خانيونس' };
 
   function fold(name) { return BRIGADE_FOLD[name] || name; }
@@ -84,31 +91,39 @@
                values: byBrigMonth.get(b[0]) || months.map(function () { return 0; }) };
     });
 
-    // Age at martyrdom, as a histogram of whole years.
-    var ageCount = new Map();
+    // Age at martyrdom in five-year bands (20-24, 25-29, ...) plus the median.
+    // One bar per whole year was unreadable on a phone and, with no axis,
+    // meaningless; a band is a figure a reader can hold. [lo, count] - the
+    // band is lo..lo+4 and the renderer labels it.
+    var bandCount = new Map(), allAges = [];
     rows.forEach(function (r) {
       if (!r.birth || !r.martyrdom) return;
       var a = ageAtDeath(r.birth, r.martyrdom);
       if (a === null || a < 10 || a > 80) return;
-      ageCount.set(a, (ageCount.get(a) || 0) + 1);
+      allAges.push(a);
+      var lo = Math.floor(a / 5) * 5;
+      bandCount.set(lo, (bandCount.get(lo) || 0) + 1);
     });
-    var ages = Array.from(ageCount.entries()).sort(function (a, b) { return a[0] - b[0]; });
+    var ageBands = Array.from(bandCount.entries()).sort(function (a, b) { return a[0] - b[0]; });
+    allAges.sort(function (a, b) { return a - b; });
+    var medAge = allAges.length ? allAges[Math.floor(allAges.length / 2)] : null;
 
-    var flat = [];
-    ages.forEach(function (a) { for (var i = 0; i < a[1]; i++) flat.push(a[0]); });
-    var medAge = flat.length ? flat[Math.floor(flat.length / 2)] : null;
-
-    var years = new Map();
+    // [year, count, months-in-span] in time order. The third element is how
+    // many charted months fall in that year, so statsYearStrip() can give each
+    // year its true share of the time axis - the first and last years are
+    // partial, and a cell that is visibly shorter says so.
+    var yearMap = new Map();
     months.forEach(function (m, i) {
       var y = m.slice(0, 4);
-      years.set(y, (years.get(y) || 0) + monthly[i]);
+      var e = yearMap.get(y) || [y, 0, 0];
+      e[1] += monthly[i]; e[2]++;
+      yearMap.set(y, e);
     });
+    var years = Array.from(yearMap.values());
 
-    var peak = 0;
-    monthly.forEach(function (v, i) { if (v > monthly[peak]) peak = i; });
-
-    // Birth year: a plain year histogram, plus the decade rollup. Rows with no
-    // birth date are simply absent - they are not a zero year.
+    // Birth year: ascending for the span, and ranked - most common first,
+    // older year first on a tie - for the "most common birth years" list.
+    // Rows with no birth date are simply absent; they are not a zero year.
     var byYear = new Map();
     rows.forEach(function (r) {
       var y = parseInt(String(r.birth || '').slice(0, 4), 10);
@@ -116,37 +131,22 @@
       byYear.set(y, (byYear.get(y) || 0) + 1);
     });
     var birthYears = Array.from(byYear.entries()).sort(function (a, b) { return a[0] - b[0]; });
-
-    var byDecade = new Map();
-    birthYears.forEach(function (e) {
-      var d = Math.floor(e[0] / 10) * 10;
-      byDecade.set(d, (byDecade.get(d) || 0) + e[1]);
-    });
-    // [label, count, rawDecade] - statsBars drills on the third element, so the
-    // label can carry Arabic-Indic digits while the drill value stays numeric.
-    var birthDecades = Array.from(byDecade.entries())
-      .sort(function (a, b) { return a[0] - b[0]; })
-      .map(function (e) { return [String(e[0]) + 's', e[1], e[0]]; });
-
-    var topBirthYear = null;
-    birthYears.forEach(function (e) {
-      if (!topBirthYear || e[1] > topBirthYear[1]) topBirthYear = e;
+    var birthYearsRanked = birthYears.slice().sort(function (a, b) {
+      return b[1] - a[1] || a[0] - b[0];
     });
 
     var battalions = countBy(rows, function (r) { return r.battalion; });
     return {
       birthYears: birthYears,
-      birthDecades: birthDecades,
-      topBirthYear: topBirthYear,
+      birthYearsRanked: birthYearsRanked,
       withBirth: birthYears.reduce(function (n, e) { return n + e[1]; }, 0),
       total: rows.length,
       months: months, monthly: monthly,
       brigades: brigades, brigadeSeries: brigadeSeries,
       battalions: battalions, battalionsTop: battalions.slice(0, 14),
       ranks: countBy(rows, function (r) { return r.rank; }),
-      ages: ages, medAge: medAge,
-      years: Array.from(years.entries()),
-      peakIndex: months.length ? peak : -1,
+      ageBands: ageBands, medAge: medAge,
+      years: years,
     };
   }
 
@@ -171,78 +171,72 @@
   }
   function nfmt(n, lang) { return lang === 'en' ? String(n) : toArDigits(n); }
 
+  // "٩٠ شهيدًا" / "90 martyrs". Arabic counts inflect the noun: 1 and 2 are
+  // their own words, 3-10 take the plural, 11-99 the accusative singular,
+  // and a round hundred the bare singular. The remainder mod 100 decides,
+  // which is exact for everything this register will ever count.
+  function statsCount(n, lang) {
+    if (lang === 'en') return n + (n === 1 ? ' martyr' : ' martyrs');
+    if (n === 1) return 'شهيد واحد';
+    if (n === 2) return 'شهيدان';
+    var r = n % 100;
+    var word = (r >= 3 && r <= 10) ? 'شهداء' : (r === 0 ? 'شهيد' : 'شهيدًا');
+    return toArDigits(n) + ' ' + word;
+  }
+
   // ---- SVG builders -------------------------------------------------------
-  // All charts are hand-authored SVG on a fixed viewBox and scale with their
-  // container. Hover targets are transparent full-height rects so the hit
-  // area is far larger than the mark itself.
-
-  function yAxis(P, W, ih, max, steps, lang) {
-    var g = '';
-    for (var i = 0; i <= steps; i++) {
-      var v = Math.round(max * i / steps);
-      var yy = P.t + ih - (v / max) * ih;
-      g += '<line x1="' + P.l + '" x2="' + (W - P.r) + '" y1="' + yy.toFixed(1) +
-           '" y2="' + yy.toFixed(1) + '"/>' +
-           '<text x="' + (P.l - 8) + '" y="' + (yy + 4).toFixed(1) +
-           '" text-anchor="end">' + nfmt(v, lang) + '</text>';
-    }
-    return g;
-  }
-
-  function yearTicks(months, x, h, lang) {
-    var out = '';
-    months.forEach(function (m, i) {
-      if (m.slice(5) === '01' || i === 0) {
-        out += '<text x="' + x(i).toFixed(1) + '" y="' + (h - 8) +
-               '" text-anchor="middle">' + nfmt(m.slice(0, 4), lang) + '</text>';
-      }
-    });
-    return out;
-  }
+  // The time charts are hand-authored SVG on a fixed 900-unit-wide viewBox
+  // with preserveAspectRatio="none", so CSS can give them a height that suits
+  // the screen (styles.css does, under 640px) while the width follows the
+  // card. Strokes are non-scaling so that stretch never thickens a line.
+  // Hover targets are transparent full-height rects, so the hit area is far
+  // larger than the mark itself.
 
   function statsArea(months, vals, color, h, lang, gid) {
     if (!months.length) return '';
-    var W = 900, P = { t: 14, r: 8, b: 26, l: 42 };
-    var iw = W - P.l - P.r, ih = h - P.t - P.b;
-    var max = Math.max.apply(null, vals) || 1, n = vals.length;
-    var x = function (i) { return P.l + (n === 1 ? iw / 2 : (i / (n - 1)) * iw); };
+    var W = 900, P = { t: 3, b: 3 };
+    var ih = h - P.t - P.b, n = vals.length;
+    var max = Math.max.apply(null, vals) || 1;
+    var x = function (i) { return n === 1 ? W / 2 : (i / (n - 1)) * W; };
     var y = function (v) { return P.t + ih - (v / max) * ih; };
     var line = vals.map(function (v, i) {
       return (i ? 'L' : 'M') + x(i).toFixed(1) + ' ' + y(v).toFixed(1);
     }).join(' ');
     var area = line + ' L' + x(n - 1).toFixed(1) + ' ' + (P.t + ih) +
                ' L' + x(0).toFixed(1) + ' ' + (P.t + ih) + ' Z';
-    var hot = '';
+    // Each month's hit area reaches halfway to its neighbours, clamped to the
+    // viewBox so the first and last never poke outside the card.
+    var hw = W / Math.max(1, n - 1), hot = '';
     vals.forEach(function (v, i) {
       if (!v) return;   // an empty month has nothing to drill into
-      hot += '<rect class="st-hit st-drill" x="' + (x(i) - iw / n / 2).toFixed(1) + '" y="' + P.t +
-             '" width="' + (iw / n).toFixed(1) + '" height="' + ih + '" fill="transparent"' +
+      var x0 = Math.max(0, x(i) - hw / 2), x1 = Math.min(W, x(i) + hw / 2);
+      hot += '<rect class="st-hit st-drill" x="' + x0.toFixed(1) + '" y="0" width="' +
+             (x1 - x0).toFixed(1) + '" height="' + h + '" fill="transparent"' +
              ' data-t="' + esc(statsMonthLabel(months[i], lang)) + '"' +
              ' data-v="' + esc(nfmt(v, lang)) + '"' +
              ' data-drill-dim="month" data-drill-val="' + months[i] + '"></rect>';
     });
     gid = gid || 'stg';
-    return '<svg viewBox="0 0 ' + W + ' ' + h + '" role="img" aria-label="' +
-      (lang === 'en' ? 'Martyrs per month' : 'الشهداء شهريًّا') + '">' +
+    return '<svg class="st-area" viewBox="0 0 ' + W + ' ' + h + '" preserveAspectRatio="none"' +
+      ' role="img" aria-label="' + (lang === 'en' ? 'Martyrs per month' : 'الشهداء شهريًّا') + '">' +
       '<defs><linearGradient id="' + gid + '" x1="0" x2="0" y1="0" y2="1">' +
       '<stop offset="0" stop-color="' + color + '" stop-opacity=".38"/>' +
       '<stop offset="1" stop-color="' + color + '" stop-opacity=".02"/></linearGradient></defs>' +
-      '<g class="st-grid st-axis">' + yAxis(P, W, ih, max, 4, lang) + '</g>' +
-      '<g class="st-axis">' + yearTicks(months, x, h, lang) + '</g>' +
       '<path d="' + area + '" fill="url(#' + gid + ')"/>' +
       '<path d="' + line + '" fill="none" stroke="' + color +
-      '" stroke-width="2" stroke-linejoin="round"/><g>' + hot + '</g></svg>';
+      '" stroke-width="2" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>' +
+      '<g>' + hot + '</g></svg>';
   }
 
   function statsStacked(months, series, h, lang) {
     if (!months.length) return '';
-    var W = 900, P = { t: 14, r: 8, b: 26, l: 42 };
-    var iw = W - P.l - P.r, ih = h - P.t - P.b, n = months.length;
+    var W = 900, P = { t: 3, b: 3 };
+    var ih = h - P.t - P.b, n = months.length;
     var totals = months.map(function (m, i) {
       return series.reduce(function (s, d) { return s + d.values[i]; }, 0);
     });
     var max = Math.max.apply(null, totals) || 1;
-    var x = function (i) { return P.l + (i / (n - 1)) * iw; };
+    var x = function (i) { return n === 1 ? W / 2 : (i / (n - 1)) * W; };
     var y = function (v) { return P.t + ih - (v / max) * ih; };
     var acc = months.map(function () { return 0; }), paths = '';
     series.forEach(function (d, si) {
@@ -254,14 +248,15 @@
       for (var i = n - 1; i >= 0; i--) dn += 'L' + x(i).toFixed(1) + ' ' + y(acc[i]).toFixed(1) + ' ';
       // A 2px surface-coloured stroke is the gap between stacked segments.
       paths += '<path d="' + up + ' ' + dn + 'Z" fill="' + SERIES[si % SERIES.length] +
-               '" fill-opacity=".82" stroke="var(--paper)" stroke-width="2"/>';
+               '" fill-opacity=".82" stroke="var(--paper)" stroke-width="2"' +
+               ' vector-effect="non-scaling-stroke"/>';
       acc = top;
     });
     // One hit area per (brigade, month) segment rather than one per month, so
     // clicking a layer drills into that brigade in that month. Segments below
     // ~6px get a 6px tall target centred on the band - otherwise the thin
     // layers in quiet months are unclickable.
-    var hot = '', base = months.map(function () { return 0; });
+    var hw = W / Math.max(1, n - 1), hot = '', base = months.map(function () { return 0; });
     series.forEach(function (d, si) {
       d.values.forEach(function (v, i) {
         var lo = base[i], hi = base[i] + v;
@@ -269,8 +264,9 @@
         if (!v) return;
         var yTop = y(hi), yBot = y(lo), hgt = Math.max(6, yBot - yTop);
         var yy = (yBot - yTop) >= 6 ? yTop : (yTop + yBot) / 2 - 3;
-        hot += '<rect class="st-hit st-drill" x="' + (x(i) - iw / n / 2).toFixed(1) +
-               '" y="' + yy.toFixed(1) + '" width="' + (iw / n).toFixed(1) +
+        var x0 = Math.max(0, x(i) - hw / 2), x1 = Math.min(W, x(i) + hw / 2);
+        hot += '<rect class="st-hit st-drill" x="' + x0.toFixed(1) +
+               '" y="' + yy.toFixed(1) + '" width="' + (x1 - x0).toFixed(1) +
                '" height="' + hgt.toFixed(1) + '" fill="transparent"' +
                ' data-t="' + esc(d.name + ' — ' + statsMonthLabel(months[i], lang)) + '"' +
                ' data-v="' + esc(nfmt(v, lang) + ' / ' + nfmt(totals[i], lang)) + '"' +
@@ -278,15 +274,31 @@
                esc(d.name + '|' + months[i]) + '"></rect>';
       });
     });
-    return '<svg viewBox="0 0 ' + W + ' ' + h + '" role="img" aria-label="' +
+    return '<svg class="st-stack" viewBox="0 0 ' + W + ' ' + h + '" preserveAspectRatio="none"' +
+      ' role="img" aria-label="' +
       (lang === 'en' ? 'By brigade over time' : 'التوزيع حسب اللواء عبر الزمن') + '">' +
-      '<g class="st-grid st-axis">' + yAxis(P, W, ih, max, 4, lang) + '</g>' +
-      '<g class="st-axis">' + yearTicks(months, x, h, lang) + '</g>' +
       paths + '<g>' + hot + '</g></svg>';
   }
 
+  // Row of year cells beneath a time chart. Each cell is as wide as that
+  // year's share of the charted months, so it sits under the stretch of curve
+  // it totals - and a partial first or last year is visibly shorter. LTR like
+  // the chart itself: time runs left to right in both. Every cell drills into
+  // its year. `years` is agg.years: [year, count, months-in-span].
+  function statsYearStrip(years, lang) {
+    if (!years || !years.length) return '';
+    return '<div class="st-years" dir="ltr">' + years.map(function (y) {
+      return '<div class="st-year st-hit st-drill" role="button" tabindex="0"' +
+        ' style="flex:' + y[2] + ' 1 0"' +
+        ' data-t="' + esc(nfmt(y[0], lang)) + '" data-v="' + esc(nfmt(y[1], lang)) + '"' +
+        ' data-drill-dim="year" data-drill-val="' + esc(y[0]) + '">' +
+        '<span class="st-year-y num">' + nfmt(y[0], lang) + '</span>' +
+        '<span class="st-year-n num">' + nfmt(y[1], lang) + '</span></div>';
+    }).join('') + '</div>';
+  }
+
   // `dim` is the drill dimension these bars represent ('brigade', 'battalion',
-  // 'rank', 'year'); pass null for a non-drillable list. Each bar is a real
+  // 'rank', 'age'); pass null for a non-drillable list. Each bar is a real
   // button so the keyboard reaches it - there are few enough of them for that
   // to be reasonable, unlike the dense month marks.
   function statsBars(items, colorFn, lang, dim) {
@@ -306,48 +318,66 @@
     }).join('') + '</div>';
   }
 
+  // A numbered ranking: "١ · ١٩٩٣ · ▇▇▇▇ · ٩٠ شهيدًا". Items are [label, count,
+  // drillVal], already in rank order. An <ol> because the order IS the
+  // statistic; the whole row is the hit target so the number, the label and
+  // the bar all drill the same way.
+  function statsRanked(items, color, lang, dim) {
+    if (!items.length) return '';
+    var max = Math.max.apply(null, items.map(function (i) { return i[1]; })) || 1;
+    return '<ol class="st-ranked">' + items.map(function (it, i) {
+      var count = statsCount(it[1], lang);
+      var drill = dim
+        ? ' role="button" tabindex="0" data-drill-dim="' + dim +
+          '" data-drill-val="' + esc(it[2] != null ? it[2] : it[0]) + '"'
+        : '';
+      return '<li><div class="st-rk st-hit' + (dim ? ' st-drill' : '') + '"' +
+        ' data-t="' + esc(it[0]) + '" data-v="' + esc(count) + '"' + drill + '>' +
+        '<span class="st-rk-n num">' + nfmt(i + 1, lang) + '</span>' +
+        '<span class="st-rk-l num">' + esc(it[0]) + '</span>' +
+        '<span class="st-rk-track"><span class="st-rk-bar" style="width:' +
+        (it[1] / max * 100).toFixed(1) + '%;background:' + color + '"></span></span>' +
+        '<span class="st-rk-v">' + esc(count) + '</span></div></li>';
+    }).join('') + '</ol>';
+  }
+
+  // The "most common birth years" block every design shows: the top `n` as a
+  // numbered list, then a table view that carries EVERY year in rank order so
+  // the sequence continues past the cut. Returns the subtitle, the card and
+  // the table; the design supplies the <section> and its heading.
+  function statsBirthYears(agg, lang, n) {
+    var ar = lang !== 'en';
+    var ranked = agg.birthYearsRanked || [];
+    if (!ranked.length) return '';
+    var first = agg.birthYears[0][0], last = agg.birthYears[agg.birthYears.length - 1][0];
+    var top = ranked.slice(0, n || 10).map(function (e) {
+      return [nfmt(e[0], lang), e[1], e[0]];
+    });
+    return '<p class="st-sub">' +
+      (ar ? statsCount(agg.withBirth, lang) + ' لهم تاريخ ميلاد مسجَّل، من ' +
+            nfmt(first, lang) + ' إلى ' + nfmt(last, lang) + '. الأكثر أولًا.'
+          : statsCount(agg.withBirth, lang) + ' with a recorded birth date, ' +
+            first + '–' + last + '. Most common first.') + '</p>' +
+      '<div class="st-card">' + statsRanked(top, 'var(--stat-1)', lang, 'birth-year') + '</div>' +
+      statsTable(ar ? 'كل السنوات بالترتيب' : 'Every year, in order',
+                 ['#', ar ? 'السنة' : 'Year', ar ? 'العدد' : 'Count'],
+                 ranked.map(function (e, i) {
+                   return [nfmt(i + 1, lang), nfmt(e[0], lang), nfmt(e[1], lang)];
+                 }), 'birth-year', ranked.map(function (e) { return e[0]; }));
+  }
+
   function statsSpark(vals, color) {
     if (!vals.length) return '';
     var W = 200, H = 42, max = Math.max.apply(null, vals) || 1, n = vals.length;
-    var x = function (i) { return (i / (n - 1)) * W; };
+    var x = function (i) { return n === 1 ? W / 2 : (i / (n - 1)) * W; };
     var y = function (v) { return H - 2 - (v / max) * (H - 6); };
     var line = vals.map(function (v, i) {
       return (i ? 'L' : 'M') + x(i).toFixed(1) + ' ' + y(v).toFixed(1);
     }).join(' ');
     return '<svg viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none" aria-hidden="true" class="st-spark">' +
       '<path d="' + line + ' L' + W + ' ' + H + ' L0 ' + H + ' Z" fill="' + color + '" fill-opacity=".14"/>' +
-      '<path d="' + line + '" fill="none" stroke="' + color + '" stroke-width="2"/></svg>';
-  }
-
-  // A simple count-per-bucket column chart. `opts.dim` is the drill dimension
-  // and `opts.suffix` the unit shown in the tooltip, so the same builder serves
-  // both the age histogram and the birth-year distribution.
-  function statsHist(ages, color, lang, opts) {
-    opts = opts || {};
-    var dim = opts.dim || 'age';
-    var suffix = opts.suffix || '';
-    if (!ages.length) return '';
-    var W = 900, H = 200, P = { t: 12, r: 8, b: 28, l: 42 };
-    var iw = W - P.l - P.r, ih = H - P.t - P.b;
-    var max = Math.max.apply(null, ages.map(function (a) { return a[1]; })) || 1;
-    var bw = iw / ages.length, bars = '', xl = '';
-    ages.forEach(function (a, i) {
-      var bh = (a[1] / max) * ih, bx = P.l + i * bw, by = P.t + ih - bh;
-      bars += '<rect class="st-hit st-drill" x="' + (bx + 1).toFixed(1) + '" y="' + by.toFixed(1) +
-              '" width="' + Math.max(1, bw - 2).toFixed(1) + '" height="' + bh.toFixed(1) +
-              '" rx="3" fill="' + color + '" fill-opacity=".8"' +
-              ' data-t="' + esc(nfmt(a[0], lang) + suffix) + '"' +
-              ' data-v="' + esc(nfmt(a[1], lang)) + '"' +
-              ' data-drill-dim="' + dim + '" data-drill-val="' + a[0] + '"></rect>';
-      if (a[0] % 10 === 0) {
-        xl += '<text x="' + (bx + bw / 2).toFixed(1) + '" y="' + (H - 8) +
-              '" text-anchor="middle">' + nfmt(a[0], lang) + '</text>';
-      }
-    });
-    return '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' +
-      (opts.label || (lang === 'en' ? 'Age distribution' : 'توزيع الأعمار')) + '">' +
-      '<g class="st-grid st-axis">' + yAxis(P, W, ih, max, 3, lang) + '</g>' +
-      '<g class="st-axis">' + xl + '</g>' + bars + '</svg>';
+      '<path d="' + line + '" fill="none" stroke="' + color + '" stroke-width="2"' +
+      ' vector-effect="non-scaling-stroke"/></svg>';
   }
 
   // Every chart ships a table view: identity must never be colour-alone, and
@@ -383,25 +413,19 @@
 
   // Exported so the registry filter can fold the same way the charts do -
   // otherwise clicking a brigade bar showing 369 would list only 365 rows.
-  // Decade labels are built at render time, not in the aggregate: the aggregate
-  // has no language, and "1990s" in Latin digits beside an Arabic-Indic count
-  // (٦٠٨) reads as a different interface. Arabic gets ١٩٩٠; English keeps the
-  // plural 's', which means nothing in Arabic.
-  global.statsDecades     = function (agg, lang) {
-    return (agg.birthDecades || []).map(function (d) {
-      return [lang === 'en' ? d[0] : nfmt(d[2], lang), d[1], d[2]];
-    });
-  };
   global.foldBrigadeName  = function (n) { return fold(clean(n)); };
   global.STATS_SERIES     = SERIES;
   global.aggregateStats   = aggregateStats;
   global.statsMonthLabel  = statsMonthLabel;
   global.statsNum         = nfmt;
+  global.statsCount       = statsCount;
   global.statsArea        = statsArea;
   global.statsStacked     = statsStacked;
+  global.statsYearStrip   = statsYearStrip;
   global.statsBars        = statsBars;
+  global.statsRanked      = statsRanked;
+  global.statsBirthYears  = statsBirthYears;
   global.statsSpark       = statsSpark;
-  global.statsHist        = statsHist;
   global.statsTable       = statsTable;
   global.statsLegend      = statsLegend;
 })(window);

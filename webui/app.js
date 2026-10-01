@@ -177,9 +177,9 @@ function aqmar() {
     viewMode: 'grid',   // 'grid' (default, multi-column) or 'list' (single-column)
     // Advanced filters — collapsible panel below the primary filter row
     showAdvancedFilters: false,
-    // Birth-date range. Set by the birth-year / decade drill-downs; there is no
-    // picker for it in the filter panel, so the drill chip is what names and
-    // clears it. Same ISO shape as the martyrdom range.
+    // Birth-date range. Set by the birth-year drill-down; there is no picker
+    // for it in the filter panel, so the drill chip is what names and clears
+    // it. Same ISO shape as the martyrdom range.
     birthFrom: '',
     birthTo: '',
     martyrdomFrom: '',   // ISO date "YYYY-MM-DD" — filter rows with martyrdom >= this
@@ -556,19 +556,18 @@ function aqmar() {
           this.birthFrom = val + '-01-01';
           this.birthTo = val + '-12-31';
           break;
-        case 'birth-decade': {
-          const d0 = parseInt(val, 10);
-          if (!Number.isFinite(d0)) return;
-          this.birthFrom = d0 + '-01-01';
-          this.birthTo = (d0 + 9) + '-12-31';
-          break;
-        }
         case 'year':      this.martyrdomFrom = val + '-01-01';
                           this.martyrdomTo = val + '-12-31'; break;
         case 'brigade':   this.filters.brig = val; break;
         case 'battalion': this.filters.batt = val; break;
         case 'rank':      this.filters.rank = val; break;
-        case 'age':       this.ageMin = Number(val); this.ageMax = Number(val); break;
+        // "lo|hi" from the five-year age bands, or a single age.
+        case 'age': {
+          const a = String(val).split('|');
+          this.ageMin = Number(a[0]);
+          this.ageMax = Number(a.length > 1 ? a[1] : a[0]);
+          break;
+        }
         case 'brigade-month': {
           const parts = String(val).split('|');
           this.filters.brig = parts[0];
@@ -598,9 +597,6 @@ function aqmar() {
         case 'year':  return (ar ? 'سنة الاستشهاد ' : 'Died: ') + toArDigits(val);
         case 'birth-year':
           return (ar ? 'مواليد ' : 'Born ') + toArDigits(val);
-        case 'birth-decade':
-          return (ar ? 'مواليد عقد ' : 'Born in the ') + toArDigits(val) +
-                 (ar ? '' : 's');
         // Brigade and battalion names already begin with لواء / كتيبة,
         // so prefixing the type again reads as a stutter.
         case 'brigade':
@@ -608,8 +604,14 @@ function aqmar() {
         case 'battalion':
           return val.startsWith('كتيبة') ? val : (ar ? 'كتيبة: ' : 'Battalion: ') + val;
         case 'rank':      return (ar ? 'رتبة: ' : 'Rank: ') + val;
-        case 'age':       return (ar ? 'العمر ' : 'Age ') + toArDigits(val) +
-                                 (ar ? ' عامًا' : ' years');
+        case 'age': {
+          const a = String(val).split('|');
+          if (a.length > 1) {
+            return ar ? 'العمر من ' + toArDigits(a[0]) + ' إلى ' + toArDigits(a[1]) + ' عامًا'
+                      : 'Age ' + a[0] + '–' + a[1];
+          }
+          return (ar ? 'العمر ' : 'Age ') + toArDigits(val) + (ar ? ' عامًا' : ' years');
+        }
         case 'brigade-month': {
           const p = String(val).split('|');
           return p[0] + ' — ' + statsMonthLabel(p[1], this.lang);

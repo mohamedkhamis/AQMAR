@@ -51,6 +51,7 @@
   <script src="data-loader.js?v=8" charset="UTF-8"></script>
   <script src="admin-edit.js?v=5" charset="UTF-8"></script>
   <script src="app.js?v=5" charset="UTF-8"></script>
+  <script src="stats-core.js?v=5" charset="UTF-8"></script>
 
   <!-- Test files -->
   <script>
@@ -555,6 +556,102 @@
       assertEq(adaptSettings(null), { version: 1, events: [] });
       assertEq(adaptSettings({}), { version: 1, events: [] });
       assertEq(adaptSettings({ version: 3, events: "nope" }), { version: 3, events: [] });
+    });
+  </script>
+
+  <script>
+    // ===== stats-core.js =====
+    // Eight rows: 1993 ×3, 1989 ×2, 1995 ×2, one with no birth date.
+    const STAT_ROWS = [
+      { birth: "1993-05-01", martyrdom: "2023-11-10", brigade: "لواء غزة" },
+      { birth: "1993-02-01", martyrdom: "2023-12-10", brigade: "لواء غزة" },
+      { birth: "1993-02-01", martyrdom: "2024-02-09" },
+      { birth: "1989-02-01", martyrdom: "2024-02-10", brigade: "لواء الشمال" },
+      { birth: "1989-02-01", martyrdom: "2024-02-11", brigade: "لواء خان يونس" },
+      { birth: "1995-02-01", martyrdom: "2024-02-12" },
+      { birth: "1995-08-01", martyrdom: "2024-02-12" },
+      { birth: "",           martyrdom: "2024-02-13" },
+    ];
+
+    test("aggregateStats ranks birth years by count, older year first on a tie", () => {
+      const agg = aggregateStats(STAT_ROWS);
+      assertEq(agg.birthYears, [[1989, 2], [1993, 3], [1995, 2]]);
+      assertEq(agg.birthYearsRanked, [[1993, 3], [1989, 2], [1995, 2]]);
+      assertEq(agg.withBirth, 7);
+    });
+
+    test("aggregateStats fills empty months and gives each year its month share", () => {
+      const agg = aggregateStats(STAT_ROWS);
+      assertEq(agg.months, ["2023-11", "2023-12", "2024-01", "2024-02"]);
+      assertEq(agg.monthly, [1, 1, 0, 6]);
+      assertEq(agg.years, [["2023", 2, 2], ["2024", 6, 2]]);
+    });
+
+    test("aggregateStats buckets ages into five-year bands and keeps the median", () => {
+      const agg = aggregateStats(STAT_ROWS);
+      // ages 28 29 30 30 31 35 35 → median 30
+      assertEq(agg.ageBands, [[25, 2], [30, 3], [35, 2]]);
+      assertEq(agg.medAge, 30);
+    });
+
+    test("aggregateStats folds the split brigade spelling", () => {
+      const agg = aggregateStats(STAT_ROWS);
+      assertEq(agg.brigades, [["لواء غزة", 2], ["لواء الشمال", 1], ["لواء خانيونس", 1]]);
+    });
+
+    test("statsCount inflects the Arabic noun by number", () => {
+      assertEq(statsCount(1, "ar"), "شهيد واحد");
+      assertEq(statsCount(2, "ar"), "شهيدان");
+      assertEq(statsCount(5, "ar"), "٥ شهداء");
+      assertEq(statsCount(90, "ar"), "٩٠ شهيدًا");
+      assertEq(statsCount(100, "ar"), "١٠٠ شهيد");
+      assertEq(statsCount(1, "en"), "1 martyr");
+      assertEq(statsCount(90, "en"), "90 martyrs");
+    });
+
+    test("statsRanked numbers the rows and drills each into its value", () => {
+      const el = document.createElement("div");
+      el.innerHTML = statsRanked([["١٩٩٣", 3, 1993], ["١٩٨٩", 2, 1989]], "red", "ar", "birth-year");
+      const rows = el.querySelectorAll("ol.st-ranked .st-rk");
+      assertEq(rows.length, 2);
+      assertEq(rows[0].dataset.drillDim, "birth-year");
+      assertEq(rows[0].dataset.drillVal, "1993");
+      assertEq(rows[0].querySelector(".st-rk-n").textContent, "١");
+      assertEq(rows[1].querySelector(".st-rk-n").textContent, "٢");
+      assertEq(rows[0].querySelector(".st-rk-v").textContent, "٣ شهداء");
+      assertEq(rows[1].querySelector(".st-rk-bar").style.width, "66.7%");
+    });
+
+    test("statsBirthYears lists the top n and tables every year in rank order", () => {
+      const el = document.createElement("div");
+      el.innerHTML = statsBirthYears(aggregateStats(STAT_ROWS), "ar", 2);
+      assertEq(el.querySelectorAll(".st-rk").length, 2);
+      assertEq([...el.querySelectorAll("tbody tr")].map(tr => tr.dataset.drillVal),
+               ["1993", "1989", "1995"]);
+    });
+
+    test("time charts carry no grid or axis and clamp their hit areas to the viewBox", () => {
+      const agg = aggregateStats(STAT_ROWS);
+      const area = statsArea(agg.months, agg.monthly, "gold", 230, "ar", "g1");
+      assertEq(/st-grid|st-axis|<text/.test(area), false);
+      assertEq(/preserveAspectRatio="none"/.test(area), true);
+      const stack = statsStacked(agg.months, agg.brigadeSeries, 320, "ar");
+      assertEq(/st-grid|st-axis|<text/.test(stack), false);
+      const el = document.createElement("div");
+      el.innerHTML = area;
+      const hits = [...el.querySelectorAll("rect.st-hit")];
+      assertEq(hits.length, 3);   // one per non-empty month
+      assertEq(hits.every(r => +r.getAttribute("x") >= 0 &&
+                               +r.getAttribute("x") + +r.getAttribute("width") <= 900), true);
+    });
+
+    test("statsYearStrip sizes each year by its months and drills by year", () => {
+      const el = document.createElement("div");
+      el.innerHTML = statsYearStrip(aggregateStats(STAT_ROWS).years, "en");
+      const cells = [...el.querySelectorAll(".st-year")];
+      assertEq(cells.map(c => c.style.flexGrow), ["2", "2"]);
+      assertEq(cells.map(c => c.dataset.drillVal), ["2023", "2024"]);
+      assertEq(cells.map(c => c.querySelector(".st-year-n").textContent), ["2", "6"]);
     });
   </script>
 </body>

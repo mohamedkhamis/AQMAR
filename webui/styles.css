@@ -1143,10 +1143,17 @@ html[dir="rtl"] .lifeline-life { background: linear-gradient(to left, var(--oliv
   border-radius:12px;padding:20px}
 
 .st-card svg{display:block;width:100%;height:auto;overflow:visible}
-.st-grid line{stroke:var(--divider);stroke-width:1}
-.st-axis text{fill:var(--faint);font-size:11px;font-family:var(--font-body);
-  font-variant-numeric:tabular-nums}
 .st-spark{height:42px;width:100%}
+.st-note{color:var(--faint);font-size:var(--text-xs);margin-top:10px}
+
+/* year strip under a time chart - LTR like the chart; each cell's flex-grow
+   is its share of the charted months (statsYearStrip sets it inline) */
+.st-years{display:flex;margin-top:10px;padding-top:8px;border-top:1px solid var(--divider)}
+.st-year{min-width:0;display:flex;flex-direction:column;gap:2px;padding:4px 6px 2px 8px;
+  border-left:1px solid var(--divider);border-radius:0 6px 6px 0;line-height:1.2;
+  transition:background .15s}
+.st-year-y{font-size:var(--text-xs);color:var(--faint)}
+.st-year-n{font-family:var(--font-display);font-weight:600;font-size:var(--text-sm);color:var(--ink-2)}
 
 /* ranked bars */
 .st-rank{display:flex;flex-direction:column;gap:9px}
@@ -1157,6 +1164,18 @@ html[dir="rtl"] .lifeline-life { background: linear-gradient(to left, var(--oliv
 .st-track{position:relative;height:26px;background:var(--bg-2);
   border-radius:6px;overflow:hidden;margin-top:4px}
 .st-bar{position:absolute;inset-block:0;right:0;border-radius:0 6px 6px 0}
+
+/* numbered ranking (most common birth years) - the order is the statistic */
+.st-ranked{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.st-rk{display:grid;grid-template-columns:auto minmax(3.6em,auto) 1fr auto;gap:10px;
+  align-items:center;padding:5px 8px;border-radius:8px;transition:background .15s}
+.st-rk-n{width:1.9em;height:1.9em;line-height:1.8em;text-align:center;border-radius:999px;
+  border:1px solid var(--divider);color:var(--faint);font-size:var(--text-xs)}
+.st-ranked li:first-child .st-rk-n{border-color:var(--forest);color:var(--forest)}
+.st-rk-l{font-family:var(--font-display);font-weight:600;font-size:var(--text-base);color:var(--ink)}
+.st-rk-track{display:block;height:12px;background:var(--bg-2);border-radius:6px;overflow:hidden}
+.st-rk-bar{display:block;height:100%;border-radius:6px}
+.st-rk-v{color:var(--muted);font-size:var(--text-sm);white-space:nowrap}
 
 /* legend — identity is never colour-alone, so the name sits beside the swatch */
 .st-legend{display:flex;gap:16px;flex-wrap:wrap;margin-top:16px}
@@ -1195,17 +1214,16 @@ html[dir="rtl"] .lifeline-life { background: linear-gradient(to left, var(--oliv
   border-color:var(--forest)}
 
 /* ---- statistics on a phone ----
-   A 900-unit viewBox squeezed into a 375px screen renders at scale 0.31, so
-   an 11-unit axis label comes out at 3.4px - present, but unreadable. Give the
-   dense charts a comfortable min-width and let them scroll inside their own
-   card, which is the same treatment tables get here; the page body still never
-   scrolls sideways. Axis text is enlarged in viewBox units so it survives the
-   remaining downscale. Sparklines are untouched - they live in .std-smc, carry
-   no axis, and are meant to read as a shape rather than a chart. */
+   The time charts carry no axis text, so nothing in them needs a minimum
+   width: they scale to the card and the page never scrolls sideways. Their
+   viewBox is 900 units wide with preserveAspectRatio="none", so the natural
+   height at 375px would be a 95px sliver - give them a fixed height here
+   instead (strokes are non-scaling, so the stretch costs nothing). Sparklines
+   are untouched - they live in .std-smc and are meant to read as a shape. */
 @media (max-width:640px){
-  .st-card{padding:14px 12px;overflow-x:auto;-webkit-overflow-scrolling:touch}
-  .st-card > svg{min-width:560px}
-  .st-axis text{font-size:17px}
+  .st-card{padding:14px 12px}
+  .st-card svg.st-area{height:150px}
+  .st-card svg.st-stack{height:190px}
   .st-title{font-size:var(--text-base)}
   .st-sub{margin-bottom:12px}
   .st-legend{gap:10px}
@@ -1214,6 +1232,8 @@ html[dir="rtl"] .lifeline-life { background: linear-gradient(to left, var(--oliv
 @media (max-width:480px){
   .st-row{grid-template-columns:1fr 52px}
   .st-lbl{font-size:var(--text-xs)}
+  .st-rk{gap:8px;padding:5px 4px}
+  .st-rk-v{font-size:var(--text-xs)}
 }
 
 
@@ -1224,6 +1244,7 @@ html[dir="rtl"] .lifeline-life { background: linear-gradient(to left, var(--oliv
 rect.st-drill:hover { fill: rgba(251, 191, 36, 0.10); }
 .st-bar.st-drill:hover { filter: brightness(1.18); }
 .st-lg.st-drill:hover, .std-smc.st-drill:hover { color: var(--ink); }
+.st-rk.st-drill:hover, .st-year.st-drill:hover { background: var(--bg-2); }
 .std-smc.st-drill { cursor: pointer; transition: background .15s; }
 .std-smc.st-drill:hover { background: var(--bg-2); }
 tr.st-drill:hover td { background: var(--bg-2); }

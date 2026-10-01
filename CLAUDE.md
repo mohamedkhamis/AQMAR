@@ -173,7 +173,8 @@ never block a row.
 - **Drill-down:** every clickable mark carries `data-drill-dim` +
   `data-drill-val`, and one delegated handler (`drillFromStats` in `app.js`)
   maps the dimension onto filters the registry **already has** —
-  `month`/`year` → `martyrdomFrom`/`To`, `age` → `ageMin`/`Max`,
+  `month`/`year` → `martyrdomFrom`/`To`, `birth-year` → `birthFrom`/`To`,
+  `age` ("lo|hi" from the five-year bands, or one age) → `ageMin`/`Max`,
   `brigade`/`battalion`/`rank` → `filters.*`. A click lands the visitor in the
   ordinary grid, not a parallel result list, so they can keep refining.
   Drills replace each other rather than intersecting, and `drillLabel` drives
@@ -188,6 +189,19 @@ never block a row.
 - Charts are hand-authored SVG on a fixed viewBox; every one ships a table
   view (`statsTable`) so identity is never colour-alone, and a single
   delegated `.st-hit` listener drives the shared hover readout.
+- **No grid, no axis (2026-10-01).** The user asked for the `st-grid`/`st-axis`
+  diagrams to go. `statsArea`/`statsStacked` now draw only the curve on a
+  900-unit viewBox with `preserveAspectRatio="none"` (`styles.css` fixes their
+  height under 640px, so nothing scrolls sideways on a phone), and
+  `statsYearStrip` beneath them is the time anchor: one clickable cell per
+  year, its width proportional to its months, so a partial first year is
+  visibly shorter. Both histograms are gone: birth years are `statsBirthYears`
+  (a numbered top-10 `<ol>` via `statsRanked`, then a table of every year in
+  rank order) and ages are five-year bands through `statsBars`. The decade
+  rollup, the "total per brigade" list under the stacked legend and the
+  "commonest birth year" tile were removed as repeats; each design shows the
+  birth-year ranking exactly once. `statsCount` inflects the Arabic noun
+  (شهيد واحد / شهيدان / ٥ شهداء / ٩٠ شهيدًا) — use it for any new count-with-unit.
 
 ## Global events (`data/settings.json`)
 

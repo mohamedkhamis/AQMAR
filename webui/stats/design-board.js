@@ -2,7 +2,7 @@
 //
 // Dense, scanned rather than read: a figure strip across the top, then one
 // small-multiple card per brigade so the brigades can be compared directly,
-// then the age distribution and the ranks.
+// then the ages, the birth years and the ranks.
 //
 // Every brigade sparkline is drawn over the SAME month span (stats-core fills
 // empty months with zeros), so the cards really are comparable — a sparkline
@@ -41,16 +41,15 @@
 
     var h = '<div class="std-board">';
 
+    // Four figures, so the strip folds to a clean 2×2 on a phone. The
+    // commonest birth year is not a tile any more: the ranked list below
+    // leads with it.
     h += '<div class="std-figs">' +
       fig(statsNum(agg.total, lang), ar ? 'شهيد موثّق' : 'recorded') +
       fig(statsNum(agg.brigades.length, lang), ar ? 'ألوية' : 'brigades') +
       fig(statsNum(agg.battalions.length, lang), ar ? 'كتيبة' : 'battalions') +
       (agg.medAge ? fig(statsNum(agg.medAge, lang), ar ? 'وسيط العمر' : 'median age',
                         ar ? 'عامًا' : 'years') : '') +
-      (agg.topBirthYear
-        ? fig(statsNum(agg.topBirthYear[0], lang),
-              ar ? 'أكثر سنة ميلاد' : 'commonest birth year',
-              statsNum(agg.topBirthYear[1], lang) + (ar ? ' شهيدًا' : '')) : '') +
       '</div>';
 
     if (agg.brigadeSeries.length) {
@@ -75,39 +74,29 @@
         '</section>';
     }
 
-    if (agg.ages.length) {
+    if (agg.ageBands.length) {
+      // Five-year bands as ranked bars: readable at any width, and each band
+      // drills into an age range the registry already filters on.
+      var bands = agg.ageBands.map(function (b) {
+        var lo = b[0], hi = b[0] + 4;
+        return [statsNum(lo, lang) + '–' + statsNum(hi, lang), b[1], lo + '|' + hi];
+      });
       h += '<section class="std-sec"><h3 class="st-title">' +
         (ar ? 'الأعمار عند الاستشهاد' : 'Age at martyrdom') + '</h3>' +
         '<p class="st-sub">' + (agg.medAge
-          ? (ar ? 'الوسيط ' + statsNum(agg.medAge, lang) + ' عامًا.'
-                : 'Median ' + agg.medAge + ' years.') : '') + '</p>' +
+          ? (ar ? 'الوسيط ' + statsNum(agg.medAge, lang) + ' عامًا، في فئات من خمس سنوات.'
+                : 'Median ' + agg.medAge + ' years, in five-year bands.')
+          : (ar ? 'في فئات من خمس سنوات.' : 'In five-year bands.')) + '</p>' +
         '<div class="st-card">' +
-        statsHist(agg.ages, 'var(--forest)', lang,
-                  { dim: 'age', suffix: ar ? ' عامًا' : ' yrs' }) +
+        statsBars(bands, function () { return 'var(--forest)'; }, lang, 'age') +
         '</div></section>';
     }
 
-    if (agg.birthYears.length) {
+    if (agg.birthYearsRanked.length) {
       h += '<section class="std-sec"><h3 class="st-title">' +
-        (ar ? 'سنة الميلاد' : 'Year of birth') + '</h3>' +
-        '<p class="st-sub">' +
-        (ar ? statsNum(agg.withBirth, lang) + ' شهيدًا لهم تاريخ ميلاد مسجَّل، من ' +
-              statsNum(agg.birthYears[0][0], lang) + ' إلى ' +
-              statsNum(agg.birthYears[agg.birthYears.length - 1][0], lang) + '.'
-            : agg.withBirth + ' with a recorded birth date, ' +
-              agg.birthYears[0][0] + '–' + agg.birthYears[agg.birthYears.length - 1][0] + '.') +
-        '</p><div class="st-card">' +
-        statsHist(agg.birthYears, 'var(--stat-1)', lang,
-                  { dim: 'birth-year', suffix: '',
-                    label: ar ? 'توزيع سنوات الميلاد' : 'Birth year distribution' }) +
-        '</div></section>';
-
-      h += '<section class="std-sec"><h3 class="st-title">' +
-        (ar ? 'حسب العقد' : 'By decade') + '</h3>' +
-        '<div class="st-card">' +
-        statsBars(statsDecades(agg, lang), function () { return 'var(--stat-1)'; },
-                  lang, 'birth-decade') +
-        '</div></section>';
+        (ar ? 'أكثر سنوات الميلاد' : 'Most common birth years') + '</h3>' +
+        statsBirthYears(agg, lang, 10) +
+        '</section>';
     }
 
     if (agg.ranks.length) {
